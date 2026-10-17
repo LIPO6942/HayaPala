@@ -9,12 +9,6 @@
   "theme_color": "#07090E",
   "icons": [
     {
-      "src": "/images/pala-icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    },
-    {
       "src": "/images/pwa-icon.jpg",
       "sizes": "1024x1024",
       "type": "image/jpeg",
@@ -24,7 +18,7 @@
       "src": "/images/pala-logo.jpg",
       "sizes": "512x512",
       "type": "image/jpeg",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ]
 }

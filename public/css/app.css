@@ -2872,15 +2872,37 @@ button,
 .pala-head-img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
+  border-radius: 12px;
   display: block;
-  filter: drop-shadow(0 0 10px rgba(0, 245, 212, 0.5)) drop-shadow(0 0 4px rgba(204, 255, 0, 0.4));
+  box-shadow: 0 0 14px rgba(0, 245, 212, 0.35);
+  border: 1px solid rgba(204, 255, 0, 0.4);
   transition: transform var(--transition-fast), filter var(--transition-fast);
 }
 
+.pala-icon-symbol {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #0A0D14;
+  box-shadow: 0 0 16px rgba(0, 245, 212, 0.25);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.pala-icon-symbol:hover {
+  transform: scale(1.08) rotate(2deg);
+  box-shadow: 0 0 22px rgba(204, 255, 0, 0.6);
+}
+
 .pala-icon-symbol:hover .pala-head-img {
-  transform: scale(1.12) rotate(-6deg);
-  filter: drop-shadow(0 0 16px rgba(0, 245, 212, 0.8)) drop-shadow(0 0 8px rgba(204, 255, 0, 0.7));
+  transform: scale(1.05);
+  border-color: var(--hayapala-volt);
 }
 
 /* Carbon Fiber Weave & Aerodynamic Perforations Background for Hero Elements */
