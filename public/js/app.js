@@ -1070,6 +1070,22 @@ async function renderAdminCourts(clubId) {
   const container = document.getElementById('adminCourtsListContainer');
   if (!container) return;
 
+  if (!clubId || !AppState.clubs || AppState.clubs.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state-notice" style="text-align: center; padding: 48px 20px; background: rgba(255, 255, 255, 0.02); border-radius: 20px; border: 1px dashed rgba(255, 255, 255, 0.1);">
+        <div style="font-size: 38px; margin-bottom: 12px;">🏢</div>
+        <div style="font-size: 17px; font-weight: 800; color: var(--text-white); margin-bottom: 8px;">Aucun Club Enregistré</div>
+        <div style="font-size: 13px; color: var(--text-secondary); max-width: 420px; margin: 0 auto 20px auto; line-height: 1.5;">
+          Pour pouvoir configurer et gérer vos terrains de padel, vous devez d'abord créer la fiche de votre club.
+        </div>
+        <button class="btn-primary-action" onclick="openModal('modal-admin-create-club')" style="max-width: 260px; margin: 0 auto;">
+          + Créer mon Premier Club
+        </button>
+      </div>
+    `;
+    return;
+  }
+
   try {
     const res = await fetch(`/api/admin/courts?clubId=${clubId}`);
     if (res.ok) {
@@ -1078,7 +1094,18 @@ async function renderAdminCourts(clubId) {
       container.innerHTML = '';
 
       if (courts.length === 0) {
-        container.innerHTML = `<div style="color: var(--text-secondary); padding: 20px;">Aucun court configuré. Cliquez sur "+ Ajouter un Nouveau Terrain".</div>`;
+        container.innerHTML = `
+          <div class="empty-state-notice" style="text-align: center; padding: 48px 20px; background: rgba(255, 255, 255, 0.02); border-radius: 20px; border: 1px dashed rgba(255, 255, 255, 0.1); width: 100%;">
+            <div style="font-size: 38px; margin-bottom: 12px;">🎾</div>
+            <div style="font-size: 17px; font-weight: 800; color: var(--text-white); margin-bottom: 8px;">Aucun Terrain pour ce Club</div>
+            <div style="font-size: 13px; color: var(--text-secondary); max-width: 420px; margin: 0 auto 20px auto; line-height: 1.5;">
+              Ajoutez votre première piste de padel (Indoor ou Outdoor) pour activer le planning et les réservations.
+            </div>
+            <button class="btn-primary-action" onclick="openModal('modal-admin-add-court')" style="max-width: 260px; margin: 0 auto;">
+              + Ajouter un Nouveau Terrain
+            </button>
+          </div>
+        `;
         return;
       }
 
@@ -1162,11 +1189,19 @@ window.deleteCourt = async function(courtId) {
 // Execute Admin Add Court
 async function executeAdminAddCourt(e) {
   e.preventDefault();
+  
+  if (!AppState.clubs || AppState.clubs.length === 0) {
+    closeAllModals();
+    showToast("Veuillez d'abord créer un club de padel !", "warning");
+    openModal('modal-admin-create-club');
+    return;
+  }
+
   const name = document.getElementById('adminAddCourtName').value;
   const type = document.getElementById('adminAddCourtType').value;
   const surface = document.getElementById('adminAddCourtSurface').value;
   const price = document.getElementById('adminAddCourtPrice').value;
-  const clubId = AppState.currentAdminClubId || 'club_connection';
+  const clubId = AppState.currentAdminClubId || AppState.clubs[0].id;
 
   try {
     const res = await fetch('/api/admin/courts', {
@@ -1682,16 +1717,20 @@ async function resetDemoData() {
 }
 
 // Modal Helpers
-function openModal(modalId) {
+window.openModal = function(modalId) {
   const modal = document.getElementById(modalId);
-  if (modal) modal.classList.add('active');
-}
+  if (modal) {
+    modal.classList.add('active');
+  } else {
+    console.warn("Modal not found:", modalId);
+  }
+};
 
-function closeAllModals() {
+window.closeAllModals = function() {
   document.querySelectorAll('.modal-overlay').forEach(modal => {
     modal.classList.remove('active');
   });
-}
+};
 
 // Toast Notice Helper
 function showToast(message, type = 'info') {

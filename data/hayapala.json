@@ -5,10 +5,10 @@
       "name": "Moslem Gouia",
       "email": "moslem.gouia@example.com",
       "avatar": "/images/tennis-ball.svg",
-      "points": 100.0,
+      "points": 100,
       "phone": "+216 22 227 041",
-      "level": 5.0,
-      "levelReliability": 50.0,
+      "level": 5,
+      "levelReliability": 50,
       "matchesPlayed": 0,
       "sport": "Padel",
       "role": "admin",
@@ -26,5 +26,19 @@
   "tournaments": [],
   "transactions": [],
   "user_match_history": [],
-  "club_settings": []
+  "club_settings": [
+    {
+      "clubId": "club_1792233691267_244",
+      "name": "Test Padel Club",
+      "address": "Tunis",
+      "phone": "+216 22 222 222",
+      "email": "contact@club.tn",
+      "openTime": "07:00",
+      "closeTime": "00:00",
+      "defaultSlotMinutes": 90,
+      "pricePerPlayer": 25,
+      "id": "club_1792233691271_816",
+      "createdAt": "2026-10-17T10:41:31.271Z"
+    }
+  ]
 }
