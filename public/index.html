@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HayaPala - L'Expérience Padel Nouvelle Génération</title>
+  
+  <meta name="theme-color" content="#090C12" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="HayaPala" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="/images/tennis-ball.svg" />
+  <link rel="apple-touch-icon" href="/images/tennis-ball.svg" />
+  <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body>
+
+  <!-- ======================================================================
+       TOP CONTROL BAR (Switch between Player App & Club Back-Office)
+       ====================================================================== -->
+  <header class="platform-control-bar">
+    <div class="brand-section">
+      <div class="hayapala-logo-badge">
+        <div class="pala-icon-symbol"><img src="/images/tennis-ball.svg" alt="HayaPala Tennis Ball" /></div>
+        <div class="hayapala-brand-text">HayaPala</div>
+      </div>
+      <span class="brand-tag">Padel 2.0</span>
+    </div>
+
+    <!-- View Mode Switcher -->
+    <div class="view-mode-tabs" role="tablist">
+      <button class="view-tab-btn active" data-mode="mobile-app" id="tabModeMobile">
+        <span>📱</span> App Joueur HayaPala
+      </button>
+      <button class="view-tab-btn" data-mode="backoffice-dashboard" id="tabModeDashboard">
+        <span>💻</span> HayaPala Club Pro (Planning)
+      </button>
+      <button class="view-tab-btn" data-mode="backoffice-login" id="tabModeLogin">
+        <span>🔐</span> Portail Club Login
+      </button>
+    </div>
+
+    <!-- Right Quick Controls -->
+    <div class="right-controls">
+      <div class="live-points-pill" id="topLivePointsPill" title="Cliquer pour recharger vos points">
+        <span>⚡</span>
+        <span id="topLivePointsValue">10.00 Points</span>
+        <span style="font-size: 11px; opacity: 0.9;">(+)</span>
+      </div>
+      <button class="btn-reset-demo" id="btnResetDemoData" title="Réinitialiser les données de démo">
+        ↺ Reset Démo
+      </button>
+    </div>
+  </header>
+
+  <!-- ======================================================================
+       WORKSPACE CANVAS
+       ====================================================================== -->
+  <main class="workspace-canvas">
+
+    <!-- ====================================================================
+         VIEW MODE 1: MOBILE APP (HayaPala Player Experience)
+         ==================================================================== -->
+    <div class="mobile-device-wrapper" id="mobileAppContainer">
+      
+      <div class="device-frame-options">
+        <button class="frame-toggle-btn active" id="toggleFrameStyleBtn">🔲 Mode Plein Écran</button>
+      </div>
+
+      <div class="smartphone-frame" id="smartphoneFrame">
+        
+        <!-- Mobile Status Bar -->
+        <div class="phone-status-bar">
+          <div class="status-left">
+            <span>08:59</span>
+            <span>💬</span>
+          </div>
+          <div class="notch-pill"></div>
+          <div class="status-right">
+            <span>5G</span>
+            <span>📶</span>
+            <span>78%</span>
+          </div>
+        </div>
+
+        <!-- Scrollable Screen Viewport -->
+        <div class="app-screen-viewport">
+
+          <!-- --------------------------------------------------------------
+               SCREEN 1: ACCUEIL (HOME)
+               -------------------------------------------------------------- -->
+          <section class="app-screen active" id="screen-home">
+            <div class="home-header">
+              <div class="user-avatar-wrap" onclick="navigateToScreen('screen-profile')" title="Mon profil">
+                <span style="font-size: 28px;">🎾</span>
+              </div>
+              <div class="top-right-wallet">
+                <div class="points-badge-pill" id="homePointsBadge" title="Recharger mes points">
+                  <span id="homePointsBadgeValue">10.00 Points</span>
+                  <div class="points-plus-icon">+</div>
+                </div>
+                <div class="transfer-quick-btn" id="homeQuickTransferBtn" title="Transférer des points">
+                  <span>⇄</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="greeting-text">Bienvenue sur HayaPala 👋</div>
+            <div class="user-display-name">Moslem Gouia</div>
+            <div class="user-level-row">
+              <span class="gold-star-icon">⭐</span>
+              <span>Votre niveau certifié est de <strong>5.49</strong></span>
+            </div>
+
+            <!-- Featured Banner Card: Tournoi HayaPala Masters -->
+            <div class="tournament-card">
+              <div class="tournament-top-row">
+                <div class="tournament-title-wrap">
+                  <span style="font-size: 20px;">🏆</span>
+                  <span>HayaPala Masters 2026</span>
+                </div>
+                <button class="btn-join-now" onclick="showToast('Inscription au tournoi HayaPala enregistrée !', 'success')">Join now</button>
+              </div>
+
+              <div class="tournament-players-row">
+                <div class="tournament-player-card">
+                  <div class="player-card-avatar">👨</div>
+                  <div class="player-card-name">krima mohamed Bilel</div>
+                  <div class="player-card-level">⭐ 8.00</div>
+                </div>
+                <div class="tournament-player-card">
+                  <div class="player-card-avatar">🧔</div>
+                  <div class="player-card-name">Écoinçon Fabian</div>
+                  <div class="player-card-level">⭐ 7.00</div>
+                </div>
+                <div class="tournament-player-card">
+                  <div class="player-card-avatar">👤</div>
+                  <div class="player-card-name">mehdi mehdi</div>
+                  <div class="player-card-level">⭐ 6.00</div>
+                </div>
+              </div>
+
+              <div class="dots-carousel-indicator">
+                <div class="carousel-dot active"></div>
+                <div class="carousel-dot"></div>
+              </div>
+            </div>
+
+            <!-- Section: Jouez votre match -->
+            <div class="section-title-tag">
+              <span class="yellow-bullet"></span>
+              <span>Jouez votre match</span>
+            </div>
+
+            <div class="play-match-grid">
+              <div class="action-quick-card" id="quickCardBookCourt">
+                <div class="quick-card-icon">📞</div>
+                <div class="quick-card-bottom">
+                  <div class="quick-card-title">Réserver votre<br />terrain</div>
+                  <div class="quick-card-arrow">&gt;</div>
+                </div>
+              </div>
+
+              <div class="action-quick-card" id="quickCardJoinMatch">
+                <div class="quick-card-icon">🎾</div>
+                <div class="quick-card-bottom">
+                  <div class="quick-card-title">Rejoindre une<br />partie</div>
+                  <div class="quick-card-arrow">&gt;</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Section: Paires Officielles & ELO Duo -->
+            <div class="section-title-tag">
+              <span class="yellow-bullet"></span>
+              <span>Compétition en Équipe</span>
+            </div>
+
+            <div class="duo-banner-card" id="btnOpenOfficialTeams">
+              <div class="duo-banner-left">
+                <div class="duo-banner-icon">⚔️</div>
+                <div>
+                  <div class="duo-banner-tag">CLASSEMENT ELO DES PAIRES</div>
+                  <div class="duo-banner-title">Paires Officielles & Défis Duo</div>
+                  <div class="duo-banner-sub">Votre duo : <strong>Les Smécheurs du Nord</strong> (#3 • 1550 ELO)</div>
+                </div>
+              </div>
+              <div class="quick-card-arrow">&gt;</div>
+            </div>
+
+            <!-- Section: Coaching -->
+            <div class="section-title-tag">
+              <span class="yellow-bullet"></span>
+              <span>HayaPala Academy</span>
+            </div>
+
+            <div class="coaching-card" onclick="showToast('Module de coaching avec les pros du Padel disponible !', 'info')">
+              <div class="coaching-left">
+                <div class="coaching-icon-wrap">🎓</div>
+                <div>
+                  <div class="coaching-title">Cours particuliers & Collectifs</div>
+                  <div class="coaching-sub">Perfectionnez votre vibora et bandeha avec nos coachs</div>
+                </div>
+              </div>
+              <div class="quick-card-arrow">&gt;</div>
+            </div>
+          </section>
+
+          <!-- --------------------------------------------------------------
+               SCREEN 2: REJOINDRE UNE PARTIE (MATCHES DISPONIBLES)
+               -------------------------------------------------------------- -->
+          <section class="app-screen" id="screen-join-match">
+            <div class="screen-header-bar">
+              <button class="back-btn-icon back-to-home-btn">&larr;</button>
+              <div class="screen-header-title">Rejoindre une partie</div>
+              <button class="filter-btn-icon" onclick="showToast('Filtres de niveau (1.0 à 7.0) appliqués', 'info')">≡</button>
+            </div>
+
+            <!-- Tabs: Disponibles vs Mes matches -->
+            <div class="match-tabs-toggle">
+              <button class="match-tab active" id="tabMatchesAvailable">Disponibles</button>
+              <button class="match-tab" id="tabMatchesMy">Mes matches</button>
+            </div>
+
+            <!-- Matches List Container -->
+            <div id="matchesListContainer">
+              <!-- Dynamically populated via JS -->
+            </div>
+
+            <!-- Floating CTA: Lancer un match -->
+            <button class="btn-launch-match-cta" id="btnLaunchMatchCta">
+              <span>+</span> Lancer un match
+            </button>
+          </section>
+
+          <!-- --------------------------------------------------------------
+               SCREEN 3: RÉSERVER VOTRE TERRAIN (CLUBS DIRECTORY)
+               -------------------------------------------------------------- -->
+          <section class="app-screen" id="screen-book-court">
+            <div class="screen-header-bar">
+              <button class="back-btn-icon back-to-home-btn">&larr;</button>
+              <div class="screen-header-title">Réserver votre terrain</div>
+              <button class="filter-btn-icon" onclick="showToast('Filtres de terrains appliqués', 'info')">≡</button>
+            </div>
+
+            <!-- Search Bar & View Toggle -->
+            <div class="search-controls-bar">
+              <div class="search-input-wrap">
+                <span>🔍</span>
+                <input type="text" id="clubSearchInput" placeholder="Rechercher un terrain (La Soukra, Lac, Borj Louzir...)" />
+              </div>
+              <div class="search-view-toggle">
+                <button class="view-icon-toggle" title="Vue Carte" onclick="showToast('Vue carte interactive centrée sur Tunis / Grand Tunis', 'info')">🗺️</button>
+                <button class="view-icon-toggle active" title="Vue Liste">📑</button>
+              </div>
+            </div>
+
+            <!-- Clubs List Container -->
+            <div id="clubsListContainer">
+              <!-- Dynamically populated via JS -->
+            </div>
+          </section>
+
+          <!-- --------------------------------------------------------------
+               SCREEN 4: MON PROFIL (PLAYER STATS & HISTORY)
+               -------------------------------------------------------------- -->
+          <section class="app-screen" id="screen-profile">
+            <div class="profile-top-bar">
+              <div style="width: 34px;"></div>
+              <div class="screen-header-title">Mon Profil HayaPala</div>
+              <button class="back-btn-icon" title="Modifier le profil" onclick="showToast('Édition du profil de Moslem Gouia', 'info')">✏️</button>
+            </div>
+
+            <div class="profile-avatar-center">
+              <div class="profile-large-avatar">
+                <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:38px;">🎾</div>
+              </div>
+              <div class="profile-user-name" id="profileUserName">Moslem Gouia</div>
+            </div>
+
+            <!-- 4 Badges Row -->
+            <div class="profile-badges-row">
+              <div class="profile-quick-badge" id="profilePointsBadge">
+                <div class="badge-icon-circle">⚡</div>
+                <div class="badge-label-text" id="profilePointsBadgeValue">10.00 Points</div>
+              </div>
+              <div class="profile-quick-badge" onclick="showToast('Vous avez 3 nouvelles notifications HayaPala', 'info')">
+                <div class="badge-icon-circle">🔔</div>
+                <div class="badge-label-text">Notifications</div>
+              </div>
+              <div class="profile-quick-badge" onclick="navigateToScreen('screen-book-court')">
+                <div class="badge-icon-circle">❤️</div>
+                <div class="badge-label-text">Favoris</div>
+              </div>
+              <div class="profile-quick-badge">
+                <div class="badge-icon-circle">🎾</div>
+                <div class="badge-label-text">Padel Pro</div>
+              </div>
+            </div>
+
+            <!-- Informations sur le Jeu -->
+            <div class="section-title-tag">
+              <span class="yellow-bullet"></span>
+              <span>Informations sur le Jeu</span>
+            </div>
+
+            <div class="info-game-box">
+              <div class="info-game-row">
+                <span class="info-game-icon">🎾</span>
+                <span>Padel Game</span>
+              </div>
+              <div class="info-game-row">
+                <span class="info-game-icon">🏁</span>
+                <span>Nombre de matchs joués : <strong id="profileMatchesCount">28</strong></span>
+              </div>
+              <div class="info-game-row">
+                <span class="info-game-icon">⭐</span>
+                <span>Niveau certifié : <strong id="profileLevel" style="color: var(--hayapala-volt);">5.49</strong></span>
+              </div>
+              <div class="info-game-row">
+                <span class="info-game-icon">🛡️</span>
+                <div class="reliability-gauge-container">
+                  <span id="profileReliability">45.74% Fiabilité du niveau</span>
+                  <div class="battery-gauge">
+                    <div class="battery-fill"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bouton Simulateur d'Algorithme de Niveau -->
+            <button class="btn-itinerary" id="btnOpenRatingSimulator" style="width: 100%; margin-bottom: 20px; border-color: var(--hayapala-volt); color: var(--hayapala-volt); background: rgba(204, 255, 0, 0.08); font-weight: 800; font-size: 13px;">
+              <span>⚡</span> Tester l'Algorithme de Niveau (Elo / Glicko)
+            </button>
+
+            <!-- Matches History List -->
+            <div class="section-title-tag">
+              <span class="yellow-bullet"></span>
+              <span>Historique des Matchs</span>
+            </div>
+
+            <div id="profileHistoryContainer">
+              <!-- Populated via JS -->
+            </div>
+          </section>
+
+          <!-- --------------------------------------------------------------
+               SCREEN 5: PARAMÈTRES (SETTINGS & WALLET)
+               -------------------------------------------------------------- -->
+          <section class="app-screen" id="screen-settings">
+            <div class="screen-header-bar" style="justify-content: center;">
+              <div class="screen-header-title">Paramètres HayaPala</div>
+            </div>
+
+            <div class="settings-menu-list">
+              <div class="settings-card-item" id="settingsRechargePoints">
+                <div class="settings-item-left">
+                  <span class="settings-icon">💳</span>
+                  <span>Recharger mes points HayaPala</span>
+                </div>
+                <span class="settings-chevron">&gt;</span>
+              </div>
+
+              <div class="settings-card-item" id="settingsTransferPoints">
+                <div class="settings-item-left">
+                  <span class="settings-icon">⇆</span>
+                  <span>Transfert des points entre coéquipiers</span>
+                </div>
+                <span class="settings-chevron">&gt;</span>
+              </div>
+
+              <div class="settings-card-item" onclick="showToast('Conditions Générales d\'Utilisation de HayaPala', 'info')">
+                <div class="settings-item-left">
+                  <span class="settings-icon">📄</span>
+                  <span>Conditions d'utilisation</span>
+                </div>
+                <span class="settings-chevron">&gt;</span>
+              </div>
+
+              <div class="settings-card-item" onclick="showToast('Politique de confidentialité HayaPala conforme RGPD / INPDP', 'info')">
+                <div class="settings-item-left">
+                  <span class="settings-icon">📋</span>
+                  <span>Politique de confidentialité</span>
+                </div>
+                <span class="settings-chevron">&gt;</span>
+              </div>
+
+              <div class="settings-card-item danger-item" onclick="showToast('Vous êtes déconnecté', 'info')">
+                <div class="settings-item-left">
+                  <span class="settings-icon">🚪</span>
+                  <span>Se déconnecter</span>
+                </div>
+              </div>
+
+              <div class="settings-card-item danger-item" onclick="showToast('Demande de suppression de compte envoyée', 'info')">
+                <div class="settings-item-left">
+                  <span class="settings-icon">🗑️</span>
+                  <span>Supprimer mon compte</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Contactez-nous WhatsApp -->
+            <div class="contact-whatsapp-box">
+              <div class="contact-sub-title">Support & Conciergerie HayaPala</div>
+              <a href="https://wa.me/21622227041" target="_blank" class="whatsapp-link-btn" rel="noopener noreferrer">
+                <span class="whatsapp-icon">💬</span>
+                <div>
+                  <div style="font-size: 11px; color: var(--text-secondary);">WhatsApp Support Direct</div>
+                  <strong style="color: var(--badge-whatsapp);">+216 22 227 041</strong>
+                </div>
+              </a>
+            </div>
+          </section>
+
+        </div>
+
+        <!-- HayaPala Bottom Navigation Bar -->
+        <nav class="bottom-nav-bar">
+          <button class="nav-item-btn active" data-screen="screen-home" id="navBtnHome">
+            <span class="nav-icon">🏠</span>
+            <span>Accueil</span>
+          </button>
+          
+          <button class="nav-item-btn" data-screen="screen-join-match" id="navBtnMatches">
+            <span class="nav-icon">🎾</span>
+            <span>Mes matchs</span>
+          </button>
+
+          <!-- Central Floating Action Emblem -->
+          <div class="nav-center-action" id="navCenterEmblem" title="Action rapide HayaPala">
+            <img src="/images/tennis-ball.svg" alt="HayaPala Tennis Ball" />
+          </div>
+
+          <button class="nav-item-btn" data-screen="screen-profile" id="navBtnProfile">
+            <span class="nav-icon">👤</span>
+            <span>Mon profil</span>
+          </button>
+
+          <button class="nav-item-btn" data-screen="screen-settings" id="navBtnSettings">
+            <span class="nav-icon">⚙️</span>
+            <span>Paramètres</span>
+          </button>
+        </nav>
+
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         VIEW MODE 2: CLUB PRO DASHBOARD (HayaPala Club Pro)
+         ==================================================================== -->
+    <div class="backoffice-viewport" id="backofficeDashboard" style="display: none;">
+      
+      <!-- Top Admin Bar -->
+      <div class="admin-top-nav">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <div class="hayapala-logo-badge">
+            <div class="pala-icon-symbol"><img src="/images/tennis-ball.svg" alt="HayaPala Tennis Ball" /></div>
+            <div class="hayapala-brand-text">HayaPala <span style="font-size: 13px; color: var(--hayapala-cyan); font-weight: 700;">Club Pro</span></div>
+          </div>
+          <select class="admin-club-select-dropdown" id="adminClubSelect">
+            <option value="club_connection">Padel Connection (Borj Louzir)</option>
+            <option value="club_arena">Arena Padel Premium (La Soukra)</option>
+            <option value="club_country">Padel Country Club (Lac Palace)</option>
+          </select>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <span style="font-size: 13px; color: var(--text-secondary);">Directeur Sportif : <strong style="color: var(--text-white);">Hassen K.</strong></span>
+          <button class="btn-reset-demo" onclick="switchViewMode('backoffice-login')">Déconnexion</button>
+        </div>
+      </div>
+
+      <!-- Quick KPI Cards -->
+      <div class="admin-kpis-strip">
+        <div class="admin-kpi-card">
+          <div class="kpi-label">Réservations Aujourd'hui</div>
+          <div class="kpi-value" style="color: var(--hayapala-volt);">14 Créneaux</div>
+        </div>
+        <div class="admin-kpi-card">
+          <div class="kpi-label">Taux d'Occupation</div>
+          <div class="kpi-value" style="color: var(--hayapala-cyan);">88.5%</div>
+        </div>
+        <div class="admin-kpi-card">
+          <div class="kpi-label">Heures Jouées</div>
+          <div class="kpi-value">21.0 Heures</div>
+        </div>
+        <div class="admin-kpi-card">
+          <div class="kpi-label">Chiffre d'Affaires du Jour</div>
+          <div class="kpi-value" style="color: #34D399;">1,120 DT</div>
+        </div>
+      </div>
+
+      <!-- Interactive Timetable Grid Container -->
+      <div class="schedule-container">
+        <div class="schedule-header-actions">
+          <div>
+            <h2 style="font-size: 20px; font-weight: 900; color: var(--text-white); font-family: 'Outfit', sans-serif;">Planning Interactif des Terrains</h2>
+            <p style="font-size: 12px; color: var(--text-secondary);">Cliquez sur une case libre pour enregistrer un joueur de passage ou bloquer une piste.</p>
+          </div>
+          <button class="btn-new-admin-booking" onclick="openBookingModalForClub('club_connection')">
+            <span>+</span> Nouvelle Réservation Directe
+          </button>
+        </div>
+
+        <table class="timetable-grid-table">
+          <thead>
+            <tr id="adminTimetableHeadRow">
+              <!-- Dynamically populated -->
+            </tr>
+          </thead>
+          <tbody id="adminTimetableBody">
+            <!-- Dynamically populated with bookings -->
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+
+    <!-- ====================================================================
+         VIEW MODE 3: PORTAIL LOGIN (HayaPala Club Pro Login)
+         ==================================================================== -->
+    <div class="backoffice-viewport" id="backofficeLogin" style="display: none;">
+      <div class="login-view-wrapper">
+        <div class="login-box-card">
+          <div style="display: flex; justify-content: center; margin-bottom: 18px;">
+            <div class="hayapala-logo-badge">
+              <div class="pala-icon-symbol" style="width: 52px; height: 52px;"><img src="/images/tennis-ball.svg" alt="HayaPala Tennis Ball" /></div>
+              <div class="hayapala-brand-text" style="font-size: 28px;">HayaPala</div>
+            </div>
+          </div>
+          <div class="login-title-msg">Espace Club & Gestionnaire</div>
+
+          <form id="loginFormAdmin">
+            <div class="login-input-group">
+              <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Email professionnel</label>
+              <input type="email" class="login-field" placeholder="manager@hayapala.com" value="manager@hayapala.com" required />
+            </div>
+
+            <div class="login-input-group">
+              <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Mot de passe</label>
+              <input type="password" id="adminPassword" class="login-field" placeholder="Mot de passe" value="••••••••" required />
+              <span class="input-addon-icon" id="togglePassword"><span>👁️</span></span>
+            </div>
+
+            <div class="login-options-row">
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                <input type="checkbox" checked />
+                <span>Se souvenir de moi</span>
+              </label>
+              <a href="#" onclick="showToast('Lien de réinitialisation envoyé par email', 'info')">Mot de passe oublié ?</a>
+            </div>
+
+            <button type="submit" class="btn-primary-login">Accéder à HayaPala Club Pro</button>
+          </form>
+
+          <div style="margin-top: 20px; font-size: 11px; color: var(--text-muted);">
+            Plateforme propulsée par <strong>HayaPala Architecture</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ======================================================================
+       INTERACTIVE MODALS
+       ====================================================================== -->
+
+  <!-- Modal 1: Recharger mes points -->
+  <div class="modal-overlay" id="modal-recharge-points">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">Recharger mes points HayaPala</div>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <div style="background: rgba(204, 255, 0, 0.08); border: 1px solid rgba(204, 255, 0, 0.25); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; font-size: 13px;">
+        <span style="color: var(--hayapala-volt); font-weight: 800;">Taux fixe :</span> <strong>1 Dinar Tunisien (DT) = 1 Point HayaPala</strong>
+      </div>
+
+      <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+        1. Choisissez le montant à recharger
+      </p>
+
+      <div class="pack-recharge-grid">
+        <div class="pack-card" data-points="25">
+          <div>
+            <div class="pack-points">25.00 Points</div>
+            <div style="font-size: 11px; color: var(--text-secondary);">Votre part pour 1 match (90 min)</div>
+          </div>
+          <div class="pack-price">25 DT</div>
+        </div>
+
+        <div class="pack-card" data-points="50">
+          <div>
+            <div class="pack-points">50.00 Points</div>
+            <div style="font-size: 11px; color: var(--text-secondary);">Idéal pour 2 parties</div>
+          </div>
+          <div class="pack-price">50 DT</div>
+        </div>
+
+        <div class="pack-card selected" data-points="100">
+          <div>
+            <div class="pack-points">100.00 Points <span style="font-size: 10px; background: rgba(204, 255, 0, 0.2); color: var(--hayapala-volt); padding: 2px 6px; border-radius: 4px; font-weight: 800;">+10 Bonus</span></div>
+            <div style="font-size: 11px; color: var(--text-secondary);">Pack le plus populaire (4 matchs)</div>
+          </div>
+          <div class="pack-price">100 DT</div>
+        </div>
+
+        <div class="pack-card" data-points="250">
+          <div>
+            <div class="pack-points">250.00 Points <span style="font-size: 10px; background: rgba(0, 245, 212, 0.2); color: var(--hayapala-cyan); padding: 2px 6px; border-radius: 4px; font-weight: 800;">+35 Bonus</span></div>
+            <div style="font-size: 11px; color: var(--text-secondary);">Pack Compétition / Tournoi</div>
+          </div>
+          <div class="pack-price">250 DT</div>
+        </div>
+      </div>
+
+      <p style="font-size: 12px; color: var(--text-secondary); margin: 16px 0 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+        2. Sélectionnez votre moyen de paiement
+      </p>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 20px;">
+        <label class="pack-card selected payment-method-card" data-method="flouci" style="padding: 10px 8px; text-align: center; flex-direction: column; gap: 4px; cursor: pointer;">
+          <input type="radio" name="payMethod" value="flouci" checked style="display: none;" />
+          <span style="font-size: 22px;">📱</span>
+          <span style="font-size: 12px; font-weight: 800; color: var(--text-white);">Flouci</span>
+          <span style="font-size: 9px; color: var(--hayapala-cyan);">Instantané QR</span>
+        </label>
+
+        <label class="pack-card payment-method-card" data-method="d17" style="padding: 10px 8px; text-align: center; flex-direction: column; gap: 4px; cursor: pointer;">
+          <input type="radio" name="payMethod" value="d17" style="display: none;" />
+          <span style="font-size: 22px;">📮</span>
+          <span style="font-size: 12px; font-weight: 800; color: var(--text-white);">D17</span>
+          <span style="font-size: 9px; color: var(--text-secondary);">La Poste</span>
+        </label>
+
+        <label class="pack-card payment-method-card" data-method="cb" style="padding: 10px 8px; text-align: center; flex-direction: column; gap: 4px; cursor: pointer;">
+          <input type="radio" name="payMethod" value="cb" style="display: none;" />
+          <span style="font-size: 22px;">💳</span>
+          <span style="font-size: 12px; font-weight: 800; color: var(--text-white);">Carte Bancaire</span>
+          <span style="font-size: 9px; color: var(--text-secondary);">GNT / CMI</span>
+        </label>
+      </div>
+
+      <button class="btn-primary-login" id="btnConfirmRecharge">Valider le paiement sécurisé</button>
+    </div>
+  </div>
+
+  <!-- Modal 2: Transfert de points -->
+  <div class="modal-overlay" id="modal-transfer-points">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">Transférer des points HayaPala</div>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 14px;">
+        Partagez la note d'un terrain avec vos coéquipiers en leur transférant des points instantanément.
+      </p>
+
+      <div class="login-input-group">
+        <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 4px;">Numéro du destinataire ou pseudo</label>
+        <input type="text" id="transferRecipientInput" class="login-field" placeholder="+216 22 ... ou pseudo" value="+216 98 123 456" />
+      </div>
+
+      <div class="login-input-group">
+        <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 4px;">Montant en points</label>
+        <input type="number" id="transferAmountInput" class="login-field" value="10" min="1" max="100" />
+      </div>
+
+      <button class="btn-primary-login" id="btnConfirmTransfer">Envoyer les points</button>
+    </div>
+  </div>
+
+  <!-- Modal 3: Confirmation de Rejoindre un match -->
+  <div class="modal-overlay" id="modal-confirm-join">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">Rejoindre la partie</div>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <div style="text-align: center; padding: 14px 0 22px;">
+        <div style="font-size: 44px; margin-bottom: 8px;">🎾</div>
+        <div style="font-size: 18px; font-weight: 900; color: var(--text-white); font-family: 'Outfit', sans-serif;" id="confirmJoinClubName">Padel Country Club</div>
+        <div style="font-size: 13px; color: var(--hayapala-cyan); margin-top: 4px;" id="confirmJoinTime">Samedi 17 oct. (12:00 - 13:30)</div>
+        <div style="margin-top: 14px; font-size: 22px; font-weight: 900; color: var(--hayapala-volt); font-family: 'Outfit', sans-serif;" id="confirmJoinCost">10.0 Points</div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <button class="btn-itinerary modal-cancel-btn">Annuler</button>
+        <button class="btn-book-court" id="btnExecuteJoinMatch">Confirmer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 4: Lancer un match public -->
+  <div class="modal-overlay" id="modal-create-match">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">Lancer un match public</div>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <form id="formCreateMatch">
+        <div class="login-input-group">
+          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 4px;">Club partenaire</label>
+          <select id="createMatchClubSelect" class="login-field">
+            <option value="club_connection">Padel Connection (Borj Louzir)</option>
+            <option value="club_arena">Arena Padel Premium (La Soukra)</option>
+            <option value="club_country">Padel Country Club (Lac Palace)</option>
+          </select>
+        </div>
+
+        <div class="login-input-group">
+          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 4px;">Horaire de la partie</label>
+          <select id="createMatchTime" class="login-field">
+            <option value="17:00 h - 18:30 h">17:00 h - 18:30 h (90 min)</option>
+            <option value="18:30 h - 20:00 h">18:30 h - 20:00 h (90 min)</option>
+            <option value="20:00 h - 21:30 h">20:00 h - 21:30 h (90 min)</option>
+          </select>
+        </div>
+
+        <div class="login-input-group">
+          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 4px;">Niveau ciblé</label>
+          <select id="createMatchLevelRange" class="login-field">
+            <option value="4.5-5.5">Niveau Intermédiaire (4.5 - 5.5)</option>
+            <option value="5.5-6.5">Niveau Avancé (5.5 - 6.5)</option>
+            <option value="1.0-3.0">Niveau Débutant (1.0 - 3.0)</option>
+          </select>
+        </div>
+
+        <div class="login-input-group">
+          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 4px;">Points par joueur</label>
+          <input type="number" id="createMatchPointsCost" class="login-field" value="20" min="5" max="50" />
+        </div>
+
+        <button type="submit" class="btn-primary-login">Publier le match</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 5: Réserver un Terrain -->
+  <div class="modal-overlay" id="modal-book-court">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">Réserver un terrain</div>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <div style="background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border-card); border-radius: 14px; padding: 12px 16px; margin-bottom: 16px;">
+        <div style="font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 800; color: var(--text-white);" id="modalBookClubName">Arena Padel Premium</div>
+        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;" id="modalBookClubAddress">Rue du parc, La Soukra</div>
+        <div style="font-size: 13px; font-weight: 800; color: var(--hayapala-volt); margin-top: 6px;" id="modalBookPointsRate">25 Points / 90 min</div>
+      </div>
+
+      <form id="formConfirmBooking">
+        <div class="login-input-group">
+          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 4px;">Piste de padel</label>
+          <select id="bookCourtSelect" class="login-field">
+            <!-- Populated via JS -->
+          </select>
+        </div>
+
+        <div class="login-input-group">
+          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 4px;">Créneau horaire (90 min)</label>
+          <select id="bookTimeSelect" class="login-field">
+            <option value="15:30 - 17:00">15:30 - 17:00</option>
+            <option value="17:00 - 18:30" selected>17:00 - 18:30</option>
+            <option value="18:30 - 20:00">18:30 - 20:00</option>
+            <option value="20:00 - 21:30">20:00 - 21:30</option>
+            <option value="21:30 - 23:00">21:30 - 23:00</option>
+          </select>
+        </div>
+
+        <div class="login-input-group">
+          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 4px;">Formule de réservation & Paiement</label>
+          <select id="bookTypeSelect" class="login-field">
+            <option value="Partie Ouverte" selected>🎾 Partie Ouverte (Chacun paie sa part : 25 DT / 25 Pts)</option>
+            <option value="Privée">🔒 Terrain Privé (Je règle la totalité : 100 DT / 100 Pts)</option>
+          </select>
+        </div>
+
+        <!-- Dynamic Price Breakdown Box -->
+        <div id="bookingPriceBreakdownBox" style="background: rgba(0, 245, 212, 0.06); border: 1px solid rgba(0, 245, 212, 0.25); border-radius: 12px; padding: 12px 14px; margin-bottom: 16px; font-size: 12px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span style="color: var(--text-secondary);">Tarif total du court (90 min) :</span>
+            <strong style="color: var(--text-white);">100 DT (100 Pts)</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span style="color: var(--text-secondary);">Votre part individuelle :</span>
+            <strong style="color: var(--hayapala-volt); font-size: 14px;" id="bookingShareDue">25.0 Points (25 DT)</strong>
+          </div>
+          <div style="font-size: 11px; color: var(--hayapala-cyan); margin-top: 4px;" id="bookingShareNote">
+            ✓ Les 3 autres joueurs régleront chacun 25 DT directement sur HayaPala en rejoignant la partie.
+          </div>
+        </div>
+
+        <div class="login-input-group">
+          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 4px;">Nom du réservataire</label>
+          <input type="text" id="bookClientName" class="login-field" value="Moslem Gouia" />
+        </div>
+
+        <div class="login-input-group">
+          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 4px;">Téléphone de confirmation</label>
+          <input type="text" id="bookClientPhone" class="login-field" value="+216 22 227 041" />
+        </div>
+
+        <button type="submit" class="btn-primary-login" id="btnSubmitBookCourt">Valider et payer ma part (25 Pts)</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 6: Action Rapide (Emblème Central) -->
+  <div class="modal-overlay" id="modal-quick-action">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">Action Rapide HayaPala</div>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <button class="settings-card-item" onclick="closeAllModals(); navigateToScreen('screen-book-court');">
+          <div class="settings-item-left">
+            <span class="settings-icon">📞</span>
+            <span>Réserver un terrain de padel</span>
+          </div>
+          <span class="settings-chevron">&gt;</span>
+        </button>
+
+        <button class="settings-card-item" onclick="closeAllModals(); openModal('modal-create-match');">
+          <div class="settings-item-left">
+            <span class="settings-icon">🎾</span>
+            <span>Lancer un nouveau match public</span>
+          </div>
+          <span class="settings-chevron">&gt;</span>
+        </button>
+
+        <button class="settings-card-item" onclick="closeAllModals(); openModal('modal-recharge-points');">
+          <div class="settings-item-left">
+            <span class="settings-icon">⚡</span>
+            <span>Recharger mon portefeuille de points</span>
+          </div>
+          <span class="settings-chevron">&gt;</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 7: Simulateur d'Algorithme de Niveau -->
+  <div class="modal-overlay" id="modal-rating-simulator">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">Simulateur de Niveau Elo Padel</div>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">
+        Testez comment l'algorithme HayaPala calcule la variation de votre niveau (1.0 à 8.0) et votre fiabilité (0 à 100%) selon le résultat du match.
+      </p>
+
+      <div style="background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; font-size: 13px;">
+        <div>Joueur : <strong style="color: var(--text-white);">Moslem Gouia</strong> (Niveau actuel : <span id="simPlayerCurrentLevel" style="color: var(--hayapala-volt); font-weight: 800;">5.49</span>, Fiabilité : <span id="simPlayerCurrentRel">45.74%</span>)</div>
+      </div>
+
+      <div class="login-input-group">
+        <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 4px;">Niveau moyen de votre équipe (2 joueurs)</label>
+        <select id="simTeamLevelSelect" class="login-field">
+          <option value="5.25" selected>5.25 (Moslem 5.49 + Partenaire 5.00)</option>
+          <option value="5.75">5.75 (Moslem 5.49 + Partenaire 6.00)</option>
+          <option value="4.75">4.75 (Moslem 5.49 + Partenaire 4.00)</option>
+        </select>
+      </div>
+
+      <div class="login-input-group">
+        <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 4px;">Niveau moyen de l'équipe adverse</label>
+        <select id="simOpponentLevelSelect" class="login-field">
+          <option value="5.75" selected>5.75 (Adversaires plus forts)</option>
+          <option value="5.25">5.25 (Adversaires de même niveau)</option>
+          <option value="4.50">4.50 (Adversaires moins forts)</option>
+          <option value="6.50">6.50 (Adversaires très forts)</option>
+        </select>
+      </div>
+
+      <div class="login-input-group">
+        <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 4px;">Score du match</label>
+        <select id="simScoreSelect" class="login-field">
+          <option value="2-1" selected>Victoire serrée (2 sets à 1)</option>
+          <option value="2-0">Victoire nette (2 sets à 0)</option>
+          <option value="1-2">Défaite serrée (1 set à 2)</option>
+          <option value="0-2">Défaite nette (0 set à 2)</option>
+        </select>
+      </div>
+
+      <!-- Live Calculation Preview Box -->
+      <div style="background: rgba(204, 255, 0, 0.05); border: 1.5px solid rgba(204, 255, 0, 0.25); border-radius: 14px; padding: 14px; margin-bottom: 16px;">
+        <div style="font-size: 11px; font-weight: 800; color: var(--hayapala-volt); text-transform: uppercase; letter-spacing: 0.5px;">Résultat du Calcul Algorithmique</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+          <span style="font-size: 13px; color: var(--text-secondary);">Probabilité estimée de victoire :</span>
+          <strong id="simExpectedWinRate" style="font-size: 14px; color: var(--text-white);">20.3%</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+          <span style="font-size: 13px; color: var(--text-secondary);">Nouveau niveau :</span>
+          <strong id="simNewLevelResult" style="font-size: 16px; color: var(--hayapala-volt);">5.66 (+0.17)</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+          <span style="font-size: 13px; color: var(--text-secondary);">Nouvelle fiabilité :</span>
+          <strong id="simNewRelResult" style="font-size: 14px; color: var(--hayapala-cyan);">47.64% (+1.9%)</strong>
+        </div>
+      </div>
+
+      <button class="btn-primary-login" id="btnApplySimulatedResult">
+        Valider et enregistrer ce match sur mon profil
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal: Classement des Paires Officielles (Duo ELO & Défis) -->
+  <div class="modal-overlay" id="modal-official-teams">
+    <div class="modal-card" style="max-width: 480px;">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title">🏆 Paires & Défis Duo (ELO)</div>
+          <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">Classement officiel des paires et défis inter-duos</div>
+        </div>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <!-- User Active Pair Highlight Card -->
+      <div class="user-duo-hero-card" id="userDuoHeroCard">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div>
+            <span class="user-duo-rank-pill">#3 au Classement Général</span>
+            <div class="user-duo-name">Les Smécheurs du Nord</div>
+            <div class="user-duo-players">🎾 Moslem Gouia (5.49) & 👨 Ahmed Horrigue (5.00)</div>
+          </div>
+          <div class="user-duo-elo-badge">
+            <div style="font-size: 10px; opacity:0.8;">ELO DUO</div>
+            <div style="font-size: 20px; font-weight:900; color:var(--hayapala-volt);">1550</div>
+          </div>
+        </div>
+        <div class="user-duo-stats-row">
+          <div><span>Victoires :</span> <strong>12V - 3D</strong></div>
+          <div><span>Taux :</span> <strong style="color:#10B981;">80%</strong></div>
+          <div><span>Série :</span> <strong style="color:var(--hayapala-volt);">W3</strong></div>
+        </div>
+      </div>
+
+      <!-- Tab toggle: Classement vs Former une Paire -->
+      <div class="match-tabs-toggle" style="margin-bottom: 14px;">
+        <button class="match-tab active" id="tabDuoRanking">Classement ELO</button>
+        <button class="match-tab" id="tabDuoCreate">Former une Paire</button>
+      </div>
+
+      <!-- Tab 1 Content: Leaderboard List -->
+      <div id="duoRankingListContainer">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Tab 2 Content: Search Registered Partner & Form Duo Pair -->
+      <div id="duoFormContainer" style="display: none;">
+        <!-- Step 1: Select Registered Player -->
+        <div class="login-input-group">
+          <label style="font-size: 12px; font-weight:700; color:var(--text-secondary); display:block; margin-bottom:4px;">
+            1. Rechercher votre partenaire parmi les joueurs inscrits
+          </label>
+          <div class="search-input-wrap" style="margin-bottom: 8px;">
+            <span>🔍</span>
+            <input type="text" id="partnerSearchQuery" placeholder="Rechercher par nom (ex: Ahmed, Karim, Dhouib...)" autocomplete="off" />
+          </div>
+
+          <!-- Selected Partner Highlight Card (hidden until selected) -->
+          <div id="selectedPartnerCard" class="selected-partner-highlight-card" style="display: none;">
+            <div style="display:flex; align-items:center; gap: 10px;">
+              <div id="selectedPartnerAvatar" style="font-size:26px;">👨</div>
+              <div>
+                <div id="selectedPartnerName" style="font-weight:800; font-size:13px; color:var(--text-white);">Ahmed Horrigue</div>
+                <div style="font-size:11px; color:var(--text-secondary);">
+                  Niveau certifié : <strong id="selectedPartnerLevel" style="color:var(--hayapala-volt);">⭐ 5.00</strong> • <span id="selectedPartnerClub">Padel Connection</span>
+                </div>
+              </div>
+            </div>
+            <button type="button" class="btn-change-partner" id="btnChangePartner">Changer</button>
+          </div>
+
+          <!-- Directory list of registered players -->
+          <div id="registeredPlayersDirectory" class="players-directory-scrollbox">
+            <!-- Populated dynamically via JS -->
+          </div>
+        </div>
+
+        <form id="formCreateDuo">
+          <input type="hidden" id="selectedPartnerId" value="" />
+
+          <!-- Step 2: Team Name -->
+          <div class="login-input-group">
+            <label style="font-size: 12px; font-weight:700; color:var(--text-secondary); display:block; margin-bottom:4px;">
+              2. Nommez votre Paire Officielle
+            </label>
+            <input type="text" id="duoTeamNameInput" class="login-field" placeholder="Ex: Carthage Smashers, Les Smécheurs du Nord..." required />
+          </div>
+
+          <!-- Step 3: Home Club -->
+          <div class="login-input-group">
+            <label style="font-size: 12px; font-weight:700; color:var(--text-secondary); display:block; margin-bottom:4px;">
+              3. Club d'attache principal
+            </label>
+            <select id="duoHomeClubSelect" class="login-field">
+              <option value="Arena Padel Premium">Arena Padel Premium (La Soukra)</option>
+              <option value="Padel Connection" selected>Padel Connection (Borj Louzir)</option>
+              <option value="Padel Country Club">Padel Country Club (Gammarth)</option>
+            </select>
+          </div>
+
+          <!-- Live Duo Projection Card -->
+          <div class="duo-live-projection-box">
+            <div style="font-size:10px; font-weight:800; color:var(--hayapala-volt); text-transform:uppercase; letter-spacing:0.5px;">Aperçu du Binôme HayaPala</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; font-size:12px;">
+              <span style="color:var(--text-secondary);">Joueur 1 (Vous) :</span>
+              <strong style="color:var(--text-white);">Moslem Gouia (⭐ 5.49)</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; font-size:12px;">
+              <span style="color:var(--text-secondary);">Joueur 2 (Partenaire) :</span>
+              <strong id="duoProjPartner" style="color:var(--hayapala-cyan);">Ahmed Horrigue (⭐ 5.00)</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; font-size:12px; border-top:1px solid rgba(255,255,255,0.08); padding-top:6px;">
+              <span style="color:var(--text-secondary);">Niveau moyen de la Paire :</span>
+              <strong id="duoProjLevel" style="color:var(--text-white);">5.25</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; font-size:12px;">
+              <span style="color:var(--text-secondary);">Cote ELO initiale calculée :</span>
+              <strong id="duoProjElo" style="color:var(--hayapala-volt); font-size:14px; font-weight:900;">1525 ELO</strong>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-primary-login" id="btnSubmitCreateDuo" style="margin-top: 12px;">
+            Former la Paire Officielle
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Global Toast Feedback -->
+  <div class="toast-notice" id="globalToastNotice">
+    <span>✅</span> <span>Action effectuée avec succès !</span>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    // Register PWA Service Worker for standalone mobile installation
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').then((reg) => {
+          console.log('HayaPala Service Worker registered:', reg.scope);
+        }).catch((err) => {
+          console.warn('HayaPala SW registration failed:', err);
+        });
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <defs>
+    <!-- Radial lighting for 3D sphere volume -->
+    <radialGradient id="tennisBallGrad" cx="36%" cy="32%" r="68%">
+      <stop offset="0%" stop-color="#F2FF66" />
+      <stop offset="35%" stop-color="#CCFF00" />
+      <stop offset="75%" stop-color="#A2D600" />
+      <stop offset="100%" stop-color="#709900" />
+    </radialGradient>
+    
+    <!-- Subtle drop shadow -->
+    <filter id="ballGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#CCFF00" flood-opacity="0.45" />
+    </filter>
+
+    <!-- Inner sphere shadow for depth -->
+    <radialGradient id="innerShade" cx="50%" cy="50%" r="50%">
+      <stop offset="85%" stop-color="#000000" stop-opacity="0" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.3" />
+    </radialGradient>
+  </defs>
+
+  <!-- Ball Sphere Body -->
+  <circle cx="50" cy="50" r="46" fill="url(#tennisBallGrad)" filter="url(#ballGlow)" />
+  <circle cx="50" cy="50" r="46" fill="url(#innerShade)" />
+
+  <!-- Iconic Curved Tennis / Padel Ball Seams (White with subtle felt groove) -->
+  <!-- Left Seam -->
+  <path d="M 21,17 C 43,30 43,70 21,83" 
+        fill="none" 
+        stroke="#597A00" 
+        stroke-width="5" 
+        stroke-linecap="round" 
+        opacity="0.35" />
+  <path d="M 21,17 C 43,30 43,70 21,83" 
+        fill="none" 
+        stroke="#FFFFFF" 
+        stroke-width="3.5" 
+        stroke-linecap="round" 
+        opacity="0.95" />
+
+  <!-- Right Seam -->
+  <path d="M 79,17 C 57,30 57,70 79,83" 
+        fill="none" 
+        stroke="#597A00" 
+        stroke-width="5" 
+        stroke-linecap="round" 
+        opacity="0.35" />
+  <path d="M 79,17 C 57,30 57,70 79,83" 
+        fill="none" 
+        stroke="#FFFFFF" 
+        stroke-width="3.5" 
+        stroke-linecap="round" 
+        opacity="0.95" />
+
+  <!-- Subtle light sheen on top-left -->
+  <ellipse cx="36" cy="24" rx="14" ry="7" transform="rotate(-30 36 24)" fill="#FFFFFF" opacity="0.3" />
+</svg>

@@ -1,0 +1,502 @@
+{
+  "user": {
+    "id": "user_moslem",
+    "name": "Moslem Gouia",
+    "email": "moslem.gouia@example.com",
+    "avatar": "/images/bg_paddle.png",
+    "points": 355,
+    "phone": "+216 22 227 041",
+    "level": 5.5,
+    "levelReliability": 47.64,
+    "matchesPlayed": 29,
+    "sport": "Padel Game",
+    "notificationsCount": 3,
+    "favorites": [
+      "club_arena",
+      "club_country"
+    ]
+  },
+  "communityPlayers": [
+    { "id": "usr_ahmed", "name": "Ahmed Horrigue", "level": 5.00, "reliability": 62.0, "avatar": "👨", "club": "Padel Connection", "city": "La Soukra", "matches": 42 },
+    { "id": "usr_karim", "name": "Karim Arfaoui", "level": 5.20, "reliability": 55.4, "avatar": "🏃", "club": "Arena Padel Premium", "city": "La Soukra", "matches": 31 },
+    { "id": "usr_dhouib", "name": "Dhouib Med Amine", "level": 6.90, "reliability": 78.5, "avatar": "🧔", "club": "Padel Connection", "city": "Borj Louzir", "matches": 89 },
+    { "id": "usr_ezzedine", "name": "Ezzedine Fitouri", "level": 6.30, "reliability": 71.0, "avatar": "🏋️", "club": "Padel Connection", "city": "La Marsa", "matches": 64 },
+    { "id": "usr_kotrane", "name": "Kotrane Oussama", "level": 5.80, "reliability": 68.2, "avatar": "👨", "club": "Arena Padel Premium", "city": "Gammarth", "matches": 53 },
+    { "id": "usr_krima", "name": "krima mohamed Bilel", "level": 8.00, "reliability": 94.0, "avatar": "👨", "club": "Arena Padel Premium", "city": "Tunis", "matches": 120 },
+    { "id": "usr_ecoincon", "name": "Écoinçon Fabian", "level": 7.00, "reliability": 82.0, "avatar": "🧔", "club": "Arena Padel Premium", "city": "La Marsa", "matches": 75 },
+    { "id": "usr_mariem", "name": "snoussi mariem", "level": 2.70, "reliability": 40.0, "avatar": "👩", "club": "Padel Country Club", "city": "Lac 2", "matches": 14 },
+    { "id": "usr_malek", "name": "Malek A", "level": 1.60, "reliability": 35.0, "avatar": "👩", "club": "Padel Country Club", "city": "Gammarth", "matches": 9 },
+    { "id": "usr_challouf", "name": "challouf youssef", "level": 3.70, "reliability": 48.0, "avatar": "👤", "club": "Padel Connection", "city": "Ariana", "matches": 22 },
+    { "id": "usr_anis", "name": "Anis Ben Salah", "level": 4.80, "reliability": 52.0, "avatar": "👨", "club": "Arena Padel Premium", "city": "La Soukra", "matches": 27 },
+    { "id": "usr_mehdi", "name": "mehdi mehdi", "level": 6.00, "reliability": 65.0, "avatar": "👤", "club": "Arena Padel Premium", "city": "Tunis", "matches": 45 }
+  ],
+  "clubs": [
+    {
+      "id": "club_arena",
+      "name": "Arena Padel Premium",
+      "sport": "Padel",
+      "address": "Rue du parc, La Soukra",
+      "schedule": "Samedi: Du 00:00 h au 00:00 h",
+      "distance": "4.1 km",
+      "logoBadge": "APP",
+      "logoColor": "#111111",
+      "logoTextColor": "#D4AF37",
+      "isFavorite": true,
+      "courtsCount": 4,
+      "indoorCourts": 2,
+      "outdoorCourts": 2,
+      "pricePoints": 25,
+      "courts": [
+        {
+          "id": "court_app_1",
+          "name": "Court 1 - Panoramique Indoor",
+          "type": "Indoor",
+          "surface": "Gazon WPT"
+        },
+        {
+          "id": "court_app_2",
+          "name": "Court 2 - Central Indoor",
+          "type": "Indoor",
+          "surface": "Gazon WPT"
+        },
+        {
+          "id": "court_app_3",
+          "name": "Court 3 - Outdoor Pro",
+          "type": "Outdoor",
+          "surface": "Bleu Pro"
+        },
+        {
+          "id": "court_app_4",
+          "name": "Court 4 - Outdoor",
+          "type": "Outdoor",
+          "surface": "Bleu Pro"
+        }
+      ]
+    },
+    {
+      "id": "club_connection",
+      "name": "Padel Connection",
+      "sport": "Padel",
+      "address": "Rue Sanhaja, Borj Louzir",
+      "schedule": "Samedi: Du 06:30 h au 00:30 h",
+      "distance": "2.3 km",
+      "logoBadge": "PC",
+      "logoColor": "#0E3A60",
+      "logoTextColor": "#FFFFFF",
+      "isFavorite": false,
+      "courtsCount": 3,
+      "indoorCourts": 2,
+      "outdoorCourts": 1,
+      "pricePoints": 20,
+      "courts": [
+        {
+          "id": "court_pc_1",
+          "name": "Court A - Indoor Bleu",
+          "type": "Indoor",
+          "surface": "Mondo Supercourt"
+        },
+        {
+          "id": "court_pc_2",
+          "name": "Court B - Indoor Rouge",
+          "type": "Indoor",
+          "surface": "Mondo Supercourt"
+        },
+        {
+          "id": "court_pc_3",
+          "name": "Court C - Outdoor",
+          "type": "Outdoor",
+          "surface": "Standard"
+        }
+      ]
+    },
+    {
+      "id": "club_country",
+      "name": "Padel Country Club",
+      "sport": "Padel",
+      "address": "Lac palace",
+      "schedule": "Samedi: Du 00:00 h au 00:00 h",
+      "distance": "3.7 km",
+      "logoBadge": "PCC",
+      "logoColor": "#1D5F8A",
+      "logoTextColor": "#E8F4FC",
+      "isFavorite": true,
+      "courtsCount": 5,
+      "indoorCourts": 3,
+      "outdoorCourts": 2,
+      "pricePoints": 25,
+      "courts": [
+        {
+          "id": "court_pcc_1",
+          "name": "Court 1 - Club House Indoor",
+          "type": "Indoor",
+          "surface": "WPT Master"
+        },
+        {
+          "id": "court_pcc_2",
+          "name": "Court 2 - Indoor Panoramique",
+          "type": "Indoor",
+          "surface": "WPT Master"
+        },
+        {
+          "id": "court_pcc_3",
+          "name": "Court 3 - Indoor Standard",
+          "type": "Indoor",
+          "surface": "WPT Master"
+        },
+        {
+          "id": "court_pcc_4",
+          "name": "Court 4 - Outdoor Lac",
+          "type": "Outdoor",
+          "surface": "Gazon Synthétique"
+        },
+        {
+          "id": "court_pcc_5",
+          "name": "Court 5 - Outdoor Lac",
+          "type": "Outdoor",
+          "surface": "Gazon Synthétique"
+        }
+      ]
+    }
+  ],
+  "matches": [
+    {
+      "id": "match_101",
+      "clubId": "club_connection",
+      "clubName": "Padel Connection",
+      "distance": "2.3 km",
+      "date": "Samedi 17 oct.",
+      "time": "11:00 h - 12:30 h",
+      "duration": "90 min",
+      "type": "Match public",
+      "courtReserved": true,
+      "levelRange": "1.1-2.1",
+      "pointsCost": 25,
+      "team1": [
+        {
+          "name": "Malek A",
+          "level": 1.6,
+          "avatar": "👩"
+        },
+        {
+          "name": "challouf youssef",
+          "level": 3.7,
+          "avatar": "👤"
+        }
+      ],
+      "team2": [
+        {
+          "name": "krimou malek",
+          "level": 2.8,
+          "avatar": "🏃"
+        },
+        {
+          "name": "snoussi mariem",
+          "level": 2.7,
+          "avatar": "👩"
+        }
+      ],
+      "openSlot": null
+    },
+    {
+      "id": "match_102",
+      "clubId": "club_country",
+      "clubName": "Padel Country Club",
+      "distance": "3.7 km",
+      "date": "Samedi 17 oct.",
+      "time": "12:00 h - 13:30 h",
+      "duration": "90 min",
+      "type": "Match public",
+      "courtReserved": true,
+      "levelRange": "6.4-7.4",
+      "pointsCost": 10,
+      "team1": [
+        {
+          "name": "Dhouib Med Amine",
+          "level": 6.9,
+          "avatar": "🧔"
+        },
+        {
+          "name": "Moslem Gouia",
+          "level": 5.49,
+          "avatar": "🎾"
+        }
+      ],
+      "team2": [
+        {
+          "name": "AHMED HORRIGUE",
+          "level": 5,
+          "avatar": "👨"
+        },
+        {
+          "name": "Ezzedine Fitouri",
+          "level": 6.3,
+          "avatar": "🏋️"
+        }
+      ],
+      "openSlot": null
+    },
+    {
+      "id": "match_103",
+      "clubId": "club_arena",
+      "clubName": "Arena Padel Premium",
+      "distance": "4.1 km",
+      "date": "Dimanche 18 oct.",
+      "time": "18:00 h - 19:30 h",
+      "duration": "90 min",
+      "type": "Match public",
+      "courtReserved": true,
+      "levelRange": "5.0-6.0",
+      "pointsCost": 20,
+      "team1": [
+        {
+          "name": "Moslem Gouia",
+          "level": 5.49,
+          "avatar": "🎾"
+        },
+        {
+          "name": "Moslem Gouia",
+          "level": 5.5,
+          "avatar": "🎾"
+        }
+      ],
+      "team2": [
+        {
+          "name": "Kotrane Oussama",
+          "level": 5.8,
+          "avatar": "👨"
+        },
+        null
+      ],
+      "openSlot": null
+    }
+  ],
+  "userMatchHistory": [
+    {
+      "id": "hist_1792228146031",
+      "date": "Aujourd'hui",
+      "clubName": "Arena Padel Premium",
+      "level": "5.0-6.0",
+      "team1": "Moslem Gouia x Moslem Gouia",
+      "team1Score": 0,
+      "team2": "Kotrane Oussama x Joueur",
+      "team2Score": 0,
+      "result": "En attente"
+    },
+    {
+      "id": "hist_1792226335285",
+      "date": "Aujourd'hui",
+      "clubName": "Padel Connection",
+      "level": "5.8-5.8",
+      "team1": "Karim Arfaoui x Dhouib Med Amine",
+      "team1Score": 2,
+      "team2": "Moslem Gouia x Ahmed Horrigue",
+      "team2Score": 1,
+      "result": "P"
+    },
+    {
+      "id": "hist_1792225383444",
+      "date": "Aujourd'hui",
+      "clubName": "Padel Country Club",
+      "level": "6.4-7.4",
+      "team1": "Dhouib Med Amine x Moslem Gouia",
+      "team1Score": 0,
+      "team2": "AHMED HORRIGUE x Ezzedine Fitouri",
+      "team2Score": 0,
+      "result": "En attente"
+    },
+    {
+      "id": "hist_1",
+      "date": "30-06",
+      "clubName": "Padel Country Club",
+      "level": "4.1-5.1",
+      "team1": "Karim Arfaoui x karoui khalil",
+      "team1Score": 2,
+      "team2": "Moslem Gouia x khelil hechmi",
+      "team2Score": 1,
+      "result": "P"
+    },
+    {
+      "id": "hist_2",
+      "date": "19-06",
+      "clubName": "Arena Padel Premium",
+      "level": "5.1-6.1",
+      "team1": "Karim Arfaoui x zoghlami sofiene",
+      "team1Score": 1,
+      "team2": "Moslem Gouia x Kotrane Oussama",
+      "team2Score": 2,
+      "result": "G"
+    },
+    {
+      "id": "hist_3",
+      "date": "10-06",
+      "clubName": "Padel Connection",
+      "level": "5.2-6.0",
+      "team1": "Moslem Gouia x Ahmed Horrigue",
+      "team1Score": 2,
+      "team2": "Ezzedine Fitouri x Dhouib Med Amine",
+      "team2Score": 0,
+      "result": "G"
+    }
+  ],
+  "tournament": {
+    "title": "HayaPala Masters 2026",
+    "badge": "Join now",
+    "participants": [
+      {
+        "name": "krima mohamed Bilel",
+        "level": 8,
+        "avatar": "👨"
+      },
+      {
+        "name": "Écoinçon Fabian",
+        "level": 7,
+        "avatar": "🧔"
+      },
+      {
+        "name": "mehdi mehdi",
+        "level": 6,
+        "avatar": "👤"
+      }
+    ]
+  },
+  "clubBookings": [
+    {
+      "id": "bkg_1",
+      "clubId": "club_connection",
+      "courtId": "court_pc_1",
+      "courtName": "Court A - Indoor Bleu",
+      "time": "08:30 - 10:00",
+      "clientName": "Anis Ben Salah",
+      "phone": "+216 98 123 456",
+      "status": "confirmed",
+      "points": 100,
+      "pricePerPlayer": 25,
+      "slotsPaid": 4,
+      "slotsTotal": 4,
+      "type": "Privée"
+    },
+    {
+      "id": "bkg_2",
+      "clubId": "club_connection",
+      "courtId": "court_pc_2",
+      "courtName": "Court B - Indoor Rouge",
+      "time": "11:30 - 13:00",
+      "clientName": "Partie Ouverte (Intermédiaires)",
+      "phone": "+216 22 227 041",
+      "status": "open_match",
+      "points": 50,
+      "pricePerPlayer": 25,
+      "slotsPaid": 2,
+      "slotsTotal": 4,
+      "type": "Partie Ouverte"
+    },
+    {
+      "id": "bkg_3",
+      "clubId": "club_connection",
+      "courtId": "court_pc_1",
+      "courtName": "Court A - Indoor Bleu",
+      "time": "17:00 - 18:30",
+      "clientName": "Moslem Gouia",
+      "phone": "+216 22 227 041",
+      "status": "confirmed",
+      "points": 100,
+      "pricePerPlayer": 25,
+      "slotsPaid": 4,
+      "slotsTotal": 4,
+      "type": "Privée"
+    },
+    {
+      "id": "bkg_4",
+      "clubId": "club_connection",
+      "courtId": "court_pc_3",
+      "courtName": "Court C - Outdoor",
+      "time": "18:30 - 20:00",
+      "clientName": "Karim Arfaoui",
+      "phone": "+216 50 889 900",
+      "status": "open_match",
+      "points": 75,
+      "pricePerPlayer": 25,
+      "slotsPaid": 3,
+      "slotsTotal": 4,
+      "type": "Partie Ouverte"
+    }
+  ],
+  "officialTeams": [
+    {
+      "id": "team_legends",
+      "name": "Bandeja Masters",
+      "player1": { "name": "krima mohamed Bilel", "level": 8.00, "avatar": "👨" },
+      "player2": { "name": "Écoinçon Fabian", "level": 7.00, "avatar": "🧔" },
+      "eloRating": 1720,
+      "teamLevel": 7.50,
+      "matchesPlayed": 24,
+      "wins": 21,
+      "losses": 3,
+      "winRate": 88,
+      "badge": "⭐ Légendes",
+      "homeClub": "Arena Padel Premium",
+      "streak": "W7"
+    },
+    {
+      "id": "team_kings",
+      "name": "Padel Kings La Marsa",
+      "player1": { "name": "Dhouib Med Amine", "level": 6.90, "avatar": "🧔" },
+      "player2": { "name": "Ezzedine Fitouri", "level": 6.30, "avatar": "🏋️" },
+      "eloRating": 1640,
+      "teamLevel": 6.60,
+      "matchesPlayed": 19,
+      "wins": 16,
+      "losses": 3,
+      "winRate": 84,
+      "badge": "👑 Top Gun",
+      "homeClub": "Padel Connection",
+      "streak": "W4"
+    },
+    {
+      "id": "team_moslem",
+      "name": "Les Smécheurs du Nord",
+      "player1": { "name": "Moslem Gouia", "level": 5.49, "avatar": "🎾" },
+      "player2": { "name": "Ahmed Horrigue", "level": 5.00, "avatar": "👨" },
+      "eloRating": 1550,
+      "teamLevel": 5.25,
+      "matchesPlayed": 15,
+      "wins": 12,
+      "losses": 3,
+      "winRate": 80,
+      "badge": "🔥 Paire en Feu",
+      "homeClub": "Padel Country Club",
+      "streak": "W3",
+      "isUserTeam": true
+    },
+    {
+      "id": "team_vibora",
+      "name": "Vibora Squad",
+      "player1": { "name": "Kotrane Oussama", "level": 5.80, "avatar": "👨" },
+      "player2": { "name": "Karim Arfaoui", "level": 5.20, "avatar": "🏃" },
+      "eloRating": 1490,
+      "teamLevel": 5.50,
+      "matchesPlayed": 12,
+      "wins": 7,
+      "losses": 5,
+      "winRate": 58,
+      "badge": "⚡ Challengers",
+      "homeClub": "Arena Padel Premium",
+      "streak": "L1"
+    },
+    {
+      "id": "team_smash",
+      "name": "Carthage Padel Duo",
+      "player1": { "name": "snoussi mariem", "level": 2.70, "avatar": "👩" },
+      "player2": { "name": "Malek A", "level": 1.60, "avatar": "👩" },
+      "eloRating": 1250,
+      "teamLevel": 2.15,
+      "matchesPlayed": 8,
+      "wins": 4,
+      "losses": 4,
+      "winRate": 50,
+      "badge": "🌱 Espoirs",
+      "homeClub": "Padel Connection",
+      "streak": "W1"
+    }
+  ]
+}

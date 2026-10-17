@@ -1,0 +1,2343 @@
+/* ==========================================================================
+   HAYAPALA - DESIGN SYSTEM & STYLESHEET
+   Next-Generation Padel Experience · Dark Athletic Luxury & Electric Volt
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap');
+
+:root {
+  /* HayaPala Signature Neon & Sports Palette */
+  --hayapala-volt: #CCFF00;
+  --hayapala-volt-glow: rgba(204, 255, 0, 0.35);
+  --hayapala-cyan: #00F5D4;
+  --hayapala-cyan-dark: #00C4A7;
+  --hayapala-blue: #2563EB;
+  --hayapala-blue-glow: rgba(37, 99, 235, 0.35);
+
+  /* Deep Canvas & Surfaces */
+  --bg-canvas: #090C12;
+  --bg-frame: #0E131E;
+  --bg-card: #151C2A;
+  --bg-card-hover: #1C2538;
+  --bg-card-subtle: #182030;
+  --bg-input: #101623;
+
+  /* Borders & Dividers */
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-card: rgba(255, 255, 255, 0.11);
+  --border-glow: rgba(204, 255, 0, 0.3);
+  --border-cyan-glow: rgba(0, 245, 212, 0.3);
+
+  /* Text & Labels */
+  --text-white: #FFFFFF;
+  --text-primary: #F1F5F9;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+  --text-dark: #0B0E14;
+
+  /* Status Badges */
+  --badge-win: #10B981;
+  --badge-win-bg: rgba(16, 185, 129, 0.15);
+  --badge-loss: #F43F5E;
+  --badge-loss-bg: rgba(244, 63, 94, 0.15);
+  --badge-whatsapp: #25D366;
+
+  /* Gradients */
+  --gradient-volt: linear-gradient(135deg, #CCFF00 0%, #00F5D4 100%);
+  --gradient-card: linear-gradient(180deg, rgba(25, 33, 50, 0.8) 0%, rgba(17, 23, 36, 0.95) 100%);
+  --gradient-nav: linear-gradient(180deg, rgba(14, 19, 30, 0.92) 0%, rgba(9, 12, 18, 0.98) 100%);
+  --gradient-btn: linear-gradient(135deg, #CCFF00 0%, #99E600 100%);
+
+  /* Shadows */
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55);
+  --shadow-volt: 0 4px 20px rgba(204, 255, 0, 0.3);
+  --shadow-cyan: 0 4px 20px rgba(0, 245, 212, 0.25);
+
+  /* Transitions */
+  --transition-fast: 0.16s ease;
+  --transition-smooth: 0.26s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Base Reset */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  background-image: 
+    radial-gradient(circle at 15% 20%, rgba(37, 99, 235, 0.12) 0%, transparent 40%),
+    radial-gradient(circle at 85% 70%, rgba(204, 255, 0, 0.08) 0%, transparent 40%);
+}
+
+/* ==========================================================================
+   TOP CONTROL BAR (Switch between Player App & Club Back-Office)
+   ========================================================================== */
+.platform-control-bar {
+  background: rgba(14, 19, 30, 0.88);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 12px 28px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.brand-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hayapala-logo-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.pala-icon-symbol {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 16px rgba(204, 255, 0, 0.45);
+  background: transparent;
+  overflow: hidden;
+}
+
+.pala-icon-symbol img, .pala-icon-symbol svg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.hayapala-brand-text {
+  font-family: 'Outfit', sans-serif;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  background: linear-gradient(90deg, #FFFFFF 0%, #CCFF00 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.brand-tag {
+  background: rgba(204, 255, 0, 0.1);
+  color: var(--hayapala-volt);
+  border: 1px solid rgba(204, 255, 0, 0.25);
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.view-mode-tabs {
+  display: flex;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 4px;
+  border-radius: 30px;
+  border: 1px solid var(--border-subtle);
+  gap: 4px;
+}
+
+.view-tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 8px 18px;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all var(--transition-fast);
+}
+
+.view-tab-btn:hover {
+  color: var(--text-white);
+}
+
+.view-tab-btn.active {
+  background: var(--gradient-volt);
+  color: var(--text-dark);
+  font-weight: 800;
+  box-shadow: var(--shadow-volt);
+}
+
+.right-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.live-points-pill {
+  background: rgba(204, 255, 0, 0.08);
+  border: 1px solid rgba(204, 255, 0, 0.25);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--hayapala-volt);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 0 15px rgba(204, 255, 0, 0.1);
+}
+
+.live-points-pill:hover {
+  background: rgba(204, 255, 0, 0.18);
+  border-color: var(--hayapala-volt);
+  transform: translateY(-1px);
+}
+
+.btn-reset-demo {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.btn-reset-demo:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-white);
+}
+
+/* ==========================================================================
+   WORKSPACE CANVAS
+   ========================================================================== */
+.workspace-canvas {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 24px;
+  min-height: calc(100vh - 62px);
+}
+
+/* ==========================================================================
+   MOBILE APP CONTAINER (View Mode: Player App)
+   ========================================================================== */
+.mobile-device-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 440px;
+}
+
+.device-frame-options {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.frame-toggle-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  padding: 4px 14px;
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.frame-toggle-btn.active, .frame-toggle-btn:hover {
+  background: rgba(204, 255, 0, 0.15);
+  color: var(--hayapala-volt);
+  border-color: var(--hayapala-volt);
+}
+
+.smartphone-frame {
+  width: 100%;
+  max-width: 420px;
+  height: 870px;
+  background: var(--bg-frame);
+  border-radius: 48px;
+  box-shadow: 
+    0 30px 80px -15px rgba(0, 0, 0, 0.9),
+    0 0 0 10px #1A2130,
+    0 0 0 12px #263146;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.smartphone-frame.frameless {
+  border-radius: 20px;
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.6);
+  max-width: 480px;
+  height: 890px;
+  border: 1px solid var(--border-card);
+}
+
+/* Phone Status Bar */
+.phone-status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  z-index: 10;
+  background: transparent;
+}
+
+.status-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.notch-pill {
+  width: 90px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.status-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+}
+
+/* Main App Screen Scrollable Area */
+.app-screen-viewport {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px 18px 96px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  scrollbar-width: none;
+}
+
+.app-screen-viewport::-webkit-scrollbar {
+  display: none;
+}
+
+/* Screen Transitions */
+.app-screen {
+  display: none;
+  flex-direction: column;
+  animation: slideFadeIn 0.22s ease-out;
+}
+
+.app-screen.active {
+  display: flex;
+}
+
+@keyframes slideFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==========================================================================
+   BOTTOM NAVIGATION BAR (Futuristic Frosted Navigation)
+   ========================================================================== */
+.bottom-nav-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 72px;
+  background: var(--gradient-nav);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 0 10px;
+  z-index: 50;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.nav-item-btn {
+  background: transparent;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  flex: 1;
+  transition: all var(--transition-fast);
+}
+
+.nav-item-btn.active {
+  color: var(--hayapala-volt);
+}
+
+.nav-item-btn:hover {
+  color: var(--text-primary);
+}
+
+.nav-item-btn .nav-icon {
+  font-size: 19px;
+  height: 20px;
+}
+
+/* Center Floating Emblem (HayaPala 3D Ring) */
+.nav-center-action {
+  position: relative;
+  top: -18px;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 
+    0 8px 24px rgba(204, 255, 0, 0.5),
+    0 0 0 4px var(--bg-frame);
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+  background: transparent;
+  overflow: hidden;
+}
+
+.nav-center-action:hover {
+  transform: scale(1.08);
+}
+
+.nav-center-action img, .nav-center-action svg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* ==========================================================================
+   SCREEN 1: ACCUEIL (HOME)
+   ========================================================================== */
+.home-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.user-avatar-wrap {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--hayapala-volt);
+  box-shadow: var(--shadow-volt);
+  background: #182234;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.user-avatar-wrap:hover {
+  transform: scale(1.05);
+}
+
+.top-right-wallet {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.points-badge-pill {
+  background: rgba(204, 255, 0, 0.1);
+  border: 1px solid rgba(204, 255, 0, 0.3);
+  border-radius: 24px;
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--hayapala-volt);
+  box-shadow: 0 2px 10px rgba(204, 255, 0, 0.15);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.points-badge-pill:hover {
+  background: rgba(204, 255, 0, 0.2);
+  transform: translateY(-1px);
+}
+
+.points-plus-icon {
+  width: 20px;
+  height: 20px;
+  background: var(--hayapala-volt);
+  color: var(--text-dark);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.transfer-quick-btn {
+  width: 32px;
+  height: 32px;
+  background: #1E283C;
+  border: 1px solid var(--border-card);
+  color: var(--hayapala-cyan);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
+}
+
+.transfer-quick-btn:hover {
+  background: #25334E;
+  transform: rotate(180deg);
+}
+
+.greeting-text {
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.user-display-name {
+  font-family: 'Outfit', sans-serif;
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--text-white);
+  letter-spacing: -0.4px;
+  margin-top: 2px;
+}
+
+.user-level-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
+.user-level-row strong {
+  color: var(--hayapala-volt);
+  font-weight: 800;
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+}
+
+.gold-star-icon {
+  color: var(--hayapala-volt);
+  font-size: 16px;
+}
+
+/* Tournament Banner Card (Tournoi HayaPala Masters) */
+.tournament-card {
+  background: var(--gradient-card);
+  border: 1px solid var(--border-card);
+  border-radius: 20px;
+  padding: 18px;
+  box-shadow: var(--shadow-md);
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.tournament-card::before {
+  content: '';
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 120px;
+  height: 120px;
+  background: radial-gradient(circle, rgba(0, 245, 212, 0.15) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+.tournament-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.tournament-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-white);
+}
+
+.btn-join-now {
+  background: var(--gradient-volt);
+  color: var(--text-dark);
+  border: none;
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 14px;
+  border-radius: 18px;
+  cursor: pointer;
+  box-shadow: var(--shadow-volt);
+  transition: var(--transition-fast);
+}
+
+.btn-join-now:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 18px rgba(204, 255, 0, 0.5);
+}
+
+.tournament-players-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+
+.tournament-player-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 104px;
+  flex: 1;
+  text-align: center;
+}
+
+.player-card-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-bottom: 6px;
+  background: #1F2A3E;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  border: 1.5px solid var(--border-card);
+}
+
+.player-card-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 90px;
+  margin-bottom: 2px;
+}
+
+.player-card-level {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--hayapala-volt);
+}
+
+.dots-carousel-indicator {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.carousel-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.carousel-dot.active {
+  background: var(--hayapala-volt);
+  width: 14px;
+  border-radius: 4px;
+}
+
+/* Section Title */
+.section-title-tag {
+  font-family: 'Outfit', sans-serif;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text-white);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.yellow-bullet {
+  width: 4px;
+  height: 16px;
+  background: var(--hayapala-volt);
+  border-radius: 3px;
+  box-shadow: 0 0 8px var(--hayapala-volt);
+}
+
+/* Quick Action Grid (Reserver / Rejoindre) */
+.play-match-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.action-quick-card {
+  background: var(--gradient-card);
+  border-radius: 18px;
+  padding: 18px 16px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 112px;
+  cursor: pointer;
+  border: 1px solid var(--border-card);
+  transition: all var(--transition-smooth);
+}
+
+.action-quick-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--hayapala-volt);
+  box-shadow: 0 8px 24px rgba(204, 255, 0, 0.18);
+}
+
+.quick-card-icon {
+  font-size: 26px;
+  margin-bottom: 8px;
+}
+
+.quick-card-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.quick-card-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-white);
+  line-height: 1.25;
+}
+
+.quick-card-arrow {
+  color: var(--hayapala-volt);
+  font-size: 16px;
+  font-weight: 900;
+}
+
+/* Coaching Card */
+.coaching-card {
+  background: var(--gradient-card);
+  border-radius: 18px;
+  padding: 16px 18px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-card);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  margin-bottom: 20px;
+}
+
+.coaching-card:hover {
+  border-color: var(--hayapala-cyan);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 245, 212, 0.15);
+}
+
+.coaching-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.coaching-icon-wrap {
+  width: 44px;
+  height: 44px;
+  background: rgba(0, 245, 212, 0.1);
+  border: 1px solid rgba(0, 245, 212, 0.25);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+
+.coaching-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-white);
+}
+
+.coaching-sub {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* Duo Banner Card (Paires & Défis ELO) */
+.duo-banner-card {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.2) 0%, rgba(20, 26, 38, 0.95) 100%);
+  border-radius: 18px;
+  padding: 16px 18px;
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.15);
+  border: 1px solid rgba(37, 99, 235, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  margin-bottom: 20px;
+}
+
+.duo-banner-card:hover {
+  border-color: var(--hayapala-volt);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(204, 255, 0, 0.2);
+}
+
+.duo-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.duo-banner-icon {
+  width: 46px;
+  height: 46px;
+  background: rgba(204, 255, 0, 0.12);
+  border: 1px solid rgba(204, 255, 0, 0.3);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.duo-banner-tag {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--hayapala-volt);
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.duo-banner-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-white);
+}
+
+.duo-banner-sub {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.duo-banner-arrow {
+  color: var(--hayapala-volt);
+  font-size: 18px;
+  font-weight: 900;
+}
+
+/* User Duo Hero Card (In Modal) */
+.user-duo-hero-card {
+  background: linear-gradient(135deg, rgba(204, 255, 0, 0.15) 0%, rgba(20, 26, 38, 0.95) 100%);
+  border: 1px solid rgba(204, 255, 0, 0.35);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+.user-duo-rank-pill {
+  display: inline-block;
+  background: rgba(204, 255, 0, 0.2);
+  color: var(--hayapala-volt);
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+
+.user-duo-name {
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-white);
+}
+
+.user-duo-players {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.user-duo-elo-badge {
+  text-align: right;
+}
+
+.user-duo-stats-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* Duo Leaderboard Items */
+.duo-leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.duo-item-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-card);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  transition: all var(--transition-fast);
+}
+
+.duo-item-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.duo-item-card.is-user {
+  border-color: var(--hayapala-volt);
+  background: rgba(204, 255, 0, 0.05);
+}
+
+.duo-rank-num {
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 900;
+  width: 26px;
+  color: var(--hayapala-cyan);
+  text-align: center;
+}
+
+.duo-item-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.duo-item-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.duo-team-name-text {
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-white);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.duo-badge-tag {
+  font-size: 9px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: var(--text-secondary);
+}
+
+.duo-players-names {
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.duo-elo-stats {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.duo-elo-val {
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--hayapala-volt);
+}
+
+.duo-winrate-val {
+  font-size: 10px;
+  color: #10B981;
+  font-weight: 700;
+}
+
+.btn-challenge-duo {
+  background: rgba(37, 99, 235, 0.2);
+  border: 1px solid rgba(37, 99, 235, 0.5);
+  color: #60A5FA;
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  white-space: nowrap;
+}
+
+.btn-challenge-duo:hover {
+  background: #2563EB;
+  color: #FFFFFF;
+}
+
+/* Partner Selection & Directory */
+.selected-partner-highlight-card {
+  background: rgba(0, 245, 212, 0.08);
+  border: 1.5px solid var(--hayapala-cyan);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  animation: fadeIn 0.2s ease;
+}
+
+.btn-change-partner {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-white);
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.btn-change-partner:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.players-directory-scrollbox {
+  max-height: 180px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 4px;
+  margin-bottom: 8px;
+}
+
+.directory-player-row {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.directory-player-row:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--hayapala-volt);
+  transform: translateX(2px);
+}
+
+.directory-player-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.directory-player-avatar {
+  font-size: 20px;
+}
+
+.directory-player-name {
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-white);
+}
+
+.directory-player-meta {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+.directory-player-level {
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--hayapala-volt);
+}
+
+/* Live Duo Projection Box */
+.duo-live-projection-box {
+  background: rgba(204, 255, 0, 0.04);
+  border: 1px solid rgba(204, 255, 0, 0.25);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-top: 14px;
+}
+
+/* ==========================================================================
+   SCREEN 2: REJOINDRE UNE PARTIE (MATCHES)
+   ========================================================================== */
+.screen-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  margin-bottom: 8px;
+}
+
+.back-btn-icon {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--text-white);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.back-btn-icon:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.screen-header-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-white);
+}
+
+.filter-btn-icon {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--text-white);
+  cursor: pointer;
+}
+
+/* Tabs: Disponibles vs Mes matches */
+.match-tabs-toggle {
+  display: flex;
+  background: #111724;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 16px;
+}
+
+.match-tab {
+  flex: 1;
+  text-align: center;
+  padding: 8px 12px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.match-tab.active {
+  background: var(--gradient-volt);
+  color: var(--text-dark);
+  font-weight: 800;
+  box-shadow: var(--shadow-volt);
+}
+
+/* Match Open Card */
+.match-open-card {
+  background: var(--gradient-card);
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-card);
+  margin-bottom: 16px;
+}
+
+.match-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.club-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-white);
+}
+
+.match-time-distance {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--hayapala-cyan);
+}
+
+.match-date-row {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+/* 2v2 Teams Layout */
+.matchup-2v2-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.team-box-wrap {
+  display: flex;
+  gap: 6px;
+}
+
+.player-slot-card {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 8px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 60px;
+  text-align: center;
+}
+
+.player-slot-card.empty-slot {
+  border: 1.5px dashed var(--hayapala-volt);
+  background: rgba(204, 255, 0, 0.05);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.player-slot-card.empty-slot:hover {
+  background: rgba(204, 255, 0, 0.15);
+  transform: scale(1.03);
+}
+
+.slot-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  margin-bottom: 4px;
+  background: #1F2A3E;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.slot-avatar.empty-avatar {
+  background: transparent;
+  color: var(--hayapala-volt);
+  font-weight: 900;
+}
+
+.slot-name {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 62px;
+}
+
+.slot-level {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--hayapala-volt);
+  margin-top: 1px;
+}
+
+.vs-badge-icon {
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--hayapala-cyan);
+  padding: 0 4px;
+}
+
+/* Match Card Footer */
+.match-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 10px;
+}
+
+.match-info-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.match-public-tag {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-white);
+}
+
+.court-reserved-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--hayapala-cyan);
+}
+
+.match-points-cost-badge {
+  background: rgba(204, 255, 0, 0.1);
+  color: var(--hayapala-volt);
+  border: 1px solid rgba(204, 255, 0, 0.3);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* CTA: Lancer un match */
+.btn-launch-match-cta {
+  background: var(--gradient-volt);
+  color: var(--text-dark);
+  border: none;
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  padding: 14px;
+  border-radius: 30px;
+  width: 100%;
+  cursor: pointer;
+  box-shadow: var(--shadow-volt);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+  margin-bottom: 12px;
+  transition: all var(--transition-fast);
+}
+
+.btn-launch-match-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(204, 255, 0, 0.5);
+}
+
+/* ==========================================================================
+   SCREEN 3: RÉSERVER VOTRE TERRAIN
+   ========================================================================== */
+.search-controls-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.search-input-wrap {
+  flex: 1;
+  background: #111724;
+  border: 1px solid var(--border-card);
+  border-radius: 14px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search-input-wrap input {
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  width: 100%;
+  outline: none;
+  color: var(--text-white);
+}
+
+.search-view-toggle {
+  display: flex;
+  background: #111724;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 3px;
+  gap: 3px;
+}
+
+.view-icon-toggle {
+  background: transparent;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  color: var(--text-secondary);
+}
+
+.view-icon-toggle.active {
+  background: var(--gradient-volt);
+  color: var(--text-dark);
+}
+
+/* Club Cards */
+.club-listing-card {
+  background: var(--gradient-card);
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-card);
+  margin-bottom: 14px;
+}
+
+.club-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.club-brand-left {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.club-badge-logo {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 900;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.club-name-text {
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-white);
+}
+
+.club-sport-tag {
+  font-size: 12px;
+  color: var(--hayapala-cyan);
+  font-weight: 600;
+}
+
+.favorite-heart-btn {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.club-info-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.club-actions-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.btn-itinerary {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: var(--transition-fast);
+}
+
+.btn-itinerary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-white);
+}
+
+.btn-book-court {
+  background: var(--gradient-volt);
+  border: none;
+  color: var(--text-dark);
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: var(--shadow-volt);
+  transition: var(--transition-fast);
+}
+
+.btn-book-court:hover {
+  box-shadow: 0 4px 16px rgba(204, 255, 0, 0.5);
+  transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   SCREEN 4: MON PROFIL (PLAYER PROFILE)
+   ========================================================================== */
+.profile-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.profile-avatar-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.profile-large-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid var(--hayapala-volt);
+  margin-bottom: 8px;
+  box-shadow: 0 0 25px rgba(204, 255, 0, 0.35);
+  background: #182234;
+}
+
+.profile-large-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-user-name {
+  font-family: 'Outfit', sans-serif;
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--text-white);
+  letter-spacing: -0.4px;
+}
+
+/* 4 Quick Badges: Points | Notifs | Favoris | Padel */
+.profile-badges-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 22px;
+}
+
+.profile-quick-badge {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 10px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.profile-quick-badge:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--hayapala-volt);
+}
+
+.badge-icon-circle {
+  font-size: 20px;
+  color: var(--hayapala-volt);
+}
+
+.badge-label-text {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: center;
+}
+
+/* Game Info List */
+.info-game-box {
+  background: var(--gradient-card);
+  border: 1px solid var(--border-card);
+  border-radius: 18px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+}
+
+.info-game-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  font-size: 14px;
+  color: var(--text-primary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.info-game-row:last-child {
+  border-bottom: none;
+}
+
+.info-game-icon {
+  font-size: 18px;
+  color: var(--hayapala-cyan);
+}
+
+.reliability-gauge-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.battery-gauge {
+  width: 48px;
+  height: 14px;
+  border: 1.5px solid var(--hayapala-cyan);
+  border-radius: 4px;
+  padding: 1.5px;
+  position: relative;
+}
+
+.battery-gauge::after {
+  content: '';
+  position: absolute;
+  right: -4px;
+  top: 3px;
+  width: 2px;
+  height: 6px;
+  background: var(--hayapala-cyan);
+  border-radius: 0 2px 2px 0;
+}
+
+.battery-fill {
+  height: 100%;
+  background: var(--gradient-volt);
+  border-radius: 2px;
+  width: 46%;
+  box-shadow: 0 0 6px var(--hayapala-volt);
+}
+
+/* Matches History */
+.history-match-item {
+  background: var(--gradient-card);
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-card);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.history-left {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.history-club-bold {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  color: var(--text-white);
+  font-size: 13px;
+}
+
+.history-teams {
+  font-size: 12px;
+  color: var(--text-primary);
+  margin-top: 2px;
+}
+
+.history-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: #FFFFFF;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 900;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.history-badge.loss {
+  background: var(--badge-loss-bg);
+  color: var(--badge-loss);
+  border: 1px solid var(--badge-loss);
+}
+
+.history-badge.win {
+  background: var(--badge-win-bg);
+  color: var(--badge-win);
+  border: 1px solid var(--badge-win);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.35);
+}
+
+/* ==========================================================================
+   SCREEN 5: PARAMÈTRES (SETTINGS)
+   ========================================================================== */
+.settings-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.settings-card-item {
+  background: var(--gradient-card);
+  border-radius: 16px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-card);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.settings-card-item:hover {
+  transform: translateY(-2px);
+  border-color: var(--hayapala-cyan);
+}
+
+.settings-item-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-white);
+}
+
+.settings-icon {
+  font-size: 18px;
+  color: var(--hayapala-cyan);
+}
+
+.settings-chevron {
+  color: var(--hayapala-volt);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.settings-card-item.danger-item .settings-item-left {
+  color: var(--badge-loss);
+}
+
+.settings-card-item.danger-item .settings-icon {
+  color: var(--badge-loss);
+}
+
+.contact-whatsapp-box {
+  background: transparent;
+  padding: 8px 4px;
+}
+
+.contact-sub-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-white);
+  margin-bottom: 8px;
+}
+
+.whatsapp-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--gradient-card);
+  padding: 12px 18px;
+  border-radius: 14px;
+  border: 1px solid var(--border-card);
+  text-decoration: none;
+  color: var(--text-white);
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition-fast);
+}
+
+.whatsapp-link-btn:hover {
+  border-color: var(--badge-whatsapp);
+  background: rgba(37, 211, 102, 0.1);
+}
+
+.whatsapp-icon {
+  color: var(--badge-whatsapp);
+  font-size: 22px;
+}
+
+/* ==========================================================================
+   VIEW MODE: CLUB BACK-OFFICE (HayaPala Club Pro)
+   ========================================================================== */
+.backoffice-viewport {
+  width: 100%;
+  max-width: 1320px;
+  background: var(--bg-frame);
+  border-radius: 24px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 820px;
+  border: 1px solid var(--border-card);
+}
+
+/* Authentic Login Screen for HayaPala */
+.login-view-wrapper {
+  background-image: radial-gradient(circle at 50% 50%, rgba(37, 99, 235, 0.25) 0%, #0A0D14 90%);
+  min-height: 820px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.login-box-card {
+  width: 100%;
+  max-width: 400px;
+  background: rgba(21, 28, 42, 0.92);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  padding: 36px 30px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
+  border: 1px solid var(--border-card);
+  text-align: center;
+}
+
+.login-title-msg {
+  font-family: 'Outfit', sans-serif;
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--text-white);
+  margin-bottom: 22px;
+}
+
+.login-input-group {
+  position: relative;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.login-field {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-card);
+  border-radius: 12px;
+  font-size: 14px;
+  color: var(--text-white);
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.login-field:focus {
+  border-color: var(--hayapala-volt);
+  box-shadow: 0 0 12px rgba(204, 255, 0, 0.25);
+}
+
+.input-addon-icon {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.login-options-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  margin-bottom: 22px;
+  color: var(--text-secondary);
+}
+
+.login-options-row a {
+  color: var(--hayapala-cyan);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.btn-primary-login {
+  background: var(--gradient-volt);
+  color: var(--text-dark);
+  border: none;
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  font-weight: 900;
+  padding: 14px;
+  border-radius: 12px;
+  width: 100%;
+  cursor: pointer;
+  box-shadow: var(--shadow-volt);
+  transition: all var(--transition-fast);
+}
+
+.btn-primary-login:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 25px rgba(204, 255, 0, 0.5);
+}
+
+/* Club Admin Top Nav */
+.admin-top-nav {
+  background: #101623;
+  color: #FFFFFF;
+  padding: 16px 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.admin-club-select-dropdown {
+  background: #182234;
+  border: 1px solid var(--border-card);
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 10px;
+  outline: none;
+}
+
+.admin-kpis-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  padding: 24px 28px;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.admin-kpi-card {
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 16px 20px;
+  border: 1px solid var(--border-card);
+  box-shadow: var(--shadow-sm);
+}
+
+.kpi-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 700;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.kpi-value {
+  font-family: 'Outfit', sans-serif;
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--text-white);
+}
+
+/* Timetable Schedule Grid */
+.schedule-container {
+  padding: 24px 28px;
+  flex: 1;
+  overflow-x: auto;
+}
+
+.schedule-header-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.btn-new-admin-booking {
+  background: var(--gradient-volt);
+  color: var(--text-dark);
+  border: none;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  font-size: 13px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: var(--shadow-volt);
+}
+
+.timetable-grid-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-card);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-card);
+}
+
+.timetable-grid-table th {
+  background: #111724;
+  color: var(--text-white);
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 14px 10px;
+  border: 1px solid var(--border-subtle);
+  text-align: center;
+}
+
+.timetable-grid-table td {
+  border: 1px solid var(--border-subtle);
+  padding: 8px;
+  vertical-align: middle;
+  height: 58px;
+  font-size: 12px;
+}
+
+.time-col {
+  width: 90px;
+  background: #0E1420;
+  font-weight: 800;
+  text-align: center;
+  color: var(--hayapala-cyan);
+  font-family: 'Outfit', sans-serif;
+}
+
+.slot-cell {
+  background: rgba(255, 255, 255, 0.015);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.slot-cell:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.booking-badge-block {
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.booking-badge-block.confirmed {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34D399;
+  border-left: 3px solid #10B981;
+}
+
+.booking-badge-block.open-match {
+  background: rgba(204, 255, 0, 0.12);
+  color: var(--hayapala-volt);
+  border-left: 3px solid var(--hayapala-volt);
+}
+
+.slot-counter-pill {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 6px;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+}
+
+.slot-counter-pill.pill-confirmed {
+  background: rgba(16, 185, 129, 0.25);
+  color: #10B981;
+}
+
+.slot-counter-pill.pill-open {
+  background: rgba(204, 255, 0, 0.25);
+  color: var(--hayapala-volt);
+}
+
+.booking-progress-mini {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  margin-top: 5px;
+  overflow: hidden;
+}
+
+.booking-progress-fill {
+  height: 100%;
+  background: var(--gradient-volt);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.booking-progress-fill.fill-confirmed {
+  background: linear-gradient(90deg, #10B981, #34D399);
+}
+
+/* ==========================================================================
+   MODALS & POPUPS
+   ========================================================================== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(5, 8, 14, 0.85);
+  backdrop-filter: blur(12px);
+  z-index: 2000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeIn 0.18s ease;
+}
+
+.modal-overlay.active {
+  display: flex;
+}
+
+.modal-card {
+  background: #141A26;
+  border: 1px solid var(--border-card);
+  border-radius: 24px;
+  width: 100%;
+  max-width: 440px;
+  padding: 26px;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  animation: slideUp 0.22s ease-out;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.modal-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 19px;
+  font-weight: 900;
+  color: var(--text-white);
+}
+
+.modal-close-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: var(--transition-fast);
+}
+
+.modal-close-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--text-white);
+}
+
+.pack-recharge-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.pack-card {
+  border: 1.5px solid var(--border-card);
+  background: #101623;
+  border-radius: 14px;
+  padding: 14px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.pack-card:hover, .pack-card.selected {
+  border-color: var(--hayapala-volt);
+  background: rgba(204, 255, 0, 0.06);
+  box-shadow: 0 0 15px rgba(204, 255, 0, 0.15);
+}
+
+.pack-points {
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--text-white);
+}
+
+.pack-price {
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--hayapala-volt);
+}
+
+/* Toast Notice */
+.toast-notice {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(30px);
+  background: #182234;
+  color: var(--text-white);
+  padding: 12px 24px;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--hayapala-volt);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toast-notice.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}

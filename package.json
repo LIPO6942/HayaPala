@@ -1,0 +1,22 @@
+{
+  "name": "hayapala-padel",
+  "version": "1.0.0",
+  "description": "HayaPala - L'Expérience Padel Nouvelle Génération : Matchmaking, Réservation de terrain, Partage de paiement (Split-Pay) & Classement ELO Officiel",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "padel",
+    "hayapala",
+    "matchmaking",
+    "pwa",
+    "elo",
+    "booking",
+    "tunisia"
+  ],
+  "author": "Moslem Gouia",
+  "license": "MIT"
+}
