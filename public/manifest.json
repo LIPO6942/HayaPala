@@ -1,24 +1,30 @@
 {
-  "name": "HayaPala Padel",
+  "name": "HayaPala - Padel Pro Experience",
   "short_name": "HayaPala",
   "description": "L'expérience Padel nouvelle génération : Matchmaking, Réservation & ELO officiel",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#090C12",
-  "theme_color": "#090C12",
+  "background_color": "#07090E",
+  "theme_color": "#07090E",
   "icons": [
     {
-      "src": "/images/tennis-ball.svg",
-      "sizes": "192x192",
+      "src": "/images/pala-icon.svg",
+      "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "/images/tennis-ball.svg",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
+      "src": "/images/pwa-icon.jpg",
+      "sizes": "1024x1024",
+      "type": "image/jpeg",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/images/pala-logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any"
     }
   ]
 }

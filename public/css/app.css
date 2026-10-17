@@ -2864,3 +2864,81 @@ button,
   transform: rotate(90deg);
 }
 
+/* ==========================================================================
+   ULTRA-MODERN PADEL PALA (RACKET) MOTIFS & PWA BRANDING
+   ========================================================================== */
+
+/* Pala Racket Icon in Brand Badges */
+.pala-head-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 0 10px rgba(0, 245, 212, 0.5)) drop-shadow(0 0 4px rgba(204, 255, 0, 0.4));
+  transition: transform var(--transition-fast), filter var(--transition-fast);
+}
+
+.pala-icon-symbol:hover .pala-head-img {
+  transform: scale(1.12) rotate(-6deg);
+  filter: drop-shadow(0 0 16px rgba(0, 245, 212, 0.8)) drop-shadow(0 0 8px rgba(204, 255, 0, 0.7));
+}
+
+/* Carbon Fiber Weave & Aerodynamic Perforations Background for Hero Elements */
+.home-hero-welcome {
+  background: 
+    radial-gradient(circle at 85% 20%, rgba(204, 255, 0, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 15% 85%, rgba(0, 245, 212, 0.06) 0%, transparent 45%),
+    linear-gradient(135deg, rgba(20, 26, 36, 0.95) 0%, rgba(10, 13, 20, 0.98) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle drilled hole grid overlay (Padel Racket Face Pattern) */
+.home-hero-welcome::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 140px;
+  height: 100%;
+  background-image: radial-gradient(rgba(0, 245, 212, 0.15) 1.5px, transparent 1.5px);
+  background-size: 14px 14px;
+  pointer-events: none;
+  opacity: 0.65;
+  mask-image: linear-gradient(to left, rgba(0,0,0,1) 0%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to left, rgba(0,0,0,1) 0%, transparent 100%);
+}
+
+/* Floating Center Emblem - Futuristic Padel Pala Sweetspot Button */
+.nav-center-action-btn {
+  background: linear-gradient(135deg, #182230 0%, #0B0E14 100%);
+  border: 2px solid rgba(204, 255, 0, 0.5);
+  box-shadow: 0 0 20px rgba(204, 255, 0, 0.4), inset 0 0 12px rgba(0, 245, 212, 0.3);
+  transition: all var(--transition-fast);
+}
+
+.nav-center-action-btn:hover {
+  transform: translateY(-8px) scale(1.08);
+  border-color: var(--hayapala-volt);
+  box-shadow: 0 0 28px rgba(204, 255, 0, 0.7), inset 0 0 16px rgba(0, 245, 212, 0.5);
+}
+
+.nav-center-inner {
+  border-radius: 50%;
+  overflow: hidden;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-center-inner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
