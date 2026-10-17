@@ -2,328 +2,12 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { db } from './database.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
-const DATA_FILE = path.join(__dirname, 'data.json');
-
-// Initial seed data based on the real YallaPlay screenshots and platform facts
-const INITIAL_DATA = {
-  user: {
-    id: "user_moslem",
-    name: "Moslem Gouia",
-    email: "moslem.gouia@example.com",
-    avatar: "/images/bg_paddle.png",
-    points: 10.00,
-    phone: "+216 22 227 041",
-    level: 5.49,
-    levelReliability: 45.74,
-    matchesPlayed: 28,
-    sport: "Padel Game",
-    notificationsCount: 3,
-    favorites: ["club_arena", "club_country"]
-  },
-  communityPlayers: [
-    { id: "usr_ahmed", name: "Ahmed Horrigue", level: 5.00, reliability: 62.0, avatar: "👨", club: "Padel Connection", city: "La Soukra", matches: 42 },
-    { id: "usr_karim", name: "Karim Arfaoui", level: 5.20, reliability: 55.4, avatar: "🏃", club: "Arena Padel Premium", city: "La Soukra", matches: 31 },
-    { id: "usr_dhouib", name: "Dhouib Med Amine", level: 6.90, reliability: 78.5, avatar: "🧔", club: "Padel Connection", city: "Borj Louzir", matches: 89 },
-    { id: "usr_ezzedine", name: "Ezzedine Fitouri", level: 6.30, reliability: 71.0, avatar: "🏋️", club: "Padel Connection", city: "La Marsa", matches: 64 },
-    { id: "usr_kotrane", name: "Kotrane Oussama", level: 5.80, reliability: 68.2, avatar: "👨", club: "Arena Padel Premium", city: "Gammarth", matches: 53 },
-    { id: "usr_krima", name: "krima mohamed Bilel", level: 8.00, reliability: 94.0, avatar: "👨", club: "Arena Padel Premium", city: "Tunis", matches: 120 },
-    { id: "usr_ecoincon", name: "Écoinçon Fabian", level: 7.00, reliability: 82.0, avatar: "🧔", club: "Arena Padel Premium", city: "La Marsa", matches: 75 },
-    { id: "usr_mariem", name: "snoussi mariem", level: 2.70, reliability: 40.0, avatar: "👩", club: "Padel Country Club", city: "Lac 2", matches: 14 },
-    { id: "usr_malek", name: "Malek A", level: 1.60, reliability: 35.0, avatar: "👩", club: "Padel Country Club", city: "Gammarth", matches: 9 },
-    { id: "usr_challouf", name: "challouf youssef", level: 3.70, reliability: 48.0, avatar: "👤", club: "Padel Connection", city: "Ariana", matches: 22 },
-    { id: "usr_anis", name: "Anis Ben Salah", level: 4.80, reliability: 52.0, avatar: "👨", club: "Arena Padel Premium", city: "La Soukra", matches: 27 },
-    { id: "usr_mehdi", name: "mehdi mehdi", level: 6.00, reliability: 65.0, avatar: "👤", club: "Arena Padel Premium", city: "Tunis", matches: 45 }
-  ],
-  clubs: [
-    {
-      id: "club_arena",
-      name: "Arena Padel Premium",
-      sport: "Padel",
-      address: "Rue du parc, La Soukra",
-      schedule: "Samedi: Du 00:00 h au 00:00 h",
-      distance: "4.1 km",
-      logoBadge: "APP",
-      logoColor: "#111111",
-      logoTextColor: "#D4AF37",
-      isFavorite: true,
-      courtsCount: 4,
-      indoorCourts: 2,
-      outdoorCourts: 2,
-      pricePoints: 25.0,
-      courts: [
-        { id: "court_app_1", name: "Court 1 - Panoramique Indoor", type: "Indoor", surface: "Gazon WPT" },
-        { id: "court_app_2", name: "Court 2 - Central Indoor", type: "Indoor", surface: "Gazon WPT" },
-        { id: "court_app_3", name: "Court 3 - Outdoor Pro", type: "Outdoor", surface: "Bleu Pro" },
-        { id: "court_app_4", name: "Court 4 - Outdoor", type: "Outdoor", surface: "Bleu Pro" }
-      ]
-    },
-    {
-      id: "club_connection",
-      name: "Padel Connection",
-      sport: "Padel",
-      address: "Rue Sanhaja, Borj Louzir",
-      schedule: "Samedi: Du 06:30 h au 00:30 h",
-      distance: "2.3 km",
-      logoBadge: "PC",
-      logoColor: "#0E3A60",
-      logoTextColor: "#FFFFFF",
-      isFavorite: false,
-      courtsCount: 3,
-      indoorCourts: 2,
-      outdoorCourts: 1,
-      pricePoints: 20.0,
-      courts: [
-        { id: "court_pc_1", name: "Court A - Indoor Bleu", type: "Indoor", surface: "Mondo Supercourt" },
-        { id: "court_pc_2", name: "Court B - Indoor Rouge", type: "Indoor", surface: "Mondo Supercourt" },
-        { id: "court_pc_3", name: "Court C - Outdoor", type: "Outdoor", surface: "Standard" }
-      ]
-    },
-    {
-      id: "club_country",
-      name: "Padel Country Club",
-      sport: "Padel",
-      address: "Lac palace",
-      schedule: "Samedi: Du 00:00 h au 00:00 h",
-      distance: "3.7 km",
-      logoBadge: "PCC",
-      logoColor: "#1D5F8A",
-      logoTextColor: "#E8F4FC",
-      isFavorite: true,
-      courtsCount: 5,
-      indoorCourts: 3,
-      outdoorCourts: 2,
-      pricePoints: 25.0,
-      courts: [
-        { id: "court_pcc_1", name: "Court 1 - Club House Indoor", type: "Indoor", surface: "WPT Master" },
-        { id: "court_pcc_2", name: "Court 2 - Indoor Panoramique", type: "Indoor", surface: "WPT Master" },
-        { id: "court_pcc_3", name: "Court 3 - Indoor Standard", type: "Indoor", surface: "WPT Master" },
-        { id: "court_pcc_4", name: "Court 4 - Outdoor Lac", type: "Outdoor", surface: "Gazon Synthétique" },
-        { id: "court_pcc_5", name: "Court 5 - Outdoor Lac", type: "Outdoor", surface: "Gazon Synthétique" }
-      ]
-    }
-  ],
-  matches: [
-    {
-      id: "match_101",
-      clubId: "club_connection",
-      clubName: "Padel Connection",
-      distance: "2.3 km",
-      date: "Samedi 17 oct.",
-      time: "11:00 h - 12:30 h",
-      duration: "90 min",
-      type: "Match public",
-      courtReserved: true,
-      levelRange: "1.1-2.1",
-      pointsCost: 25.0,
-      team1: [
-        { name: "Malek A", level: 1.60, avatar: "👩" },
-        { name: "challouf youssef", level: 3.70, avatar: "👤" }
-      ],
-      team2: [
-        { name: "krimou malek", level: 2.80, avatar: "🏃" },
-        { name: "snoussi mariem", level: 2.70, avatar: "👩" }
-      ],
-      openSlot: null
-    },
-    {
-      id: "match_102",
-      clubId: "club_country",
-      clubName: "Padel Country Club",
-      distance: "3.7 km",
-      date: "Samedi 17 oct.",
-      time: "12:00 h - 13:30 h",
-      duration: "90 min",
-      type: "Match public",
-      courtReserved: true,
-      levelRange: "6.4-7.4",
-      pointsCost: 10.0,
-      team1: [
-        { name: "Dhouib Med Amine", level: 6.90, avatar: "🧔" },
-        null // Open slot for player!
-      ],
-      team2: [
-        { name: "AHMED HORRIGUE", level: 5.00, avatar: "👨" },
-        { name: "Ezzedine Fitouri", level: 6.30, avatar: "🏋️" }
-      ],
-      openSlot: { team: 1, position: 2 }
-    },
-    {
-      id: "match_103",
-      clubId: "club_arena",
-      clubName: "Arena Padel Premium",
-      distance: "4.1 km",
-      date: "Dimanche 18 oct.",
-      time: "18:00 h - 19:30 h",
-      duration: "90 min",
-      type: "Match public",
-      courtReserved: true,
-      levelRange: "5.0-6.0",
-      pointsCost: 20.0,
-      team1: [
-        { name: "Moslem Gouia", level: 5.49, avatar: "🎾" },
-        null
-      ],
-      team2: [
-        { name: "Kotrane Oussama", level: 5.80, avatar: "👨" },
-        null
-      ],
-      openSlot: { team: 1, position: 2 }
-    }
-  ],
-  userMatchHistory: [
-    {
-      id: "hist_1",
-      date: "30-06",
-      clubName: "Padel Country Club",
-      level: "4.1-5.1",
-      team1: "Karim Arfaoui x karoui khalil",
-      team1Score: 2,
-      team2: "Moslem Gouia x khelil hechmi",
-      team2Score: 1,
-      result: "P" // Perdu
-    },
-    {
-      id: "hist_2",
-      date: "19-06",
-      clubName: "Arena Padel Premium",
-      level: "5.1-6.1",
-      team1: "Karim Arfaoui x zoghlami sofiene",
-      team1Score: 1,
-      team2: "Moslem Gouia x Kotrane Oussama",
-      team2Score: 2,
-      result: "G" // Gagné
-    },
-    {
-      id: "hist_3",
-      date: "10-06",
-      clubName: "Padel Connection",
-      level: "5.2-6.0",
-      team1: "Moslem Gouia x Ahmed Horrigue",
-      team1Score: 2,
-      team2: "Ezzedine Fitouri x Dhouib Med Amine",
-      team2Score: 0,
-      result: "G" // Gagné
-    }
-  ],
-  tournament: {
-    title: "HayaPala Masters 2026",
-    badge: "Join now",
-    participants: [
-      { name: "krima mohamed Bilel", level: 8.00, avatar: "👨" },
-      { name: "Écoinçon Fabian", level: 7.00, avatar: "🧔" },
-      { name: "mehdi mehdi", level: 6.00, avatar: "👤" }
-    ]
-  },
-  clubBookings: [
-    { id: "bkg_1", clubId: "club_connection", courtId: "court_pc_1", courtName: "Court A - Indoor Bleu", time: "08:30 - 10:00", clientName: "Anis Ben Salah", phone: "+216 98 123 456", status: "confirmed", points: 100, pricePerPlayer: 25, slotsPaid: 4, slotsTotal: 4, type: "Privée" },
-    { id: "bkg_2", clubId: "club_connection", courtId: "court_pc_2", courtName: "Court B - Indoor Rouge", time: "11:30 - 13:00", clientName: "Partie Ouverte (Intermédiaires)", phone: "+216 22 227 041", status: "open_match", points: 50, pricePerPlayer: 25, slotsPaid: 2, slotsTotal: 4, type: "Partie Ouverte" },
-    { id: "bkg_3", clubId: "club_connection", courtId: "court_pc_1", courtName: "Court A - Indoor Bleu", time: "17:00 - 18:30", clientName: "Moslem Gouia", phone: "+216 22 227 041", status: "confirmed", points: 100, pricePerPlayer: 25, slotsPaid: 4, slotsTotal: 4, type: "Privée" },
-    { id: "bkg_4", clubId: "club_connection", courtId: "court_pc_3", courtName: "Court C - Outdoor", time: "18:30 - 20:00", clientName: "Karim Arfaoui", phone: "+216 50 889 900", status: "open_match", points: 75, pricePerPlayer: 25, slotsPaid: 3, slotsTotal: 4, type: "Partie Ouverte" }
-  ],
-  officialTeams: [
-    {
-      id: "team_legends",
-      name: "Bandeja Masters",
-      player1: { name: "krima mohamed Bilel", level: 8.00, avatar: "👨" },
-      player2: { name: "Écoinçon Fabian", level: 7.00, avatar: "🧔" },
-      eloRating: 1720,
-      teamLevel: 7.50,
-      matchesPlayed: 24,
-      wins: 21,
-      losses: 3,
-      winRate: 88,
-      badge: "⭐ Légendes",
-      homeClub: "Arena Padel Premium",
-      streak: "W7"
-    },
-    {
-      id: "team_kings",
-      name: "Padel Kings La Marsa",
-      player1: { name: "Dhouib Med Amine", level: 6.90, avatar: "🧔" },
-      player2: { name: "Ezzedine Fitouri", level: 6.30, avatar: "🏋️" },
-      eloRating: 1640,
-      teamLevel: 6.60,
-      matchesPlayed: 19,
-      wins: 16,
-      losses: 3,
-      winRate: 84,
-      badge: "👑 Top Gun",
-      homeClub: "Padel Connection",
-      streak: "W4"
-    },
-    {
-      id: "team_moslem",
-      name: "Les Smécheurs du Nord",
-      player1: { name: "Moslem Gouia", level: 5.49, avatar: "🎾" },
-      player2: { name: "Ahmed Horrigue", level: 5.00, avatar: "👨" },
-      eloRating: 1550,
-      teamLevel: 5.25,
-      matchesPlayed: 15,
-      wins: 12,
-      losses: 3,
-      winRate: 80,
-      badge: "🔥 Paire en Feu",
-      homeClub: "Padel Country Club",
-      streak: "W3",
-      isUserTeam: true
-    },
-    {
-      id: "team_vibora",
-      name: "Vibora Squad",
-      player1: { name: "Kotrane Oussama", level: 5.80, avatar: "👨" },
-      player2: { name: "Karim Arfaoui", level: 5.20, avatar: "🏃" },
-      eloRating: 1490,
-      teamLevel: 5.50,
-      matchesPlayed: 12,
-      wins: 7,
-      losses: 5,
-      winRate: 58,
-      badge: "⚡ Challengers",
-      homeClub: "Arena Padel Premium",
-      streak: "L1"
-    },
-    {
-      id: "team_smash",
-      name: "Carthage Padel Duo",
-      player1: { name: "snoussi mariem", level: 2.70, avatar: "👩" },
-      player2: { name: "Malek A", level: 1.60, avatar: "👩" },
-      eloRating: 1250,
-      teamLevel: 2.15,
-      matchesPlayed: 8,
-      wins: 4,
-      losses: 4,
-      winRate: 50,
-      badge: "🌱 Espoirs",
-      homeClub: "Padel Connection",
-      streak: "W1"
-    }
-  ]
-};
-
-// Load or initialize data
-let db = { ...INITIAL_DATA };
-try {
-  if (fs.existsSync(DATA_FILE)) {
-    db = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
-  } else {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2), 'utf-8');
-  }
-} catch (e) {
-  console.warn("Could not read data.json, using defaults", e);
-}
-
-function saveDb() {
-  try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2), 'utf-8');
-  } catch (e) {
-    console.error("Save DB failed:", e);
-  }
-}
 
 // MIME types dictionary
 const MIME_TYPES = {
@@ -339,12 +23,50 @@ const MIME_TYPES = {
   '.woff2': 'font/woff2'
 };
 
+// PADEL RATING ENGINE (Glicko-2 / Elo Model for Tunisian & Global Padel)
+function calculatePadelRatingUpdate({ playerLevel, playerReliability, partnerLevel, opponent1Level, opponent2Level, setsWon, setsLost }) {
+  const teamAverage = (playerLevel + partnerLevel) / 2;
+  const opponentAverage = (opponent1Level + opponent2Level) / 2;
+
+  // Expected outcome: logistic probability curve based on level difference
+  const exponent = (opponentAverage - teamAverage) / 0.85;
+  const expectedTeamWinRate = 1 / (1 + Math.pow(10, exponent));
+
+  // Actual outcome based on match result and sets (2-0, 2-1, 1-2, 0-2)
+  let actualOutcome = 0;
+  if (setsWon > setsLost) {
+    actualOutcome = setsLost === 0 ? 1.0 : 0.85;
+  } else {
+    actualOutcome = setsWon === 0 ? 0.0 : 0.25;
+  }
+
+  // Dynamic K-factor: lower reliability leads to larger adjustments
+  const reliabilityFraction = Math.max(0, Math.min(1, playerReliability / 100));
+  const kFactor = 0.42 - (0.34 * reliabilityFraction);
+
+  // Delta level change
+  let delta = kFactor * (actualOutcome - expectedTeamWinRate);
+  delta = Math.max(-0.45, Math.min(0.45, delta));
+
+  const newLevel = Math.max(1.0, Math.min(8.0, Number((playerLevel + delta).toFixed(2))));
+  const newReliability = Math.min(99.0, Number((playerReliability + (100 - playerReliability) * 0.035).toFixed(2)));
+
+  return {
+    newLevel,
+    delta: Number(delta.toFixed(2)),
+    newReliability,
+    expectedWinRate: Number((expectedTeamWinRate * 100).toFixed(1)),
+    teamAverage: Number(teamAverage.toFixed(2)),
+    opponentAverage: Number(opponentAverage.toFixed(2))
+  };
+}
+
 const server = http.createServer(async (req, res) => {
   const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = parsedUrl.pathname;
   const method = req.method;
 
-  // CORS headers for development flexibility
+  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -355,7 +77,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Parse JSON Body Helper (robust and safe)
+  // Parse JSON Body Helper
   const parseJsonBody = () => {
     return new Promise((resolve) => {
       let body = '';
@@ -379,101 +101,168 @@ const server = http.createServer(async (req, res) => {
   };
 
   // ----------------------------------------------------------------
-  // REST API Routes
+  // REST API: PLAYER APPLICATION ROUTES
   // ----------------------------------------------------------------
 
-  // GET /api/state - Complete initial state
+  // GET /api/state - Complete initial state from persistent database
   if (method === 'GET' && pathname === '/api/state') {
-    return jsonResponse(db);
+    const user = db.getUser();
+    const clubs = db.getClubsWithCourts();
+    const matches = db.findAll('matches');
+    const userMatchHistory = db.findAll('user_match_history', h => h.userId === user.id || !h.userId);
+    const tournaments = db.findAll('tournaments');
+    const clubBookings = db.findAll('bookings');
+    const officialTeams = db.findAll('official_teams');
+    const communityPlayers = db.findAll('community_players');
+    const transactions = db.findAll('transactions');
+
+    return jsonResponse({
+      user,
+      clubs,
+      matches,
+      userMatchHistory,
+      tournament: tournaments[0] || null,
+      tournaments,
+      clubBookings,
+      officialTeams,
+      communityPlayers,
+      transactions
+    });
   }
 
   // GET /api/user - User profile
   if (method === 'GET' && pathname === '/api/user') {
-    return jsonResponse(db.user);
+    return jsonResponse(db.getUser());
   }
 
   // POST /api/user/wallet/recharge - Recharge points (1 DT = 1 Point via CB, Flouci, D17)
   if (method === 'POST' && pathname === '/api/user/wallet/recharge') {
     const body = await parseJsonBody();
-    const dtAmount = Number(body.amount) || 25; // 1 DT = 1 Point
-    const methodChoice = body.paymentMethod || 'flouci'; // 'cb' | 'flouci' | 'd17'
-    
+    const dtAmount = Number(body.amount) || 25;
+    const methodChoice = body.paymentMethod || 'flouci';
+
     // Bonus policy: 100 DT gives +10 pts bonus, 250 DT gives +35 pts bonus
     let bonus = 0;
     if (dtAmount >= 250) bonus = 35;
     else if (dtAmount >= 100) bonus = 10;
 
     const totalPointsAdded = dtAmount + bonus;
-    db.user.points = Number((db.user.points + totalPointsAdded).toFixed(2));
+    const user = db.getUser();
+    const newPoints = Number((user.points + totalPointsAdded).toFixed(2));
+    db.updateUser(user.id, { points: newPoints });
 
     const methodLabels = {
       'cb': 'Carte Bancaire (GNT / CMI)',
       'flouci': 'Flouci Mobile Pay',
-      'd17': 'D17 (La Poste Tunisienne)'
+      'd17': 'D17 (La Poste Tunisienne)',
+      'cash': 'Paiement Espèces (Guichet Club)'
     };
+    const paymentMethodLabel = methodLabels[methodChoice] || methodChoice;
 
-    saveDb();
+    // Record persistent transaction
+    db.insert('transactions', {
+      userId: user.id,
+      userName: user.name,
+      type: "recharge",
+      amount: dtAmount,
+      points: totalPointsAdded,
+      paymentMethod: paymentMethodLabel,
+      status: "completed",
+      description: `Recharge portefeuille +${totalPointsAdded} pts via ${paymentMethodLabel}`
+    });
+
     return jsonResponse({
       success: true,
-      points: db.user.points,
+      points: newPoints,
       amountDT: dtAmount,
       pointsAdded: totalPointsAdded,
-      paymentMethod: methodLabels[methodChoice] || methodChoice,
-      message: `Paiement de ${dtAmount} DT validé par ${methodLabels[methodChoice] || 'Mobile'} ! +${totalPointsAdded} Points crédités sur votre compte.`
+      paymentMethod: paymentMethodLabel,
+      message: `Paiement de ${dtAmount} DT validé par ${paymentMethodLabel} ! +${totalPointsAdded} Points crédités sur votre compte.`
     });
   }
 
-  // POST /api/user/wallet/transfer - Transfer points
+  // POST /api/user/wallet/transfer - Transfer points to a friend
   if (method === 'POST' && pathname === '/api/user/wallet/transfer') {
     const body = await parseJsonBody();
     const amount = Number(body.amount) || 10;
     const recipient = body.recipient || "Ami";
-    if (db.user.points < amount) {
+    const user = db.getUser();
+
+    if (user.points < amount) {
       return jsonResponse({ success: false, message: "Solde insuffisant pour ce transfert." }, 400);
     }
-    db.user.points = Number((db.user.points - amount).toFixed(2));
-    saveDb();
-    return jsonResponse({ success: true, points: db.user.points, message: `${amount} points transférés à ${recipient}.` });
+
+    const newPoints = Number((user.points - amount).toFixed(2));
+    db.updateUser(user.id, { points: newPoints });
+
+    // Record persistent transaction
+    db.insert('transactions', {
+      userId: user.id,
+      userName: user.name,
+      type: "transfer_out",
+      amount: amount,
+      points: amount,
+      paymentMethod: "Solde HayaPala",
+      status: "completed",
+      description: `Transfert de ${amount} points à ${recipient}`
+    });
+
+    return jsonResponse({ success: true, points: newPoints, message: `${amount} points transférés à ${recipient}.` });
   }
 
   // POST /api/matches/join - Join an open match & pay individual share
   if (method === 'POST' && pathname === '/api/matches/join') {
     const body = await parseJsonBody();
-    const match = db.matches.find(m => m.id === body.matchId);
+    const match = db.findById('matches', body.matchId);
     if (!match) {
       return jsonResponse({ success: false, message: "Match introuvable." }, 404);
     }
-    if (db.user.points < match.pointsCost) {
+
+    const user = db.getUser();
+    if (user.points < match.pointsCost) {
       return jsonResponse({ success: false, message: `Points insuffisants. Il vous faut ${match.pointsCost} points (1 DT = 1 Pt).` }, 400);
     }
 
     // Deduct player's individual share
-    db.user.points = Number((db.user.points - match.pointsCost).toFixed(2));
+    const newPoints = Number((user.points - match.pointsCost).toFixed(2));
+    db.updateUser(user.id, { points: newPoints });
 
     // Fill the slot
     if (match.openSlot) {
       if (match.openSlot.team === 1) {
-        match.team1[match.openSlot.position - 1] = { name: db.user.name, level: db.user.level, avatar: "🎾" };
+        match.team1[match.openSlot.position - 1] = { name: user.name, level: user.level, avatar: "🎾" };
       } else {
-        match.team2[match.openSlot.position - 1] = { name: db.user.name, level: db.user.level, avatar: "🎾" };
+        match.team2[match.openSlot.position - 1] = { name: user.name, level: user.level, avatar: "🎾" };
       }
       match.openSlot = null;
     }
+    db.update('matches', match.id, { team1: match.team1, team2: match.team2, openSlot: match.openSlot });
 
     // Update linked club booking slots paid if any
     if (match.bookingId) {
-      const bkg = db.clubBookings.find(b => b.id === match.bookingId);
+      const bkg = db.findById('bookings', match.bookingId);
       if (bkg) {
-        bkg.slotsPaid = Math.min(4, (bkg.slotsPaid || 1) + 1);
-        if (bkg.slotsPaid >= 4) {
-          bkg.status = "confirmed";
-        }
+        const slotsPaid = Math.min(4, (bkg.slotsPaid || 1) + 1);
+        const status = slotsPaid >= 4 ? "confirmed" : bkg.status;
+        db.update('bookings', bkg.id, { slotsPaid, status });
       }
     }
 
+    // Record transaction
+    db.insert('transactions', {
+      userId: user.id,
+      userName: user.name,
+      type: "match_share",
+      amount: match.pointsCost,
+      points: match.pointsCost,
+      paymentMethod: "Solde HayaPala",
+      status: "completed",
+      description: `Part individuelle Match Padel - ${match.clubName}`
+    });
+
     // Add to user match history
-    db.userMatchHistory.unshift({
-      id: "hist_" + Date.now(),
+    db.insert('user_match_history', {
+      userId: user.id,
       date: "Aujourd'hui",
       clubName: match.clubName,
       level: match.levelRange,
@@ -484,16 +273,17 @@ const server = http.createServer(async (req, res) => {
       result: "En attente"
     });
 
-    saveDb();
-    return jsonResponse({ success: true, match, userPoints: db.user.points, message: `Vous avez payé votre part (${match.pointsCost} DT / Pts) et rejoint le match !` });
+    return jsonResponse({ success: true, match, userPoints: newPoints, message: `Vous avez payé votre part (${match.pointsCost} DT / Pts) et rejoint le match !` });
   }
 
   // POST /api/matches/create - Create an open match
   if (method === 'POST' && pathname === '/api/matches/create') {
     const body = await parseJsonBody();
-    const club = db.clubs.find(c => c.id === body.clubId) || db.clubs[0];
-    const newMatch = {
-      id: "match_" + Date.now(),
+    const clubs = db.findAll('clubs');
+    const club = clubs.find(c => c.id === body.clubId) || clubs[0];
+    const user = db.getUser();
+
+    const newMatch = db.insert('matches', {
       clubId: club.id,
       clubName: club.name,
       distance: club.distance,
@@ -505,49 +295,64 @@ const server = http.createServer(async (req, res) => {
       levelRange: body.levelRange || "4.5-5.5",
       pointsCost: Number(body.pointsCost) || 25.0,
       team1: [
-        { name: db.user.name, level: db.user.level, avatar: "🎾" },
+        { name: user.name, level: user.level, avatar: "🎾" },
         null
       ],
       team2: [
         null,
         null
       ],
-      openSlot: { team: 1, position: 2 }
-    };
-    db.matches.unshift(newMatch);
-    saveDb();
+      openSlot: { team: 1, position: 2 },
+      status: "open"
+    });
+
     return jsonResponse({ success: true, match: newMatch, message: "Match public créé avec succès !" });
   }
 
   // POST /api/courts/book - Book a court slot (Individual share vs full private)
   if (method === 'POST' && pathname === '/api/courts/book') {
     const body = await parseJsonBody();
-    const club = db.clubs.find(c => c.id === body.clubId) || db.clubs[0];
-    const court = club.courts.find(crt => crt.id === body.courtId) || club.courts[0];
-    const pricePerPlayer = Number(club.pricePoints) || 25.0; // 25 DT par joueur
+    const clubs = db.findAll('clubs');
+    const club = clubs.find(c => c.id === body.clubId) || clubs[0];
+    const courts = db.findAll('courts', c => c.clubId === club.id);
+    const court = courts.find(crt => crt.id === body.courtId) || courts[0] || { id: "court_gen", name: "Court Central" };
+
+    const pricePerPlayer = Number(club.pricePoints) || 25.0;
     const isPrivateFull = body.type === 'Privée';
     const pointsRequired = isPrivateFull ? pricePerPlayer * 4 : pricePerPlayer;
+    const user = db.getUser();
 
-    if (body.bookedBy === 'user' && db.user.points < pointsRequired) {
+    if (body.bookedBy === 'user' && user.points < pointsRequired) {
       return jsonResponse({
         success: false,
-        message: `Points insuffisants. Il vous faut ${pointsRequired} pts (${isPrivateFull ? 'Terrain complet 100 DT' : 'Votre part 25 DT'}). Solde: ${db.user.points} pts.`
+        message: `Points insuffisants. Il vous faut ${pointsRequired} pts (${isPrivateFull ? 'Terrain complet 100 DT' : 'Votre part 25 DT'}). Solde: ${user.points} pts.`
       }, 400);
     }
 
     if (body.bookedBy === 'user') {
-      db.user.points = Number((db.user.points - pointsRequired).toFixed(2));
+      const newPts = Number((user.points - pointsRequired).toFixed(2));
+      db.updateUser(user.id, { points: newPts });
+
+      db.insert('transactions', {
+        userId: user.id,
+        userName: user.name,
+        type: "booking_pay",
+        amount: pointsRequired,
+        points: pointsRequired,
+        paymentMethod: "Solde HayaPala",
+        status: "completed",
+        description: `Réservation ${court.name} (${body.time || '17:00 - 18:30'})`
+      });
     }
 
-    const bookingId = "bkg_" + Date.now();
-    const newBooking = {
-      id: bookingId,
+    const newBooking = db.insert('bookings', {
       clubId: club.id,
       courtId: court.id,
       courtName: court.name,
       time: body.time || "17:00 - 18:30",
-      clientName: body.clientName || db.user.name,
-      phone: body.phone || db.user.phone,
+      date: body.date || "Aujourd'hui",
+      clientName: body.clientName || user.name,
+      phone: body.phone || user.phone,
       status: isPrivateFull ? "confirmed" : "open_match",
       points: pointsRequired,
       pricePerPlayer: pricePerPlayer,
@@ -555,15 +360,12 @@ const server = http.createServer(async (req, res) => {
       slotsPaid: isPrivateFull ? 4 : 1,
       slotsTotal: 4,
       type: body.type || "Partie Ouverte"
-    };
+    });
 
-    db.clubBookings.push(newBooking);
-
-    // If it's an open match, create the public match in the feed so others can join and pay their share!
+    // If open match, also create public match lobby
     if (!isPrivateFull) {
-      const openMatch = {
-        id: "match_" + Date.now(),
-        bookingId: bookingId,
+      db.insert('matches', {
+        bookingId: newBooking.id,
         clubId: club.id,
         clubName: club.name,
         courtId: court.id,
@@ -574,78 +376,38 @@ const server = http.createServer(async (req, res) => {
         duration: "90 min",
         type: "Match public",
         courtReserved: true,
-        levelRange: `${(db.user.level - 0.5).toFixed(1)}-${(db.user.level + 0.5).toFixed(1)}`,
-        pointsCost: pricePerPlayer, // Each player only pays their share!
+        levelRange: `${(user.level - 0.5).toFixed(1)}-${(user.level + 0.5).toFixed(1)}`,
+        pointsCost: pricePerPlayer,
         team1: [
-          { name: db.user.name, level: db.user.level, avatar: "🎾" },
+          { name: user.name, level: user.level, avatar: "🎾" },
           null
         ],
         team2: [
           null,
           null
         ],
-        openSlot: { team: 1, position: 2 }
-      };
-      db.matches.unshift(openMatch);
+        openSlot: { team: 1, position: 2 },
+        status: "open"
+      });
     }
 
-    saveDb();
     return jsonResponse({
       success: true,
       booking: newBooking,
-      userPoints: db.user.points,
+      userPoints: db.getUser().points,
       message: isPrivateFull
         ? `Court réservé et réglé en totalité (${pointsRequired} DT / Pts).`
         : `Court réservé ! Vous n'avez payé que votre part individuelle (${pointsRequired} DT / Pts). Les 3 autres places sont ouvertes sur HayaPala.`
     });
   }
 
-  // ----------------------------------------------------------------
-  // PADEL RATING ENGINE (Glicko-2 / Elo Model for YallaPlay & Playtomic)
-  // ----------------------------------------------------------------
-  function calculatePadelRatingUpdate({ playerLevel, playerReliability, partnerLevel, opponent1Level, opponent2Level, setsWon, setsLost }) {
-    const teamAverage = (playerLevel + partnerLevel) / 2;
-    const opponentAverage = (opponent1Level + opponent2Level) / 2;
-
-    // Expected outcome: logistic probability curve based on level difference
-    const exponent = (opponentAverage - teamAverage) / 0.85;
-    const expectedTeamWinRate = 1 / (1 + Math.pow(10, exponent));
-
-    // Actual outcome based on match result and sets (2-0, 2-1, 1-2, 0-2)
-    let actualOutcome = 0;
-    if (setsWon > setsLost) {
-      actualOutcome = setsLost === 0 ? 1.0 : 0.85;
-    } else {
-      actualOutcome = setsWon === 0 ? 0.0 : 0.25;
-    }
-
-    // Dynamic K-factor: lower reliability leads to larger adjustments (high volatility)
-    const reliabilityFraction = Math.max(0, Math.min(1, playerReliability / 100));
-    const kFactor = 0.42 - (0.34 * reliabilityFraction);
-
-    // Delta level change
-    let delta = kFactor * (actualOutcome - expectedTeamWinRate);
-    delta = Math.max(-0.45, Math.min(0.45, delta));
-
-    const newLevel = Math.max(1.0, Math.min(8.0, Number((playerLevel + delta).toFixed(2))));
-    const newReliability = Math.min(99.0, Number((playerReliability + (100 - playerReliability) * 0.035).toFixed(2)));
-
-    return {
-      newLevel,
-      delta: Number(delta.toFixed(2)),
-      newReliability,
-      expectedWinRate: Number((expectedTeamWinRate * 100).toFixed(1)),
-      teamAverage: Number(teamAverage.toFixed(2)),
-      opponentAverage: Number(opponentAverage.toFixed(2))
-    };
-  }
-
-  // POST /api/rating/simulate - Simulate rating calculation
+  // POST /api/rating/simulate
   if (method === 'POST' && pathname === '/api/rating/simulate') {
     const body = await parseJsonBody();
+    const user = db.getUser();
     const result = calculatePadelRatingUpdate({
-      playerLevel: Number(body.playerLevel) || db.user.level,
-      playerReliability: Number(body.playerReliability) || db.user.levelReliability,
+      playerLevel: Number(body.playerLevel) || user.level,
+      playerReliability: Number(body.playerReliability) || user.levelReliability,
       partnerLevel: Number(body.partnerLevel) || 5.0,
       opponent1Level: Number(body.opponent1Level) || 5.2,
       opponent2Level: Number(body.opponent2Level) || 5.5,
@@ -655,9 +417,10 @@ const server = http.createServer(async (req, res) => {
     return jsonResponse({ success: true, simulation: result });
   }
 
-  // POST /api/rating/record-result - Record match result & update player level
+  // POST /api/rating/record-result
   if (method === 'POST' && pathname === '/api/rating/record-result') {
     const body = await parseJsonBody();
+    const user = db.getUser();
     const setsWon = Number(body.setsWon) || 2;
     const setsLost = Number(body.setsLost) || 1;
     const clubName = body.clubName || "Padel Connection";
@@ -669,8 +432,8 @@ const server = http.createServer(async (req, res) => {
     const opp2Level = Number(body.opp2Level) || 6.90;
 
     const calc = calculatePadelRatingUpdate({
-      playerLevel: db.user.level,
-      playerReliability: db.user.levelReliability,
+      playerLevel: user.level,
+      playerReliability: user.levelReliability,
       partnerLevel,
       opponent1Level: opp1Level,
       opponent2Level: opp2Level,
@@ -679,76 +442,73 @@ const server = http.createServer(async (req, res) => {
     });
 
     const isWin = setsWon > setsLost;
-    const oldLevel = db.user.level;
-    const oldReliability = db.user.levelReliability;
+    const oldLevel = user.level;
+    const oldReliability = user.levelReliability;
 
-    // Apply updates
-    db.user.level = calc.newLevel;
-    db.user.levelReliability = calc.newReliability;
-    db.user.matchesPlayed += 1;
+    db.updateUser(user.id, {
+      level: calc.newLevel,
+      levelReliability: calc.newReliability,
+      matchesPlayed: user.matchesPlayed + 1
+    });
 
-    // Add to history
-    db.userMatchHistory.unshift({
-      id: "hist_" + Date.now(),
+    db.insert('user_match_history', {
+      userId: user.id,
       date: "Aujourd'hui",
       clubName: clubName,
       level: `${opp1Level.toFixed(1)}-${opp2Level.toFixed(1)}`,
       team1: `${opp1Name} x ${opp2Name}`,
       team1Score: setsLost,
-      team2: `${db.user.name} x ${partnerName}`,
+      team2: `${user.name} x ${partnerName}`,
       team2Score: setsWon,
       result: isWin ? "G" : "P"
     });
 
-    saveDb();
-
     return jsonResponse({
       success: true,
       calculation: calc,
-      user: db.user,
+      user: db.getUser(),
       message: `Match enregistré ! Niveau: ${oldLevel} -> ${calc.newLevel} (${calc.delta >= 0 ? '+' : ''}${calc.delta}), Fiabilité: ${oldReliability}% -> ${calc.newReliability}%`
     });
   }
 
-  // GET /api/players - List registered community players for duo matchmaking
+  // GET /api/players
   if (method === 'GET' && pathname === '/api/players') {
     const q = (parsedUrl.searchParams.get('q') || '').toLowerCase().trim();
-    let players = (db.communityPlayers || []).slice();
+    let players = db.findAll('community_players');
     if (q) {
       players = players.filter(p => p.name.toLowerCase().includes(q) || (p.club && p.club.toLowerCase().includes(q)) || (p.city && p.city.toLowerCase().includes(q)));
     }
     return jsonResponse({ success: true, players });
   }
 
-  // GET /api/teams - List all official duos sorted by ELO
+  // GET /api/teams
   if (method === 'GET' && pathname === '/api/teams') {
-    const teams = (db.officialTeams || []).slice().sort((a, b) => (b.eloRating || 0) - (a.eloRating || 0));
+    const teams = db.findAll('official_teams').sort((a, b) => (b.eloRating || 0) - (a.eloRating || 0));
     return jsonResponse({ success: true, teams });
   }
 
-  // POST /api/teams/create - Form official duo pair by selecting an existing registered player
+  // POST /api/teams/create
   if (method === 'POST' && pathname === '/api/teams/create') {
     const body = await parseJsonBody();
-    
-    // Look up registered player in community database
-    const partner = (db.communityPlayers || []).find(p => p.id === body.partnerId || p.name.toLowerCase() === (body.partnerName || '').toLowerCase()) 
-      || (db.communityPlayers && db.communityPlayers[0])
+    const user = db.getUser();
+    const players = db.findAll('community_players');
+    const partner = players.find(p => p.id === body.partnerId || p.name.toLowerCase() === (body.partnerName || '').toLowerCase())
+      || players[0]
       || { id: "usr_custom", name: body.partnerName || "Partenaire", level: 5.00, avatar: "👨", club: "Padel Connection" };
 
     const partnerName = partner.name;
     const partnerLevel = Number(partner.level) || 5.00;
     const partnerAvatar = partner.avatar || "👨";
-    const teamName = body.teamName || `Team ${db.user.name} & ${partnerName}`;
+    const teamName = body.teamName || `Team ${user.name} & ${partnerName}`;
     const club = body.homeClub || partner.club || "Padel Country Club";
 
-    const initialElo = Math.round(1000 + ((db.user.level + partnerLevel) / 2) * 100);
-    const newTeam = {
-      id: "team_" + Date.now(),
+    const initialElo = Math.round(1000 + ((user.level + partnerLevel) / 2) * 100);
+    const newTeam = db.insert('official_teams', {
       name: teamName,
-      player1: { id: db.user.id, name: db.user.name, level: db.user.level, avatar: "🎾" },
+      player1: { id: user.id, name: user.name, level: user.level, avatar: "🎾" },
       player2: { id: partner.id, name: partnerName, level: partnerLevel, avatar: partnerAvatar, club: partner.club },
       eloRating: initialElo,
-      teamLevel: Number(((db.user.level + partnerLevel) / 2).toFixed(2)),
+      teamLevel: Number(((user.level + partnerLevel) / 2).toFixed(2)),
       matchesPlayed: 0,
       wins: 0,
       losses: 0,
@@ -757,10 +517,8 @@ const server = http.createServer(async (req, res) => {
       homeClub: club,
       streak: "-",
       isUserTeam: true
-    };
-    db.officialTeams = db.officialTeams || [];
-    db.officialTeams.unshift(newTeam);
-    saveDb();
+    });
+
     return jsonResponse({
       success: true,
       team: newTeam,
@@ -769,10 +527,10 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
-  // POST /api/teams/challenge - Challenge an opposing duo
+  // POST /api/teams/challenge
   if (method === 'POST' && pathname === '/api/teams/challenge') {
     const body = await parseJsonBody();
-    const opponentTeam = (db.officialTeams || []).find(t => t.id === body.teamId);
+    const opponentTeam = db.findById('official_teams', body.teamId);
     if (!opponentTeam) {
       return jsonResponse({ success: false, message: "Équipe introuvable." }, 404);
     }
@@ -783,18 +541,368 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
-  // POST /api/admin/reset-demo - Reset data to initial state
-  if (method === 'POST' && pathname === '/api/admin/reset-demo') {
-    db = JSON.parse(JSON.stringify(INITIAL_DATA));
-    saveDb();
-    return jsonResponse({ success: true, message: "Données réinitialisées avec succès !" });
+  // POST /api/tournaments/join
+  if (method === 'POST' && pathname === '/api/tournaments/join') {
+    const body = await parseJsonBody();
+    const user = db.getUser();
+    const tourn = db.findById('tournaments', body.tournamentId) || db.findAll('tournaments')[0];
+    if (!tourn) {
+      return jsonResponse({ success: false, message: "Tournoi introuvable." }, 404);
+    }
+    tourn.participants = tourn.participants || [];
+    if (!tourn.participants.some(p => p.name === user.name)) {
+      tourn.participants.push({ name: user.name, level: user.level, avatar: "🎾" });
+      db.update('tournaments', tourn.id, { participants: tourn.participants });
+    }
+    return jsonResponse({ success: true, tournament: tourn, message: `Inscription au tournoi "${tourn.title}" confirmée !` });
   }
 
   // ----------------------------------------------------------------
-  // Static File Serving
+  // REST API: COMPLETE ADMIN MANAGEMENT & BACK-OFFICE ROUTES
+  // ----------------------------------------------------------------
+
+  // GET /api/admin/stats - KPI Metrics for Admin Dashboard
+  if (method === 'GET' && pathname === '/api/admin/stats') {
+    const clubId = parsedUrl.searchParams.get('clubId');
+    const stats = db.getAdminStats(clubId);
+    return jsonResponse({ success: true, stats });
+  }
+
+  // GET /api/admin/bookings - List bookings with filters
+  if (method === 'GET' && pathname === '/api/admin/bookings') {
+    const clubId = parsedUrl.searchParams.get('clubId');
+    const bookings = clubId ? db.findAll('bookings', b => b.clubId === clubId) : db.findAll('bookings');
+    return jsonResponse({ success: true, bookings });
+  }
+
+  // POST /api/admin/bookings - Direct admin booking creation (walk-in/phone)
+  if (method === 'POST' && pathname === '/api/admin/bookings') {
+    const body = await parseJsonBody();
+    const clubs = db.findAll('clubs');
+    const club = clubs.find(c => c.id === body.clubId) || clubs[0];
+    const courts = db.findAll('courts', c => c.clubId === club.id);
+    const court = courts.find(crt => crt.id === body.courtId) || courts[0] || { id: "court_1", name: "Court 1" };
+
+    const pricePerPlayer = Number(body.pricePerPlayer) || Number(club.pricePoints) || 25;
+    const isPrivate = body.type === 'Privée';
+    const slotsPaid = isPrivate ? 4 : (Number(body.slotsPaid) || 1);
+
+    const booking = db.insert('bookings', {
+      clubId: club.id,
+      courtId: court.id,
+      courtName: court.name,
+      time: body.time || "17:00 - 18:30",
+      date: body.date || "Aujourd'hui",
+      clientName: body.clientName || "Client Guichet",
+      phone: body.phone || "+216 00 000 000",
+      status: slotsPaid >= 4 ? "confirmed" : "open_match",
+      points: slotsPaid * pricePerPlayer,
+      pricePerPlayer: pricePerPlayer,
+      totalPrice: pricePerPlayer * 4,
+      slotsPaid: slotsPaid,
+      slotsTotal: 4,
+      type: body.type || (isPrivate ? "Privée" : "Partie Ouverte")
+    });
+
+    db.insert('transactions', {
+      userId: "admin_booking",
+      userName: booking.clientName,
+      type: "admin_booking",
+      amount: slotsPaid * pricePerPlayer,
+      points: slotsPaid * pricePerPlayer,
+      paymentMethod: body.paymentMethod || "Paiement Guichet",
+      status: "completed",
+      description: `Réservation Directe Admin: ${court.name} (${booking.time})`
+    });
+
+    return jsonResponse({ success: true, booking, message: "Réservation enregistrée sur le planning club !" });
+  }
+
+  // PUT /api/admin/bookings/:id - Update booking
+  if (method === 'PUT' && pathname.startsWith('/api/admin/bookings/')) {
+    const bookingId = pathname.replace('/api/admin/bookings/', '');
+    const body = await parseJsonBody();
+    const updated = db.update('bookings', bookingId, body);
+    if (!updated) return jsonResponse({ success: false, message: "Réservation introuvable." }, 404);
+    return jsonResponse({ success: true, booking: updated, message: "Réservation mise à jour avec succès." });
+  }
+
+  // DELETE /api/admin/bookings/:id - Cancel/Delete booking
+  if (method === 'DELETE' && pathname.startsWith('/api/admin/bookings/')) {
+    const bookingId = pathname.replace('/api/admin/bookings/', '');
+    const deleted = db.delete('bookings', bookingId);
+    if (!deleted) return jsonResponse({ success: false, message: "Réservation introuvable." }, 404);
+    return jsonResponse({ success: true, message: "Réservation annulée et créneau libéré." });
+  }
+
+  // GET /api/admin/clubs - List all clubs
+  if (method === 'GET' && pathname === '/api/admin/clubs') {
+    return jsonResponse({ success: true, clubs: db.getClubsWithCourts() });
+  }
+
+  // POST /api/admin/clubs - Create new club
+  if (method === 'POST' && pathname === '/api/admin/clubs') {
+    const body = await parseJsonBody();
+    const newClub = db.insert('clubs', {
+      name: body.name || "Nouveau Club Padel",
+      sport: "Padel",
+      address: body.address || "Tunis",
+      schedule: body.schedule || "07:00 - 00:00",
+      distance: body.distance || "1.5 km",
+      logoBadge: body.logoBadge || (body.name ? body.name.split(' ').map(w => w[0]).join('').slice(0, 3).toUpperCase() : 'HPC'),
+      logoColor: "#111827",
+      logoTextColor: "#CCFF00",
+      isFavorite: true,
+      courtsCount: 0,
+      indoorCourts: 0,
+      outdoorCourts: 0,
+      pricePoints: Number(body.pricePoints) || 25.0,
+      phone: body.phone || "+216 22 000 000",
+      email: body.email || "contact@club.tn"
+    });
+
+    db.insert('club_settings', {
+      clubId: newClub.id,
+      name: newClub.name,
+      address: newClub.address,
+      phone: newClub.phone,
+      email: newClub.email,
+      openTime: "07:00",
+      closeTime: "00:00",
+      defaultSlotMinutes: 90,
+      pricePerPlayer: newClub.pricePoints
+    });
+
+    return jsonResponse({ success: true, club: newClub, message: `Club "${newClub.name}" créé avec succès !` });
+  }
+
+  // DELETE /api/admin/clubs/:id - Delete club
+  if (method === 'DELETE' && pathname.startsWith('/api/admin/clubs/')) {
+    const clubId = pathname.replace('/api/admin/clubs/', '');
+    db.delete('clubs', clubId);
+    const courts = db.findAll('courts', c => c.clubId === clubId);
+    courts.forEach(crt => db.delete('courts', crt.id));
+    return jsonResponse({ success: true, message: "Club et ses terrains supprimés." });
+  }
+
+  // POST /api/admin/players - Register new community member
+  if (method === 'POST' && pathname === '/api/admin/players') {
+    const body = await parseJsonBody();
+    const newPlayer = db.insert('community_players', {
+      name: body.name || "Nouveau Joueur",
+      level: Number(body.level) || 5.00,
+      reliability: Number(body.reliability) || 50.0,
+      avatar: body.avatar || "🎾",
+      club: body.club || "Club Padel",
+      city: body.city || "Tunis",
+      phone: body.phone || "+216 00 000 000",
+      matches: 0,
+      points: Number(body.points) || 0.0
+    });
+    return jsonResponse({ success: true, player: newPlayer, message: `Membre "${newPlayer.name}" inscrit avec succès !` });
+  }
+
+  // GET /api/admin/courts - List courts
+  if (method === 'GET' && pathname === '/api/admin/courts') {
+    const clubId = parsedUrl.searchParams.get('clubId');
+    const courts = clubId ? db.findAll('courts', c => c.clubId === clubId) : db.findAll('courts');
+    return jsonResponse({ success: true, courts });
+  }
+
+  // POST /api/admin/courts - Add new court
+  if (method === 'POST' && pathname === '/api/admin/courts') {
+    const body = await parseJsonBody();
+    const newCourt = db.insert('courts', {
+      clubId: body.clubId || 'club_connection',
+      name: body.name || `Court ${Date.now().toString().slice(-3)}`,
+      type: body.type || 'Indoor',
+      surface: body.surface || 'Mondo Supercourt',
+      status: body.status || 'active',
+      price: Number(body.price) || 25.0
+    });
+
+    // Update club's court counts
+    const clubCourts = db.findAll('courts', c => c.clubId === newCourt.clubId);
+    db.update('clubs', newCourt.clubId, { courtsCount: clubCourts.length });
+
+    return jsonResponse({ success: true, court: newCourt, message: `Court "${newCourt.name}" ajouté avec succès au club !` });
+  }
+
+  // PUT /api/admin/courts/:id - Update court (status, surface, name, price)
+  if (method === 'PUT' && pathname.startsWith('/api/admin/courts/')) {
+    const courtId = pathname.replace('/api/admin/courts/', '');
+    const body = await parseJsonBody();
+    const updated = db.update('courts', courtId, body);
+    if (!updated) return jsonResponse({ success: false, message: "Court introuvable." }, 404);
+    return jsonResponse({ success: true, court: updated, message: `Court "${updated.name}" mis à jour.` });
+  }
+
+  // DELETE /api/admin/courts/:id - Delete court
+  if (method === 'DELETE' && pathname.startsWith('/api/admin/courts/')) {
+    const courtId = pathname.replace('/api/admin/courts/', '');
+    const court = db.findById('courts', courtId);
+    if (!court) return jsonResponse({ success: false, message: "Court introuvable." }, 404);
+    db.delete('courts', courtId);
+    return jsonResponse({ success: true, message: "Court supprimé de l'infrastructure." });
+  }
+
+  // GET /api/admin/tournaments
+  if (method === 'GET' && pathname === '/api/admin/tournaments') {
+    return jsonResponse({ success: true, tournaments: db.findAll('tournaments') });
+  }
+
+  // POST /api/admin/tournaments - Create tournament
+  if (method === 'POST' && pathname === '/api/admin/tournaments') {
+    const body = await parseJsonBody();
+    const clubs = db.findAll('clubs');
+    const club = clubs.find(c => c.id === body.clubId) || clubs[0];
+
+    const newTourn = db.insert('tournaments', {
+      title: body.title || "Tournoi Padel Open",
+      badge: "Inscriptions Ouvertes",
+      clubId: club.id,
+      clubName: club.name,
+      date: body.date || "Prochainement",
+      format: body.format || "P250 Hommes",
+      maxTeams: Number(body.maxTeams) || 16,
+      entryFee: Number(body.entryFee) || 30.0,
+      prizePool: Number(body.prizePool) || 1500,
+      status: "open",
+      participants: []
+    });
+
+    return jsonResponse({ success: true, tournament: newTourn, message: `Tournoi "${newTourn.title}" créé avec succès !` });
+  }
+
+  // PUT /api/admin/tournaments/:id - Update tournament status or details
+  if (method === 'PUT' && pathname.startsWith('/api/admin/tournaments/')) {
+    const tournId = pathname.replace('/api/admin/tournaments/', '');
+    const body = await parseJsonBody();
+    const updated = db.update('tournaments', tournId, body);
+    if (!updated) return jsonResponse({ success: false, message: "Tournoi introuvable." }, 404);
+    return jsonResponse({ success: true, tournament: updated, message: "Tournoi mis à jour." });
+  }
+
+  // GET /api/admin/players - Complete member directory with balance & stats
+  if (method === 'GET' && pathname === '/api/admin/players') {
+    const community = db.findAll('community_players');
+    const user = db.getUser();
+    const all = [
+      {
+        id: user.id,
+        name: user.name + " (Vous)",
+        level: user.level,
+        reliability: user.levelReliability,
+        avatar: "🎾",
+        club: "Multi-clubs",
+        city: "Tunis",
+        phone: user.phone,
+        matches: user.matchesPlayed,
+        points: user.points,
+        role: "VIP / Admin"
+      },
+      ...community
+    ];
+    return jsonResponse({ success: true, players: all });
+  }
+
+  // POST /api/admin/players/adjust-points - Credit or debit player points at desk
+  if (method === 'POST' && pathname === '/api/admin/players/adjust-points') {
+    const body = await parseJsonBody();
+    const playerId = body.playerId;
+    const amount = Number(body.amount) || 0;
+    const reason = body.reason || "Ajustement guichet club";
+
+    if (playerId === "user_moslem") {
+      const u = db.getUser();
+      const newPts = Math.max(0, Number((u.points + amount).toFixed(2)));
+      db.updateUser(u.id, { points: newPts });
+      db.insert('transactions', {
+        userId: u.id,
+        userName: u.name,
+        type: amount >= 0 ? "admin_credit" : "admin_debit",
+        amount: Math.abs(amount),
+        points: Math.abs(amount),
+        paymentMethod: "Régie Club",
+        status: "completed",
+        description: reason
+      });
+      return jsonResponse({ success: true, newPoints: newPts, message: `Solde mis à jour : ${newPts} pts (${amount >= 0 ? '+' : ''}${amount} pts).` });
+    } else {
+      const p = db.findById('community_players', playerId);
+      if (!p) return jsonResponse({ success: false, message: "Joueur introuvable." }, 404);
+      const newPts = Math.max(0, Number(((p.points || 0) + amount).toFixed(2)));
+      db.update('community_players', p.id, { points: newPts });
+      db.insert('transactions', {
+        userId: p.id,
+        userName: p.name,
+        type: amount >= 0 ? "admin_credit" : "admin_debit",
+        amount: Math.abs(amount),
+        points: Math.abs(amount),
+        paymentMethod: "Régie Club",
+        status: "completed",
+        description: reason
+      });
+      return jsonResponse({ success: true, newPoints: newPts, message: `Solde de ${p.name} ajusté : ${newPts} pts.` });
+    }
+  }
+
+  // POST /api/admin/players/adjust-level - Update player certified rating
+  if (method === 'POST' && pathname === '/api/admin/players/adjust-level') {
+    const body = await parseJsonBody();
+    const playerId = body.playerId;
+    const newLevel = Number(body.level);
+    if (!newLevel || newLevel < 1 || newLevel > 8) {
+      return jsonResponse({ success: false, message: "Niveau invalide (doit être compris entre 1.00 et 8.00)." }, 400);
+    }
+
+    if (playerId === "user_moslem") {
+      db.updateUser(playerId, { level: newLevel });
+      return jsonResponse({ success: true, level: newLevel, message: `Niveau certifié de Moslem Gouia mis à jour à ${newLevel}.` });
+    } else {
+      const p = db.findById('community_players', playerId);
+      if (!p) return jsonResponse({ success: false, message: "Joueur introuvable." }, 404);
+      db.update('community_players', p.id, { level: newLevel });
+      return jsonResponse({ success: true, level: newLevel, message: `Niveau de ${p.name} certifié à ${newLevel}.` });
+    }
+  }
+
+  // GET /api/admin/transactions - Transaction audit log
+  if (method === 'GET' && pathname === '/api/admin/transactions') {
+    const transactions = db.findAll('transactions');
+    return jsonResponse({ success: true, transactions });
+  }
+
+  // GET /api/admin/settings - Club settings
+  if (method === 'GET' && pathname === '/api/admin/settings') {
+    const clubId = parsedUrl.searchParams.get('clubId') || 'club_connection';
+    const settings = db.findById('club_settings', clubId) || db.findAll('club_settings')[0];
+    return jsonResponse({ success: true, settings });
+  }
+
+  // PUT /api/admin/settings - Update club settings
+  if (method === 'PUT' && pathname === '/api/admin/settings') {
+    const body = await parseJsonBody();
+    const clubId = body.clubId || 'club_connection';
+    const updated = db.update('club_settings', clubId, body);
+    return jsonResponse({ success: true, settings: updated, message: "Paramètres du club enregistrés." });
+  }
+
+  // POST /api/admin/reset-demo - Reset data to initial seed
+  if (method === 'POST' && pathname === '/api/admin/reset-demo') {
+    db.reset();
+    return jsonResponse({ success: true, message: "Base de données réinitialisée aux données officielles !" });
+  }
+
+  // ----------------------------------------------------------------
+  // Static File Serving & Clean Routing
   // ----------------------------------------------------------------
   let safePath = path.normalize(pathname).replace(/^(\.\.[\/\\])+/, '');
-  if (safePath === '/' || safePath === '\\') safePath = '/index.html';
+  
+  // Specific routes mapping to index.html
+  if (safePath === '/' || safePath === '\\' || safePath === '/admin' || safePath === '/app' || safePath === '/dashboard') {
+    safePath = '/index.html';
+  }
 
   const filePath = path.join(PUBLIC_DIR, safePath);
 
@@ -821,8 +929,9 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`\n======================================================`);
-  console.log(`🚀 YallaPlay Platform is live at: http://localhost:${PORT}`);
-  console.log(`- 📱 Espace Joueur Mobile (PWA & Web)`);
-  console.log(`- 💻 Portail Back-Office Club (yallaplayapp.com replica)`);
+  console.log(`🚀 HayaPala Platform is live at: http://localhost:${PORT}`);
+  console.log(`- 📱 Real Mobile Player Web App: http://localhost:${PORT}/`);
+  console.log(`- ⚡ Club Pro Administration Portal: http://localhost:${PORT}/admin`);
+  console.log(`- 💾 Persistent Database: ./data/hayapala.json & schema.sql`);
   console.log(`======================================================\n`);
 });

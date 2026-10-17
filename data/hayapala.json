@@ -1,0 +1,30 @@
+{
+  "users": [
+    {
+      "id": "user_moslem",
+      "name": "Moslem Gouia",
+      "email": "moslem.gouia@example.com",
+      "avatar": "/images/tennis-ball.svg",
+      "points": 100.0,
+      "phone": "+216 22 227 041",
+      "level": 5.0,
+      "levelReliability": 50.0,
+      "matchesPlayed": 0,
+      "sport": "Padel",
+      "role": "admin",
+      "notificationsCount": 0,
+      "favorites": [],
+      "createdAt": "2026-10-17T11:00:00.000Z"
+    }
+  ],
+  "community_players": [],
+  "clubs": [],
+  "courts": [],
+  "bookings": [],
+  "matches": [],
+  "official_teams": [],
+  "tournaments": [],
+  "transactions": [],
+  "user_match_history": [],
+  "club_settings": []
+}
