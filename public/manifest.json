@@ -1,7 +1,7 @@
 {
-  "name": "HayaPala - Padel Pro Experience",
-  "short_name": "HayaPala",
-  "description": "L'expérience Padel nouvelle génération : Matchmaking, Réservation & ELO officiel",
+  "name": "CirclePadel - Padel Club App",
+  "short_name": "CirclePadel",
+  "description": "L'expérience Padel nouvelle génération : Matchmaking, Réservation & Évaluation officielle",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",

@@ -3010,8 +3010,12 @@ img { display: block; max-width: 100%; }
    RESPONSIVE OVERRIDES
    ========================================================================== */
 @media (max-width: 480px) {
-  .platform-control-bar { padding: 0 16px; }
-  .view-mode-tabs .view-tab-btn { padding: 5px 10px; font-size: 11px; }
+  .platform-control-bar { padding: 0 10px; gap: 6px; }
+  .hayapala-brand-text { font-size: 14px; }
+  .brand-tag { display: none; }
+  .tab-label { display: none; }
+  .view-tab-btn { padding: 6px 10px; font-size: 14px; }
+  .btn-reset-demo { padding: 5px 8px; font-size: 13px; }
   .admin-panel-container { padding: 16px; }
   .schedule-container { padding: 16px; }
 }

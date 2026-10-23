@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<!-- HayaPala v1.1 · Firebase Firestore + Auth · circlepadel -->
+<!-- CirclePadel v1.1 · Firebase Firestore + Auth · circlepadel -->
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>HayaPala – Club de Padel · Réservation &amp; Matchmaking</title>
+  <title>CirclePadel – Club de Padel · Réservation &amp; Matchmaking</title>
   <meta name="description" content="Réservez votre terrain, rejoignez un match ouvert et suivez votre progression validée par le coach. L'app officielle de votre club de padel." />
   <meta name="theme-color" content="#080B10" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="HayaPala" />
+  <meta name="apple-mobile-web-app-title" content="CirclePadel" />
   <meta name="mobile-web-app-capable" content="yes" />
   <link rel="manifest" href="./manifest.json" />
   <link rel="icon" type="image/jpeg" href="./images/pwa-icon.jpg" />
@@ -26,27 +26,27 @@
     <div class="brand-section">
       <div class="hayapala-logo-badge" onclick="switchViewMode('player-app')" style="cursor:pointer">
         <div class="pala-icon-symbol">
-          <img src="./images/pwa-icon.jpg" alt="HayaPala" class="pala-head-img" />
+          <img src="./images/pwa-icon.jpg" alt="CirclePadel" class="pala-head-img" />
         </div>
-        <div class="hayapala-brand-text">HayaPala</div>
+        <div class="hayapala-brand-text">CirclePadel</div>
       </div>
       <span class="brand-tag">Padel Club</span>
     </div>
 
     <div class="view-mode-tabs" role="tablist">
       <button class="view-tab-btn active" data-mode="player-app" id="tabModePlayerApp">
-        <span>🎾</span> App Joueur
+        <span>🎾</span><span class="tab-label"> App</span>
       </button>
       <button class="view-tab-btn" data-mode="backoffice-dashboard" id="tabModeDashboard">
-        <span>⚡</span> Gérant
+        <span>⚡</span><span class="tab-label"> Gérant</span>
       </button>
       <button class="view-tab-btn" data-mode="backoffice-login" id="tabModeLogin">
-        <span>🔑</span> Portail
+        <span>🔑</span><span class="tab-label"> Portail</span>
       </button>
     </div>
 
     <div class="right-controls">
-      <button class="btn-reset-demo" id="btnResetDemoData">↺ Reset</button>
+      <button class="btn-reset-demo" id="btnResetDemoData">↺</button>
     </div>
   </header>
 
@@ -507,7 +507,7 @@
           </div>
 
           <div style="padding:24px 20px; text-align:center; font-size:11px; color:var(--text-muted)">
-            HayaPala v1.0.0 · Club de Padel · Tunisie 🇹🇳
+            CirclePadel v1.0.0 · Club de Padel · Tunisie 🇹🇳
           </div>
         </section>
 
@@ -533,7 +533,7 @@
         <div class="nav-center-action-btn" id="navCenterEmblem" onclick="openModal('modal-create-match')" title="Lancer un match">
           <div class="nav-center-glow"></div>
           <div class="nav-center-inner">
-            <img src="./images/pwa-icon.jpg" alt="HayaPala" class="ball-fuzzy-img" />
+            <img src="./images/pwa-icon.jpg" alt="CirclePadel" class="ball-fuzzy-img" />
           </div>
         </div>
 
@@ -563,13 +563,13 @@
         <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap">
           <div class="hayapala-logo-badge">
             <div class="pala-icon-symbol">
-              <img src="./images/pwa-icon.jpg" alt="HayaPala" class="pala-head-img" />
+              <img src="./images/pwa-icon.jpg" alt="CirclePadel" class="pala-head-img" />
             </div>
-            <div class="hayapala-brand-text">HayaPala <span style="font-size:13px; color:var(--gold); font-weight:700">Club Pro</span></div>
+            <div class="hayapala-brand-text">CirclePadel <span style="font-size:13px; color:var(--gold); font-weight:700">Club Pro</span></div>
           </div>
           <div class="admin-live-badge">🟢 EN LIGNE</div>
           <select class="admin-club-select-dropdown" id="adminClubSelect">
-            <option value="hp">HayaPala · Votre Club de Padel</option>
+            <option value="hp">CirclePadel · Votre Club de Padel</option>
           </select>
         </div>
 
@@ -891,10 +891,10 @@
         <div class="login-logo-area">
           <div class="hayapala-logo-badge" style="justify-content:center">
             <div class="pala-icon-symbol" style="width:56px;height:56px">
-              <img src="./images/pwa-icon.jpg" alt="HayaPala" class="pala-head-img" style="border-radius:50%" />
+              <img src="./images/pwa-icon.jpg" alt="CirclePadel" class="pala-head-img" style="border-radius:50%" />
             </div>
           </div>
-          <div class="login-brand-title">HayaPala</div>
+          <div class="login-brand-title">CirclePadel</div>
           <div class="login-brand-sub">Portail Gérant &amp; Administration</div>
         </div>
 

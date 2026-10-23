@@ -16,17 +16,15 @@ import {
   fbSeedIfEmpty, fbTrack,
 } from './firebase.js';
 
-'use strict';
 
 // ============================================================================
 // BASE DE DONNÉES LOCALE (simulation → sera remplacée par Firestore)
 // ============================================================================
 
-const DB_KEY = 'hayapala_db_v1';
 
 const SEED_DATA = {
   appConfig: {
-    clubName: 'HayaPala Padel Club',
+    clubName: 'CirclePadel Club',
     address: 'Route de La Marsa, Tunis, Tunisie',
     phone: '+216 71 000 000',
     email: 'contact@hayapala.tn',
@@ -2306,7 +2304,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initCreateMatchLevelSelectors();
 
   // ── Load club settings into form ──
-  document.getElementById('settingClubName')?.setAttribute('value', DB.appConfig.clubName || 'HayaPala');
+  document.getElementById('settingClubName')?.setAttribute('value', DB.appConfig.clubName || 'CirclePadel');
   document.getElementById('settingClubPhone')?.setAttribute('value', DB.appConfig.phone || '');
   document.getElementById('settingClubEmail')?.setAttribute('value', DB.appConfig.email || '');
 
@@ -2325,7 +2323,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (kpiEl) kpiEl.textContent = alerts.length;
   }, 5 * 60 * 1000);
 
-  console.log('%c🎾 HayaPala v1.1 — Firebase Firestore + Auth · circlepadel', 'color:#C8A96E; font-weight:bold; font-size:15px');
+  console.log('%c🎾 CirclePadel v1.1 — Firebase Firestore + Auth · circlepadel', 'color:#C8A96E; font-weight:bold; font-size:15px');
   console.log('%c🔥 Firestore sync + real-time listeners actifs', 'color:#F39C12');
 });
 
