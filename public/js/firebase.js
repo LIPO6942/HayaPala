@@ -125,6 +125,10 @@ async function fbGetCourts() {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
+async function fbSaveCourt(court) {
+  await setDoc(doc(db, COL.courts, court.id), { ...court, updatedAt: serverTimestamp() }, { merge: true });
+}
+
 // ── Firestore helpers — Bookings ──────────────────────────────────────────────
 
 async function fbGetBookings(date) {
@@ -294,7 +298,7 @@ export {
   // Players
   fbGetPlayers, fbGetPlayer, fbSavePlayer, fbUpdatePlayerLevel, fbListenPlayers,
   // Courts
-  fbGetCourts,
+  fbGetCourts, fbSaveCourt,
   // Bookings
   fbGetBookings, fbAddBooking, fbUpdateBooking, fbCancelBooking, fbListenBookings,
   // Open Matches

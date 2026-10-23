@@ -77,6 +77,76 @@
 }
 
 /* ==========================================================================
+   MODE CLAIR — surcharge des variables (body.light-mode)
+   ========================================================================== */
+body.light-mode {
+  --bg-canvas:      #F0F2F7;
+  --bg-frame:       #FFFFFF;
+  --bg-card:        #FFFFFF;
+  --bg-card-2:      #F5F6FA;
+  --bg-card-hover:  #EDF0F8;
+  --bg-input:       #F0F2F7;
+  --bg-overlay:     rgba(240, 242, 247, 0.96);
+
+  --border-subtle:  rgba(0, 0, 0, 0.08);
+  --border-card:    rgba(0, 0, 0, 0.10);
+  --border-gold:    rgba(180, 140, 60, 0.40);
+  --border-gold-sm: rgba(180, 140, 60, 0.22);
+
+  --text-white:     #0D1117;
+  --text-primary:   #1A1F2E;
+  --text-secondary: #5A6478;
+  --text-muted:     #9AA3B2;
+  --text-dark:      #F0F2F7;
+
+  --green-bg:   rgba(46, 204, 113, 0.12);
+  --red-bg:     rgba(231, 76, 60, 0.10);
+  --amber-bg:   rgba(243, 156, 18, 0.12);
+  --blue-bg:    rgba(52, 152, 219, 0.10);
+
+  --gradient-card:  linear-gradient(160deg, rgba(255,255,255,0.95) 0%, rgba(240,242,247,0.98) 100%);
+  --gradient-hero:  linear-gradient(180deg, rgba(240,242,247,0) 0%, rgba(240,242,247,0.97) 100%);
+
+  --shadow-sm:  0 2px 12px rgba(0, 0, 0, 0.08);
+  --shadow-md:  0 8px 28px rgba(0, 0, 0, 0.12);
+  --shadow-lg:  0 20px 60px rgba(0, 0, 0, 0.18);
+  --shadow-gold: 0 4px 24px rgba(200, 169, 110, 0.20);
+}
+
+/* Transition fluide lors du changement de thème */
+body, body * {
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    color 0.2s ease,
+    box-shadow 0.3s ease;
+}
+
+/* Bouton toggle thème */
+.theme-toggle-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--ease-smooth);
+  flex-shrink: 0;
+}
+.theme-toggle-btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-card);
+  color: var(--text-primary);
+  transform: scale(1.08);
+}
+
+
+/* ==========================================================================
    RESET & BASE
    ========================================================================== */
 *, *::before, *::after {

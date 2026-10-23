@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title HayaPala — Git Push + Firebase Deploy
+title CirclePadel — Git Push + Firebase Deploy
 color 0A
 set "DIR=%~dp0"
 set "NODE=%DIR%node_portable\node-v22.12.0-win-x64\node.exe"
@@ -8,7 +8,7 @@ set "NPM=%DIR%node_portable\node-v22.12.0-win-x64\npm.cmd"
 
 echo.
 echo  ╔══════════════════════════════════════════════════╗
-echo  ║   HayaPala v1.1 — Git Push + Firebase Deploy    ║
+echo  ║   CirclePadel v1.1 — Git Push + Firebase Deploy  ║
 echo  ║   Projet : circlepadel.web.app                   ║
 echo  ╚══════════════════════════════════════════════════╝
 echo.

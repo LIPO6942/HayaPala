@@ -8,7 +8,7 @@
 import {
   fbSignIn, fbSignOut, fbOnAuthChange,
   fbGetPlayers, fbGetPlayer, fbSavePlayer, fbUpdatePlayerLevel, fbListenPlayers,
-  fbGetCourts,
+  fbGetCourts, fbSaveCourt,
   fbGetBookings, fbAddBooking, fbUpdateBooking, fbCancelBooking, fbListenBookings,
   fbGetOpenMatches, fbJoinMatch, fbCreateOpenMatch, fbListenOpenMatches,
   fbGetNotifications, fbMarkNotifRead, fbAddNotification,
@@ -18,251 +18,73 @@ import {
 
 
 // ============================================================================
-// BASE DE DONNÉES LOCALE (simulation → sera remplacée par Firestore)
+// CONFIGURATION DE BASE DU CLUB (structure fixe — aucune donnée mock)
 // ============================================================================
 
-
-const SEED_DATA = {
-  appConfig: {
-    clubName: 'CirclePadel Club',
-    address: 'Route de La Marsa, Tunis, Tunisie',
-    phone: '+216 71 000 000',
-    email: 'contact@hayapala.tn',
-    openTime: '08:00',
-    closeTime: '23:00',
-    pricePeak: 25,
-    priceOffPeak: 18,
-    matchmakingTolerance: 1,
-    alertBeforeMatchHours: 2,
-    slotDurationMinutes: 90,
-    cancelDeadlineHours: 2,
-    maxPlayersPerMatch: 4,
-  },
-
-  currentUser: {
-    id: 'user_moslem',
-    firstName: 'Moslem',
-    lastName: 'Gouia',
-    phone: '+216 22 227 041',
-    email: 'moslem@hayapala.tn',
-    avatar: null,
-    role: 'manager',            // 'player' | 'manager'
-  },
-
-  players: [
-    {
-      id: 'user_moslem',
-      firstName: 'Moslem', lastName: 'Gouia',
-      phone: '+216 22 227 041', email: 'moslem@hayapala.tn',
-      avatar: null, role: 'manager',
-      status: 'active',          // 'pending' | 'active' | 'suspended'
-      level: 5,                  // 1–7, entier, validé coach uniquement
-      levelValidatedAt: '2026-09-15T10:00:00Z',
-      levelValidatedBy: 'coach_ali',
-      preferredSide: 'right',
-      playStyle: 'offensive',
-      reliabilityScore: 82,
-      totalMatchesPlayed: 24,
-      skills: { bandeja:7, vibora:5, salida_cristal:4, volee:7, placement:8, regularite:7, mental:8 },
-      levelHistory: [
-        { previousLevel:4, newLevel:5, changedAt:'2026-09-15T10:00:00Z', changedBy:'coach_ali', coachComment:'Excellent progrès sur les volées et le placement. Vibora à travailler.' }
-      ],
-      consentSignedAt: '2026-08-01T09:00:00Z',
-      createdAt: '2026-08-01T09:00:00Z',
-    },
-    {
-      id: 'player_yassine',
-      firstName: 'Yassine', lastName: 'Ben Salah',
-      phone: '+216 55 123 456', email: 'yassine@example.com',
-      avatar: null, role: 'player',
-      status: 'active',
-      level: 4,
-      levelValidatedAt: '2026-10-01T10:00:00Z',
-      levelValidatedBy: 'coach_ali',
-      preferredSide: 'left',
-      playStyle: 'defensive',
-      reliabilityScore: 91,
-      totalMatchesPlayed: 38,
-      skills: { bandeja:6, vibora:4, salida_cristal:6, volee:5, placement:7, regularite:8, mental:7 },
-      levelHistory: [],
-      consentSignedAt: '2026-07-10T09:00:00Z',
-      createdAt: '2026-07-10T09:00:00Z',
-    },
-    {
-      id: 'player_sana',
-      firstName: 'Sana', lastName: 'Trabelsi',
-      phone: '+216 98 765 432', email: 'sana@example.com',
-      avatar: null, role: 'player',
-      status: 'active',
-      level: 3,
-      levelValidatedAt: '2026-09-20T10:00:00Z',
-      levelValidatedBy: 'coach_ali',
-      preferredSide: 'right',
-      playStyle: 'all-around',
-      reliabilityScore: 75,
-      totalMatchesPlayed: 12,
-      skills: { bandeja:4, vibora:3, salida_cristal:4, volee:5, placement:6, regularite:6, mental:5 },
-      levelHistory: [],
-      consentSignedAt: '2026-09-01T09:00:00Z',
-      createdAt: '2026-09-01T09:00:00Z',
-    },
-    {
-      id: 'player_mehdi',
-      firstName: 'Mehdi', lastName: 'Khalfallah',
-      phone: '+216 21 000 111', email: 'mehdi@example.com',
-      avatar: null, role: 'player',
-      status: 'active',
-      level: 6,
-      levelValidatedAt: '2026-10-10T10:00:00Z',
-      levelValidatedBy: 'coach_ali',
-      preferredSide: 'right',
-      playStyle: 'offensive',
-      reliabilityScore: 95,
-      totalMatchesPlayed: 67,
-      skills: { bandeja:8, vibora:8, salida_cristal:7, volee:8, placement:9, regularite:8, mental:9 },
-      levelHistory: [],
-      consentSignedAt: '2026-06-01T09:00:00Z',
-      createdAt: '2026-06-01T09:00:00Z',
-    },
-    {
-      id: 'player_rania',
-      firstName: 'Rania', lastName: 'Chahed',
-      phone: '+216 50 111 222', email: '',
-      avatar: null, role: 'player',
-      status: 'pending',        // pas encore validée
-      level: null,
-      levelValidatedAt: null,
-      levelValidatedBy: null,
-      preferredSide: 'left',
-      playStyle: 'defensive',
-      reliabilityScore: 50,
-      totalMatchesPlayed: 0,
-      skills: {},
-      levelHistory: [],
-      consentSignedAt: '2026-10-22T09:00:00Z',
-      createdAt: '2026-10-22T09:00:00Z',
-    },
-  ],
-
-  courts: [
-    { id: 'court_1', name: 'Terrain 1', surface: 'Gazon synthétique bleu', isActive: true, amenities: ['Éclairage LED', 'Chauffage'] },
-    { id: 'court_2', name: 'Terrain 2', surface: 'Gazon synthétique bleu', isActive: true, amenities: ['Éclairage LED'] },
-    { id: 'court_3', name: 'Terrain 3', surface: 'Gazon synthétique vert', isActive: true, amenities: ['Éclairage LED', 'Chauffage'] },
-    { id: 'court_4', name: 'Terrain 4', surface: 'Moquette indoor', isActive: true, amenities: ['Éclairage LED', 'Climatisation'] },
-  ],
-
-  bookings: [
-    {
-      id: 'bk_001',
-      courtId: 'court_1', courtName: 'Terrain 1',
-      date: getTodayStr(),
-      startTime: '10:00', endTime: '11:30',
-      type: 'private', status: 'confirmed',
-      players: [
-        { userId:'user_moslem', name:'Moslem Gouia', level:5, isOrganizer:true },
-        { userId:'player_yassine', name:'Yassine Ben Salah', level:4, isOrganizer:false },
-        { userId:'player_mehdi', name:'Mehdi Khalfallah', level:6, isOrganizer:false },
-        { userId:'player_sana', name:'Sana Trabelsi', level:3, isOrganizer:false },
-      ],
-      waitlist: [],
-      pricePerPlayer: 25,
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 'bk_002',
-      courtId: 'court_2', courtName: 'Terrain 2',
-      date: getTodayStr(),
-      startTime: '18:30', endTime: '20:00',
-      type: 'open', status: 'confirmed',
-      minLevel: 4, maxLevel: 6,
-      players: [
-        { userId:'player_mehdi', name:'Mehdi Khalfallah', level:6, isOrganizer:true },
-        { userId:'player_yassine', name:'Yassine Ben Salah', level:4, isOrganizer:false },
-      ],
-      waitlist: [],
-      pricePerPlayer: 25,
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 'bk_003',
-      courtId: 'court_3', courtName: 'Terrain 3',
-      date: getTodayStr(),
-      startTime: '09:30', endTime: '11:00',
-      type: 'course', status: 'confirmed',
-      players: [],
-      notes: 'Cours débutants · Coach Ali',
-      pricePerPlayer: 0,
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 'bk_004',
-      courtId: 'court_1', courtName: 'Terrain 1',
-      date: getTodayStr(),
-      startTime: '20:00', endTime: '21:30',
-      type: 'open', status: 'confirmed',
-      minLevel: 3, maxLevel: 5,
-      players: [
-        { userId:'player_sana', name:'Sana Trabelsi', level:3, isOrganizer:true },
-      ],
-      waitlist: [],
-      pricePerPlayer: 25,
-      createdAt: new Date().toISOString(),
-    },
-  ],
-
-  notifications: [
-    {
-      id: 'notif_001',
-      userId: 'user_moslem',
-      type: 'match_available',
-      title: 'Match disponible · Niveau 4–6',
-      body: 'Un match ouvert ce soir à 18:30 sur Terrain 2 cherche 2 joueurs.',
-      isRead: false,
-      sentAt: new Date(Date.now() - 30 * 60000).toISOString(),
-    },
-    {
-      id: 'notif_002',
-      userId: 'user_moslem',
-      type: 'level_updated',
-      title: 'Votre niveau a été mis à jour',
-      body: 'Le coach a validé votre niveau à 5/7. Commentaire : Excellent progrès !',
-      isRead: true,
-      sentAt: new Date(Date.now() - 3 * 3600000).toISOString(),
-    },
-    {
-      id: 'notif_003',
-      userId: 'user_moslem',
-      type: 'match_alert',
-      title: '🚨 Alerte — Match incomplet dans 2h',
-      body: 'Le match de 20:00 sur Terrain 1 n\'a que 1 joueur inscrit. Il faut 3 joueurs de plus.',
-      isRead: false,
-      sentAt: new Date(Date.now() - 5 * 60000).toISOString(),
-    },
-  ],
-
-  matchReviews: [],
-  transactions: [],
+/** Config par défaut — remplacée par Firestore dès le chargement */
+const DEFAULT_CONFIG = {
+  clubName: 'CirclePadel Club',
+  address: 'Route de La Marsa, Tunis, Tunisie',
+  phone: '+216 71 000 000',
+  email: 'contact@circlepadel.tn',
+  openTime: '08:00',
+  closeTime: '23:00',
+  pricePeak: 25,
+  priceOffPeak: 18,
+  matchmakingTolerance: 1,
+  alertBeforeMatchHours: 2,
+  slotDurationMinutes: 90,
+  cancelDeadlineHours: 2,
+  maxPlayersPerMatch: 4,
 };
 
+/** Les 4 terrains — seules données structurelles créées automatiquement dans Firestore */
+const COURTS_SEED = [
+  { id: 'court_1', name: 'Terrain 1', surface: 'Gazon synthétique bleu', isActive: true, amenities: ['Éclairage LED', 'Chauffage'] },
+  { id: 'court_2', name: 'Terrain 2', surface: 'Gazon synthétique bleu', isActive: true, amenities: ['Éclairage LED'] },
+  { id: 'court_3', name: 'Terrain 3', surface: 'Gazon synthétique vert', isActive: true, amenities: ['Éclairage LED', 'Chauffage'] },
+  { id: 'court_4', name: 'Terrain 4', surface: 'Moquette indoor', isActive: true, amenities: ['Éclairage LED', 'Climatisation'] },
+];
+
 // ============================================================================
-// DATABASE — COUCHE HYBRIDE (localStorage cache + Firebase Firestore)
+// DATABASE — SOURCE DE VÉRITÉ : FIRESTORE UNIQUEMENT
+// Le cache localStorage n'est utilisé que pour le rendu immédiat (optimistic UI)
+// Aucune donnée mock n'est chargée — tout vient de Firestore
 // ============================================================================
 
-const DB_KEY = 'hayapala_db_v2';
+const DB_KEY = 'circlepadel_db_v1';
 
-// Cache local (rendu immédiat de l'UI, synchronisé avec Firestore en arrière-plan)
-let DB = (() => {
-  try {
-    const raw = localStorage.getItem(DB_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch (e) {}
-  const seed = JSON.parse(JSON.stringify(SEED_DATA));
-  seed.bookings.forEach(b => { try { b.date = new Date().toISOString().split('T')[0]; } catch(e) {} });
-  return seed;
-})();
+/** Structure vide initiale — sera peuplée exclusivement par Firestore */
+let DB = {
+  appConfig:     { ...DEFAULT_CONFIG },
+  currentUser:   { id: 'guest', firstName: 'Joueur', lastName: '', role: 'player' },
+  players:       [],
+  courts:        [...COURTS_SEED],
+  bookings:      [],
+  notifications: [],
+  matchReviews:  [],
+  transactions:  [],
+};
+
+// Restaurer le cache Firestore uniquement (flag _fromFirestore requis)
+try {
+  const raw = localStorage.getItem(DB_KEY);
+  if (raw) {
+    const cached = JSON.parse(raw);
+    if (cached._fromFirestore === true) {
+      DB = { ...DB, ...cached };
+    } else {
+      // Ancien cache localStorage (données mock) → on l'efface
+      localStorage.removeItem(DB_KEY);
+    }
+  }
+} catch (e) { localStorage.removeItem(DB_KEY); }
 
 function saveDB(data) {
-  try { localStorage.setItem(DB_KEY, JSON.stringify(data)); } catch (e) {}
+  try {
+    data._fromFirestore = true;
+    localStorage.setItem(DB_KEY, JSON.stringify(data));
+  } catch (e) {}
 }
 
 function getTodayStr() {
@@ -275,21 +97,51 @@ function getTomorrowStr() {
   return d.toISOString().split('T')[0];
 }
 
+/** Initialise Firestore au premier lancement (terrains + config uniquement) */
+async function initFirestoreIfEmpty() {
+  try {
+    const [courts, config] = await Promise.all([fbGetCourts(), fbGetConfig()]);
+    if (!courts.length) {
+      for (const c of COURTS_SEED) await fbSaveCourt(c);
+      console.log('✅ Firestore : 4 terrains créés');
+    }
+    if (!config) {
+      await fbSaveConfig(DEFAULT_CONFIG);
+      console.log('✅ Firestore : config club initialisée');
+    }
+  } catch (e) {
+    console.warn('⚠️ Init Firestore :', e.message);
+  }
+}
+
 /** Synchronise le cache local depuis Firestore (appelé au démarrage) */
 async function syncFromFirestore() {
   try {
-    const [players, courts, bookings, config] = await Promise.all([
+    const [players, courts, bookings, openMatches, config] = await Promise.all([
       fbGetPlayers(),
       fbGetCourts(),
       fbGetBookings(),
+      fbGetOpenMatches(),
       fbGetConfig(),
     ]);
-    if (players.length)  DB.players   = players;
-    if (courts.length)   DB.courts    = courts;
-    if (bookings.length) DB.bookings  = bookings;
-    if (config)          DB.appConfig = { ...DB.appConfig, ...config };
+    if (players.length)    DB.players  = players;
+    if (courts.length)     DB.courts   = courts;
+    // Fusionner réservations + matchs ouverts
+    const regularBookings = bookings.filter(b => b.type !== 'open');
+    const openAsBookings  = openMatches.map(m => ({ ...m, type: 'open', status: m.status || 'confirmed' }));
+    DB.bookings = [...regularBookings, ...openAsBookings];
+    if (config) DB.appConfig = { ...DEFAULT_CONFIG, ...config };
+
+    // Charger les notifications du joueur courant
+    if (DB.currentUser?.id && DB.currentUser.id !== 'guest') {
+      try {
+        const notifs = await fbGetNotifications(DB.currentUser.id);
+        if (notifs.length) DB.notifications = notifs;
+      } catch (e) {}
+    }
+
     saveDB(DB);
-    console.log('🔥 Firestore sync OK —', players.length, 'joueurs,', bookings.length, 'réservations');
+    console.log('🔥 Firestore sync OK —', players.length, 'joueurs,', DB.bookings.length, 'réservations/matchs');
   } catch (e) {
     console.warn('⚠️ Firestore hors-ligne, cache local utilisé :', e.message);
   }
@@ -1942,12 +1794,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   // FIREBASE : Seed (1ère utilisation) + Sync + Listeners temps-réel
   // ──────────────────────────────────────────────────────────────────────────
 
-  // 1. Seed Firestore si base vide (premier lancement)
+  // 1. Initialiser Firestore si base vide (terrains + config)
   try {
-    const seeded = await fbSeedIfEmpty(SEED_DATA);
-    if (seeded) console.log('🌱 Seed Firestore effectué avec succès');
+    await initFirestoreIfEmpty();
   } catch (e) {
-    console.warn('⚠️ Seed Firestore ignoré (hors-ligne ou déjà existant) :', e.message);
+    console.warn('⚠️ Init Firestore ignorée :', e.message);
   }
 
   // 2. Sync initiale depuis Firestore (met à jour le cache local)
@@ -2323,42 +2174,178 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (kpiEl) kpiEl.textContent = alerts.length;
   }, 5 * 60 * 1000);
 
+  // ============================================================================
+  // EVENT DELEGATION — tous les boutons dynamiques (modales, planning, éval.)
+  // Un seul handler capture TOUS les clics, évitant les problèmes d'éléments
+  // non encore présents dans le DOM au moment du addEventListener.
+  // ============================================================================
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button, [data-action]');
+    if (!btn) return;
+    const id = btn.id;
+
+    // ── Confirmation réservation terrain ──
+    if (id === 'btnConfirmBooking') {
+      const courtNum = parseInt(document.getElementById('bookCourtSelect')?.value) || 1;
+      const date     = document.getElementById('bookDateInput')?.value || getTodayStr();
+      const time     = document.getElementById('bookStartTime')?.value || '10:00';
+      const duration = parseInt(document.getElementById('bookDuration')?.value) || 90;
+      const type     = document.getElementById('bookType')?.value || 'private';
+      const courtId  = `court_${courtNum}`;
+      const court    = DB.courts.find(c => c.id === courtId);
+      const user     = DB.players.find(p => p.id === DB.currentUser.id);
+      const newBooking = {
+        id: `bk_${Date.now()}`, courtId,
+        courtName: court?.name || `Terrain ${courtNum}`,
+        date, startTime: time, endTime: addMinutes(time, duration),
+        type, status: 'confirmed',
+        players: [{ userId: DB.currentUser.id, name: `${user?.firstName || 'Joueur'} ${user?.lastName || ''}`, level: user?.level, isOrganizer: true }],
+        waitlist: [], pricePerPlayer: DB.appConfig.pricePeak,
+        createdAt: new Date().toISOString(),
+      };
+      DB.bookings.push(newBooking); saveDB(DB);
+      try {
+        const fsId = await fbAddBooking(newBooking); newBooking.id = fsId;
+        showToast('Réservation confirmée ✓', 'success');
+        fbTrack('booking_created', { courtId, type });
+      } catch (err) { showToast('Réservation enregistrée.', 'gold'); }
+      closeAllModals(); renderCourtsPlanningGrid(); renderHomeScreen();
+    }
+
+    // ── Création match ouvert ──
+    if (id === 'btnConfirmCreateMatch') {
+      const courtNum = parseInt(document.getElementById('createMatchCourt')?.value) || 1;
+      const datetime = document.getElementById('createMatchDateTime')?.value;
+      const levelRange = document.getElementById('createMatchLevel')?.value || '3-5';
+      const note = document.getElementById('createMatchNote')?.value?.trim() || '';
+      if (!datetime) { showToast('Sélectionnez une date et heure.', 'error'); return; }
+      const [minL, maxL] = levelRange.split('-').map(Number);
+      const [date, time] = datetime.split('T');
+      const courtId = `court_${courtNum}`;
+      const court = DB.courts.find(c => c.id === courtId);
+      const user = DB.players.find(p => p.id === DB.currentUser.id);
+      const newMatch = {
+        id: `bk_${Date.now()}`, courtId,
+        courtName: court?.name || `Terrain ${courtNum}`,
+        date, startTime: time?.slice(0,5) || '18:00', endTime: addMinutes(time?.slice(0,5) || '18:00', 90),
+        type: 'open', status: 'open',
+        minLevel: minL || 3, maxLevel: maxL || 5,
+        players: [{ userId: DB.currentUser.id, name: `${user?.firstName || 'Joueur'} ${user?.lastName || ''}`, level: user?.level, isOrganizer: true }],
+        waitlist: [], pricePerPlayer: DB.appConfig.pricePeak, notes: note,
+        createdAt: new Date().toISOString(),
+      };
+      DB.bookings.push(newMatch); saveDB(DB);
+      try {
+        await fbCreateOpenMatch(newMatch);
+        showToast('Match ouvert publié ! 🎾', 'success');
+        fbTrack('open_match_created', { courtId, minLevel: minL, maxLevel: maxL });
+      } catch (err) { showToast('Match créé.', 'gold'); }
+      closeAllModals(); renderMatchesList(); renderHomeOpenMatches();
+    }
+
+    // ── Validation évaluation coach ──
+    if (id === 'btnSubmitEvaluation') {
+      const playerId = btn.dataset.playerId;
+      if (!playerId) return;
+      const level = parseInt(document.getElementById('evalLevelSelector')?.querySelector('.eval-level-btn.active')?.textContent) || null;
+      const comment = document.getElementById('evalCoachComment')?.value?.trim() || '';
+      if (!level) { showToast('Sélectionnez un niveau officiel.', 'error'); return; }
+      const skills = {};
+      document.querySelectorAll('#skillsEvalGrid .skill-eval-row').forEach(row => {
+        skills[row.dataset.skill] = parseInt(row.querySelector('.eval-dot.active')?.dataset.val) || 5;
+      });
+      const player = DB.players.find(p => p.id === playerId);
+      if (player) {
+        const prev = player.level;
+        player.level = level; player.status = 'active'; player.skills = skills;
+        player.levelValidatedAt = new Date().toISOString(); player.levelValidatedBy = 'coach';
+        player.levelHistory = [...(player.levelHistory || []), { previousLevel: prev, newLevel: level, changedAt: new Date().toISOString(), changedBy: 'coach', coachComment: comment }];
+        saveDB(DB);
+      }
+      try {
+        await fbUpdatePlayerLevel(playerId, { level, coachComment: comment, coachId: 'coach' });
+        await fbSavePlayer({ ...player, skills });
+        showToast(`Niveau ${level}/7 validé ✓`, 'success');
+        fbTrack('player_evaluated', { playerId, level });
+      } catch (err) { showToast(`Niveau ${level}/7 sauvegardé.`, 'gold'); }
+      closeAllModals(); renderAdminPlayers();
+    }
+
+    // ── Inscription membre ──
+    if (id === 'btnConfirmRegisterPlayer') {
+      const name = document.getElementById('regPlayerName')?.value?.trim();
+      const phone = document.getElementById('regPlayerPhone')?.value?.trim();
+      const email = document.getElementById('regPlayerEmail')?.value?.trim() || '';
+      const side = document.getElementById('regPlayerSide')?.value || 'right';
+      const style = document.getElementById('regPlayerStyle')?.value || 'offensive';
+      if (!name || !phone) { showToast('Nom et téléphone obligatoires.', 'error'); return; }
+      const [firstName, ...lastParts] = name.split(' ');
+      const newPlayer = {
+        id: `player_${Date.now()}`,
+        firstName, lastName: lastParts.join(' ') || '', phone, email,
+        avatar: null, role: 'player', status: 'pending', level: null,
+        preferredSide: side, playStyle: style, reliabilityScore: 50,
+        totalMatchesPlayed: 0, skills: {}, levelHistory: [],
+        consentSignedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
+      };
+      DB.players.push(newPlayer); saveDB(DB);
+      try {
+        await fbSavePlayer(newPlayer);
+        showToast(`${name} inscrit(e) ✓`, 'success');
+        fbTrack('player_registered', { playerId: newPlayer.id });
+      } catch (err) { showToast(`${name} inscrit(e).`, 'gold'); }
+      closeAllModals(); renderAdminPlayers();
+    }
+
+    // ── Navigation jours planning gérant ──
+    if (id === 'btnPrevDay') {
+      const d = new Date((window._adminCurrentDate || getTodayStr()) + 'T00:00:00');
+      d.setDate(d.getDate() - 1);
+      window._adminCurrentDate = d.toISOString().split('T')[0];
+      const el = document.getElementById('adminCurrentDate');
+      if (el) el.textContent = formatDate(window._adminCurrentDate);
+      renderAdminTimetable();
+    }
+    if (id === 'btnNextDay') {
+      const d = new Date((window._adminCurrentDate || getTodayStr()) + 'T00:00:00');
+      d.setDate(d.getDate() + 1);
+      window._adminCurrentDate = d.toISOString().split('T')[0];
+      const el = document.getElementById('adminCurrentDate');
+      if (el) el.textContent = formatDate(window._adminCurrentDate);
+      renderAdminTimetable();
+    }
+    if (id === 'btnTodayAdmin') {
+      window._adminCurrentDate = getTodayStr();
+      const el = document.getElementById('adminCurrentDate');
+      if (el) el.textContent = formatDate(window._adminCurrentDate);
+      renderAdminTimetable();
+    }
+    if (id === 'btnAdminOpenRegisterPlayer') openModal('modal-register-player');
+    if (id === 'btnAdminDirectBooking') openModal('modal-admin-create-slot');
+
+    // ── Mot de passe admin visible/masqué ──
+    if (id === 'toggleAdminPassword') {
+      const inp = document.getElementById('adminPassword');
+      if (inp) inp.type = inp.type === 'password' ? 'text' : 'password';
+    }
+
+    // ── Mark all notifs read ──
+    if (id === 'btnMarkAllRead') {
+      const unreadN = DB.notifications.filter(n => !n.isRead && n.userId === DB.currentUser.id);
+      unreadN.forEach(n => { n.isRead = true; });
+      saveDB(DB); renderNotifications();
+      const dotElN = document.getElementById('notifDot');
+      if (dotElN) dotElN.style.display = 'none';
+      for (const n of unreadN) { try { await fbMarkNotifRead(n.id); } catch (er) {} }
+    }
+  });
+
   console.log('%c🎾 CirclePadel v1.1 — Firebase Firestore + Auth · circlepadel', 'color:#C8A96E; font-weight:bold; font-size:15px');
   console.log('%c🔥 Firestore sync + real-time listeners actifs', 'color:#F39C12');
 });
 
 
-// ── Admin timetable nav (calendar ‹/›) ─────────────────────────────────────
-document.addEventListener('click', (e) => {
-  if (e.target.id === 'btnPrevDay') {
-    const d = new Date((window._adminCurrentDate || getTodayStr()) + 'T00:00:00');
-    d.setDate(d.getDate() - 1);
-    window._adminCurrentDate = d.toISOString().split('T')[0];
-    const el = document.getElementById('adminCurrentDate');
-    if (el) el.textContent = formatDate(window._adminCurrentDate);
-    renderAdminTimetable();
-  }
-  if (e.target.id === 'btnNextDay') {
-    const d = new Date((window._adminCurrentDate || getTodayStr()) + 'T00:00:00');
-    d.setDate(d.getDate() + 1);
-    window._adminCurrentDate = d.toISOString().split('T')[0];
-    const el = document.getElementById('adminCurrentDate');
-    if (el) el.textContent = formatDate(window._adminCurrentDate);
-    renderAdminTimetable();
-  }
-  if (e.target.id === 'btnTodayAdmin') {
-    window._adminCurrentDate = getTodayStr();
-    const el = document.getElementById('adminCurrentDate');
-    if (el) el.textContent = formatDate(window._adminCurrentDate);
-    renderAdminTimetable();
-  }
-  if (e.target.id === 'btnAdminOpenRegisterPlayer') {
-    openModal('modal-register-player');
-  }
-  if (e.target.id === 'btnAdminDirectBooking') {
-    openModal('modal-admin-create-slot');
-  }
-});
+
 
 // ============================================================================
 // EXPOSITION GLOBALE (requis car app.js est un ES Module)
@@ -2397,3 +2384,30 @@ window.setMatchLevelMax        = setMatchLevelMax;
 window.removePlayerFromBooking = removePlayerFromBooking;
 window.adminCancelBooking      = adminCancelBooking;
 window.renderSlotDetail        = renderSlotDetail;
+
+// ============================================================================
+// TOGGLE THÈME CLAIR / SOMBRE
+// ============================================================================
+
+const THEME_KEY = 'circlepadel_theme';
+
+function applyTheme(theme) {
+  const isDark = theme === 'dark';
+  document.body.classList.toggle('light-mode', !isDark);
+  const btn = document.getElementById('btnToggleTheme');
+  if (btn) btn.textContent = isDark ? '🌙' : '☀️';
+  localStorage.setItem(THEME_KEY, theme);
+}
+
+function toggleTheme() {
+  const current = localStorage.getItem(THEME_KEY) || 'dark';
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+}
+
+// Initialiser le thème (sombre par défaut)
+applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
+
+// Brancher le bouton
+document.getElementById('btnToggleTheme')?.addEventListener('click', toggleTheme);
+window.toggleTheme = toggleTheme;
+
