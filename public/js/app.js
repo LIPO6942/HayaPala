@@ -1,4 +1,4 @@
-﻿/* ==========================================================================
+/* ==========================================================================
    HAYAPALA — APPLICATION LOGIC v1.1
    Club de Padel · Firebase Firestore + Auth · circlepadel
    Vanilla JS, no framework — ES Module (type="module" dans index.html)
@@ -1900,16 +1900,16 @@ function closeAllModals() {
 
 function showToast(message, type = 'info') {
   const container = document.getElementById('toastContainer');
+  if (!container) return;
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   const icons = { gold:'✦', success:'✓', error:'✗', info:'ℹ' };
-  toast.innerHTML = `<span>${icons[type] || '•'}</span><span>${message}</span>`;
+  toast.innerHTML = `<span>${icons[type] || '•'}</span> <span>${message}</span>`;
   container.appendChild(toast);
   setTimeout(() => {
-    toast.style.animation = 'none';
+    toast.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
     toast.style.opacity = '0';
     toast.style.transform = 'translateY(-8px)';
-    toast.style.transition = 'all 0.25s ease';
     setTimeout(() => toast.remove(), 300);
   }, 3500);
 }
@@ -2361,3 +2361,41 @@ document.addEventListener('click', (e) => {
     openModal('modal-admin-create-slot');
   }
 });
+
+// ============================================================================
+// EXPOSITION GLOBALE (requis car app.js est un ES Module)
+// Les fonctions appelées via onclick="..." dans le HTML doivent être
+// attachées à window pour être accessibles hors du scope du module.
+// ============================================================================
+window.navigateToScreen        = navigateToScreen;
+window.switchViewMode          = switchViewMode;
+window.openModal               = openModal;
+window.closeModal              = (modalId) => {
+  const m = document.getElementById(modalId);
+  if (m) { m.classList.remove('active'); document.body.style.overflow = ''; }
+};
+window.closeAllModals          = closeAllModals;
+window.showToast               = showToast;
+window.resetDemoData           = resetDemoData;
+window.selectPlanningDate      = selectPlanningDate;
+window.openBookingFromSlot     = openBookingFromSlot;
+window.handleJoinMatch         = handleJoinMatch;
+window.cancelMyBooking         = cancelMyBooking;
+window.markNotifRead           = markNotifRead;
+window.openPlayerEvalModal     = openPlayerEvalModal;
+window.setSkillValue           = setSkillValue;
+window.setEvalLevel            = setEvalLevel;
+window.saveEvaluation          = saveEvaluation;
+window.openAdminSlotModal      = openAdminSlotModal;
+window.createAdminSlot         = createAdminSlot;
+window.activatePlayer          = activatePlayer;
+window.suspendPlayer           = suspendPlayer;
+window.switchAdminTab          = switchAdminTab;
+window.registerPlayer          = registerPlayer;
+window.submitBooking           = submitBooking;
+window.createMatch             = createMatch;
+window.setMatchLevelMin        = setMatchLevelMin;
+window.setMatchLevelMax        = setMatchLevelMax;
+window.removePlayerFromBooking = removePlayerFromBooking;
+window.adminCancelBooking      = adminCancelBooking;
+window.renderSlotDetail        = renderSlotDetail;
