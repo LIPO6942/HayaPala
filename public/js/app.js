@@ -87,15 +87,28 @@ function saveDB(data) {
   } catch (e) {}
 }
 
+function formatLocalDate(d = new Date()) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function getTodayStr() {
-  return new Date().toISOString().split('T')[0];
+  return formatLocalDate(new Date());
+}
+
+function shiftDateStr(dateStr, days = 0) {
+  if (!dateStr) dateStr = getTodayStr();
+  const parts = dateStr.split('-').map(Number);
+  const dt = new Date(parts[0], parts[1] - 1, parts[2] + days);
+  return formatLocalDate(dt);
 }
 
 function getTomorrowStr() {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().split('T')[0];
+  return shiftDateStr(getTodayStr(), 1);
 }
+
 
 /** Initialise Firestore au premier lancement (terrains + config uniquement) */
 async function initFirestoreIfEmpty() {
@@ -293,11 +306,41 @@ function checkMatchAlerts() {
 
 let currentMode = 'player-app';
 
+function updateAuthRoleUI() {
+  const isAdmin = DB.currentUser?.role === 'admin';
+  const tabDashboard = document.getElementById('tabModeDashboard');
+  const proBadge = document.querySelector('.home-club-pro-badge');
+  const adminSettings = document.getElementById('settingsAdminLink');
+
+  if (tabDashboard) {
+    tabDashboard.style.display = isAdmin ? '' : 'none';
+  }
+  if (proBadge) {
+    proBadge.style.display = isAdmin ? '' : 'none';
+  }
+  if (adminSettings) {
+    adminSettings.style.display = isAdmin ? '' : 'none';
+  }
+}
+
 function switchViewMode(mode) {
+  // Protection de l'espace gérant : seul un admin peut accéder au dashboard
+  if (mode === 'backoffice-dashboard') {
+    const isAdmin = DB.currentUser?.role === 'admin';
+    if (!isAdmin) {
+      showToast('Accès réservé aux gérants / coachs.', 'error');
+      mode = 'backoffice-login';
+    }
+  }
+
   currentMode = mode;
-  document.getElementById('playerAppContainer').style.display = (mode === 'player-app') ? '' : 'none';
-  document.getElementById('backofficeDashboard').style.display = (mode === 'backoffice-dashboard') ? '' : 'none';
-  document.getElementById('backofficeLogin').style.display = (mode === 'backoffice-login') ? '' : 'none';
+  const playerContainer = document.getElementById('playerAppContainer');
+  const dashboardContainer = document.getElementById('backofficeDashboard');
+  const loginContainer = document.getElementById('backofficeLogin');
+
+  if (playerContainer) playerContainer.style.display = (mode === 'player-app') ? '' : 'none';
+  if (dashboardContainer) dashboardContainer.style.display = (mode === 'backoffice-dashboard') ? '' : 'none';
+  if (loginContainer) loginContainer.style.display = (mode === 'backoffice-login') ? '' : 'none';
 
   document.querySelectorAll('.view-tab-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.mode === mode);
@@ -307,6 +350,7 @@ function switchViewMode(mode) {
     renderAdminDashboard();
   }
 }
+
 
 // ============================================================================
 // SCREEN NAVIGATION (App joueur)
@@ -616,9 +660,9 @@ function renderPlanningDateBar() {
   const todayStr = getTodayStr();
 
   for (let i = 0; i < 7; i++) {
-    const d = new Date(now);
-    d.setDate(now.getDate() + i);
-    const dateStr = d.toISOString().split('T')[0];
+    const dateStr = shiftDateStr(todayStr, i);
+    const parts = dateStr.split('-').map(Number);
+    const d = new Date(parts[0], parts[1] - 1, parts[2]);
     days.push({
       dateStr,
       dayName: dateStr === todayStr ? 'Auj.' : dayNames[d.getDay()],
@@ -802,6 +846,7 @@ function updateAuthUI() {
     profileAvatarBig.textContent = (f + l).toUpperCase();
   }
 
+  updateAuthRoleUI();
   renderProfileScreen();
 }
 
@@ -836,8 +881,8 @@ async function handlePlayerLogin(email, password) {
         email: u.email,
         phone: '',
         role: 'player',
-        status: 'active',
-        level: 3,
+        status: 'pending',
+        level: null,
         preferredSide: 'right',
         playStyle: 'all-around',
         reliabilityScore: 80,
@@ -899,14 +944,14 @@ async function handlePlayerRegister({ firstName, lastName, phone, email, passwor
       phone: phone || '',
       email: u.email,
       role: 'player',
-      status: 'active',
-      level: 3,
+      status: 'pending',
+      level: null,
       preferredSide: preferredSide || 'right',
       playStyle: playStyle || 'all-around',
       reliabilityScore: 100,
       totalMatchesPlayed: 0,
       skills: {},
-      levelHistory: [{ date: getTodayStr(), level: 3, note: 'Inscription initiale' }],
+      levelHistory: [{ date: getTodayStr(), level: null, note: 'Inscription initiale — en attente évaluation coach' }],
       createdAt: new Date().toISOString(),
     };
 
@@ -1316,6 +1361,12 @@ function renderAdminCourts() {
 
 function renderAdminPlayers() {
   const tbody = document.getElementById('adminPlayersTableBody');
+  if (!tbody) return;
+
+  if (!DB.players || DB.players.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:32px; color:var(--text-muted)">Aucun joueur inscrit dans la base de données.</td></tr>`;
+    return;
+  }
 
   tbody.innerHTML = DB.players.map(p => {
     const statusBadge = p.status === 'active'
@@ -1596,55 +1647,85 @@ let evalSkillValues = {};
 let evalLevelValue = null;
 
 function openPlayerEvalModal(playerId) {
-  const player = DB.players.find(p => p.id === playerId);
-  if (!player) return;
+  const player = (DB.players || []).find(p => p.id === playerId);
+  if (!player) {
+    showToast('Joueur introuvable.', 'error');
+    return;
+  }
 
   evalCurrentPlayerId = playerId;
-  evalSkillValues = player.skills ? { ...player.skills } : {};
-  evalLevelValue = player.level;
+  evalSkillValues = player.skills && Object.keys(player.skills).length ? { ...player.skills } : {};
+  Object.keys(SKILL_LABELS).forEach(k => {
+    if (evalSkillValues[k] === undefined) evalSkillValues[k] = 5;
+  });
+  evalLevelValue = player.level || null;
 
-  document.getElementById('evalModalTitle').textContent = `Évaluation · ${player.firstName} ${player.lastName}`;
-  document.getElementById('evalPlayerAvatar').textContent = '🎾';
-  document.getElementById('evalPlayerName').textContent = `${player.firstName} ${player.lastName}`;
-  document.getElementById('evalPlayerPhone').textContent = player.phone || '—';
-  document.getElementById('evalPlayerCurrentLevel').textContent = player.level ? `Niveau ${player.level}` : 'Non évalué';
-  document.getElementById('evalPlayerMatches').textContent = `${player.totalMatchesPlayed || 0} matchs`;
+  const modalTitle = document.getElementById('evalModalTitle');
+  if (modalTitle) modalTitle.innerHTML = `Évaluation · <span id="evalPlayerName">${player.firstName} ${player.lastName || ''}</span>`;
+  const nameCard = document.getElementById('evalPlayerNameCard');
+  if (nameCard) nameCard.textContent = `${player.firstName} ${player.lastName || ''}`.trim();
+  const phoneCard = document.getElementById('evalPlayerPhone');
+  if (phoneCard) phoneCard.textContent = player.phone || player.email || '—';
+  const levelCard = document.getElementById('evalPlayerCurrentLevel');
+  if (levelCard) {
+    levelCard.innerHTML = player.level
+      ? `<span class="level-badge">${player.level}/7 <span class="coach-check">✓</span></span>`
+      : `<span class="level-badge pending">⏳ En attente d'évaluation coach</span>`;
+  }
+
+  const commentEl = document.getElementById('evalCoachComment');
+  if (commentEl) commentEl.value = '';
+
+  // Skill dots (1–10)
+  const skillsGrid = document.getElementById('skillsEvalGrid');
+  if (skillsGrid) {
+    skillsGrid.innerHTML = Object.entries(SKILL_LABELS).map(([skillKey, skillLabel]) => {
+      const currentVal = evalSkillValues[skillKey] || 5;
+      const dots = Array.from({ length: 10 }, (_, i) => i + 1).map(n => `
+        <button type="button" class="skill-dot-btn ${n <= currentVal ? 'active' : ''}"
+          data-val="${n}" onclick="setSkillValue('${skillKey}', ${n})">${n}</button>
+      `).join('');
+      return `
+        <div class="skill-eval-row" data-skill="${skillKey}" style="margin-bottom:14px">
+          <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:12px">
+            <span style="font-weight:600; color:var(--text-white)">${skillLabel}</span>
+            <span id="skillValDisplay_${skillKey}" style="color:var(--gold); font-weight:700">${currentVal}/10</span>
+          </div>
+          <div class="skill-eval-dots" style="display:flex; gap:4px; flex-wrap:wrap">
+            ${dots}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Level selector (1–7)
+  const levelSel = document.getElementById('evalLevelSelector');
+  if (levelSel) {
+    levelSel.innerHTML = Array.from({ length: 7 }, (_, i) => i + 1).map(n => `
+      <div class="eval-level-btn ${n === evalLevelValue ? 'active' : ''}"
+        onclick="setEvalLevel(${n})" title="${LEVEL_LABELS[n] || ''}">
+        ${n}
+      </div>
+    `).join('');
+  }
 
   const submitBtn = document.getElementById('btnSubmitEvaluation');
   if (submitBtn) submitBtn.dataset.playerId = playerId;
 
-  // Skill dots (1–10)
-  Object.keys(SKILL_LABELS).forEach(skill => {
-    const container = document.querySelector(`[data-skill="${skill}"]`);
-    if (!container) return;
-    const current = evalSkillValues[skill] || 0;
-    container.innerHTML = Array.from({ length: 10 }, (_, i) => i + 1).map(n => `
-      <button type="button" class="skill-dot-btn ${n <= current ? 'active' : ''}"
-        data-val="${n}" onclick="setSkillValue('${skill}', ${n})">${n}</button>`
-    ).join('');
-  });
-
-  // Level selector (1–7)
-  const levelSel = document.getElementById('evalLevelSelector');
-  levelSel.innerHTML = Array.from({ length: 7 }, (_, i) => i + 1).map(n => `
-    <div class="eval-level-btn ${n === evalLevelValue ? 'active' : ''}"
-      onclick="setEvalLevel(${n})" title="${LEVEL_LABELS[n]}">${n}</div>`
-  ).join('');
-
-  // Comment
-  document.getElementById('evalCoachComment').value = '';
-
   openModal('modal-evaluate-player');
 }
 
-function setSkillValue(skill, val) {
-  evalSkillValues[skill] = val;
-  const container = document.querySelector(`[data-skill="${skill}"]`);
-  if (container) {
-    container.querySelectorAll('.skill-dot-btn').forEach(btn => {
+function setSkillValue(skillKey, val) {
+  evalSkillValues[skillKey] = val;
+  const row = document.querySelector(`.skill-eval-row[data-skill="${skillKey}"]`);
+  if (row) {
+    row.querySelectorAll('.skill-dot-btn').forEach(btn => {
       btn.classList.toggle('active', parseInt(btn.dataset.val) <= val);
     });
   }
+  const disp = document.getElementById(`skillValDisplay_${skillKey}`);
+  if (disp) disp.textContent = `${val}/10`;
 }
 
 function setEvalLevel(level) {
@@ -1654,59 +1735,88 @@ function setEvalLevel(level) {
   });
 }
 
-function saveEvaluation(e) {
-  e.preventDefault();
-  if (!evalCurrentPlayerId || !evalLevelValue) {
-    showToast('Veuillez sélectionner un niveau global (1–7).', 'error');
+async function saveEvaluation(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  const playerId = evalCurrentPlayerId;
+  if (!playerId) {
+    showToast('Joueur introuvable.', 'error');
+    return;
+  }
+  if (!evalLevelValue) {
+    showToast('Veuillez sélectionner un niveau officiel (1–7).', 'error');
     return;
   }
 
-  const player = DB.players.find(p => p.id === evalCurrentPlayerId);
-  if (!player) return;
+  const btn = document.getElementById('btnSubmitEvaluation');
+  const originalText = btn ? btn.textContent : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Validation...';
+  }
 
-  const comment = document.getElementById('evalCoachComment').value.trim();
-  const previousLevel = player.level;
+  try {
+    const player = (DB.players || []).find(p => p.id === playerId);
+    if (!player) {
+      showToast('Joueur introuvable.', 'error');
+      return;
+    }
 
-  // Update player
-  player.skills = { ...evalSkillValues };
-  player.level = evalLevelValue;
-  player.status = 'active';
-  player.levelValidatedAt = new Date().toISOString();
-  player.levelValidatedBy = DB.currentUser.id;
+    const comment = document.getElementById('evalCoachComment')?.value?.trim() || '';
+    const previousLevel = player.level;
 
-  // Level history entry
-  if (previousLevel !== evalLevelValue || !previousLevel) {
+    player.level = evalLevelValue;
+    player.status = 'active'; // Joueur validé et actif !
+    player.skills = { ...evalSkillValues };
+    player.levelValidatedAt = new Date().toISOString();
+    player.levelValidatedBy = 'coach_ali';
     player.levelHistory = player.levelHistory || [];
     player.levelHistory.push({
       previousLevel: previousLevel || null,
       newLevel: evalLevelValue,
       changedAt: new Date().toISOString(),
-      changedBy: DB.currentUser.id,
+      changedBy: 'coach_ali',
       coachComment: comment,
     });
 
-    // Notification to player
+    // Notification au joueur
+    DB.notifications = DB.notifications || [];
     DB.notifications.push({
       id: `notif_${Date.now()}`,
       userId: player.id,
       type: 'level_updated',
-      title: `Votre niveau a été mis à jour`,
-      body: `Le coach a validé votre niveau à ${evalLevelValue}/7.${comment ? ` "${comment}"` : ''}`,
+      title: 'Niveau validé par le coach',
+      body: `Félicitations ! Votre niveau officiel a été certifié à ${evalLevelValue}/7 par votre coach.${comment ? ` Note : "${comment}"` : ''}`,
       isRead: false,
       sentAt: new Date().toISOString(),
     });
-  }
 
-  saveDB(DB);
-  try {
-    fbUpdatePlayerLevel(player.id, { level: evalLevelValue, coachComment: comment });
-    fbSavePlayer(player);
-  } catch (err) {}
-  showToast(`✓ Évaluation enregistrée · Niveau ${evalLevelValue}/7 validé pour ${player.firstName}`, 'success');
-  closeAllModals();
-  renderAdminPlayers();
-  renderAdminKPIs();
-  renderAdminAlerts();
+    saveDB(DB);
+    closeAllModals();
+    renderAdminPlayers();
+    renderAdminKPIs();
+    renderAdminAlerts();
+    if (DB.currentUser?.id === player.id) {
+      renderHomeScreen();
+      updateAuthUI();
+    }
+
+    showToast(`✓ Niveau ${evalLevelValue}/7 validé pour ${player.firstName}`, 'success');
+
+    // Sauvegarde Firestore en arrière-plan
+    fbUpdatePlayerLevel(player.id, { level: evalLevelValue, coachComment: comment, coachId: 'coach_ali' })
+      .catch(err => console.warn('fbUpdatePlayerLevel async error:', err));
+    fbSavePlayer(player)
+      .catch(err => console.warn('fbSavePlayer async error:', err));
+    fbTrack('player_evaluated', { playerId: player.id, level: evalLevelValue });
+  } catch (err) {
+    console.error('Error in saveEvaluation:', err);
+    showToast('Erreur lors de la validation.', 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  }
 }
 
 // ============================================================================
@@ -2060,6 +2170,7 @@ function timeAgo(isoStr) {
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
+  updateAuthRoleUI();
 
   // ── View mode tab buttons ──
   document.querySelectorAll('.view-tab-btn').forEach(btn => {
@@ -2121,7 +2232,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const originalText = btn ? btn.textContent : '';
 
     // Mode démo : admin / admin → accès direct sans Firebase Auth
-    if ((email === 'admin' || email === 'admin@hayapala.tn') && password === 'admin') {
+    if ((email === 'admin' || email === 'admin@hayapala.tn' || email === 'admin@circlepadel.com') && password === 'admin') {
+      DB.currentUser = {
+        id: 'admin_1',
+        firstName: 'Gérant',
+        lastName: 'CirclePadel',
+        email: email,
+        role: 'admin',
+        status: 'active'
+      };
+      saveDB(DB);
+      updateAuthRoleUI();
       switchViewMode('backoffice-dashboard');
       showToast('Bienvenue Admin 👋', 'gold');
       fbTrack('login', { method: 'demo' });
@@ -2132,7 +2253,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Tentative Firebase Auth (email/password)
     try {
-      await fbSignIn(email, password);
+      const userCred = await fbSignIn(email, password);
+      let adminUser = (DB.players || []).find(p => p.id === userCred?.user?.uid || p.email === userCred?.user?.email);
+      if (!adminUser) {
+        adminUser = {
+          id: userCred?.user?.uid || 'admin_fb',
+          firstName: userCred?.user?.displayName || 'Gérant',
+          lastName: '',
+          email: userCred?.user?.email || email,
+          role: 'admin',
+          status: 'active'
+        };
+      } else {
+        adminUser.role = 'admin';
+      }
+      DB.currentUser = adminUser;
+      saveDB(DB);
+      updateAuthRoleUI();
       switchViewMode('backoffice-dashboard');
       showToast('Connexion réussie ✓', 'success');
       fbTrack('login', { method: 'firebase_email' });
@@ -2148,7 +2285,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('[onclick*="backoffice-login"]').forEach(btn => {
     btn.addEventListener('click', async () => {
       try { await fbSignOut(); } catch (e) {}
+      DB.currentUser = { id: 'guest', firstName: 'Joueur', lastName: '', role: 'player' };
+      saveDB(DB);
+      updateAuthRoleUI();
       switchViewMode('backoffice-login');
+      showToast('Déconnexion effectuée.', 'info');
     });
   });
 
@@ -2343,33 +2484,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── Validation évaluation coach ──
     if (id === 'btnSubmitEvaluation') {
-      const playerId = btn.dataset.playerId || evalCurrentPlayerId;
-      if (!playerId) { showToast('Joueur introuvable.', 'error'); return; }
-      const activeLvlBtn = document.getElementById('evalLevelSelector')?.querySelector('.eval-level-btn.active');
-      const level = activeLvlBtn ? parseInt(activeLvlBtn.textContent) : evalLevelValue;
-      const comment = document.getElementById('evalCoachComment')?.value?.trim() || '';
-      if (!level) { showToast('Sélectionnez un niveau officiel (1–7).', 'error'); return; }
-      const skills = { ...evalSkillValues };
-      document.querySelectorAll('#skillsEvalGrid .skill-eval-row').forEach(row => {
-        const k = row.dataset.skill;
-        const v = parseInt(row.querySelector('.eval-dot.active')?.dataset.val);
-        if (k && v) skills[k] = v;
-      });
-      const player = (DB.players || []).find(p => p.id === playerId);
-      if (player) {
-        const prev = player.level;
-        player.level = level; player.status = 'active'; player.skills = skills;
-        player.levelValidatedAt = new Date().toISOString(); player.levelValidatedBy = 'coach';
-        player.levelHistory = [...(player.levelHistory || []), { previousLevel: prev, newLevel: level, changedAt: new Date().toISOString(), changedBy: 'coach', coachComment: comment }];
-        saveDB(DB);
-      }
-      closeAllModals();
-      renderAdminPlayers();
-      renderAdminKPIs();
-      showToast(`Niveau ${level}/7 validé ✓`, 'success');
-      fbUpdatePlayerLevel(playerId, { level, coachComment: comment, coachId: 'coach' }).catch(() => {});
-      if (player) fbSavePlayer({ ...player, skills }).catch(() => {});
-      fbTrack('player_evaluated', { playerId, level });
+      await saveEvaluation(e);
     }
 
     // ── Inscription membre gérant ──
@@ -2401,17 +2516,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── Navigation jours planning gérant (‹ / › / Aujourd'hui) ──
     if (id === 'btnPrevDay') {
-      const d = new Date(adminCurrentDate + 'T00:00:00');
-      d.setDate(d.getDate() - 1);
-      adminCurrentDate = d.toISOString().split('T')[0];
+      adminCurrentDate = shiftDateStr(adminCurrentDate, -1);
       const el = document.getElementById('adminCurrentDate');
       if (el) el.textContent = formatDate(adminCurrentDate);
       renderAdminTimetable();
     }
     if (id === 'btnNextDay') {
-      const d = new Date(adminCurrentDate + 'T00:00:00');
-      d.setDate(d.getDate() + 1);
-      adminCurrentDate = d.toISOString().split('T')[0];
+      adminCurrentDate = shiftDateStr(adminCurrentDate, 1);
       const el = document.getElementById('adminCurrentDate');
       if (el) el.textContent = formatDate(adminCurrentDate);
       renderAdminTimetable();
@@ -2427,16 +2538,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── Navigation jours planning joueur (‹ / › / Aujourd'hui) ──
     if (id === 'btnPlayerPrevDay') {
-      const d = new Date((planningSelectedDate || getTodayStr()) + 'T00:00:00');
-      d.setDate(d.getDate() - 1);
-      planningSelectedDate = d.toISOString().split('T')[0];
+      planningSelectedDate = shiftDateStr(planningSelectedDate || getTodayStr(), -1);
       renderPlanningDateBar();
       renderCourtsGrid();
     }
     if (id === 'btnPlayerNextDay') {
-      const d = new Date((planningSelectedDate || getTodayStr()) + 'T00:00:00');
-      d.setDate(d.getDate() + 1);
-      planningSelectedDate = d.toISOString().split('T')[0];
+      planningSelectedDate = shiftDateStr(planningSelectedDate || getTodayStr(), 1);
       renderPlanningDateBar();
       renderCourtsGrid();
     }
@@ -2515,14 +2622,15 @@ document.addEventListener('DOMContentLoaded', () => {
       if (player) {
         DB.currentUser = player;
       } else {
+        const isAdminEmail = user.email === 'admin@hayapala.tn' || user.email === 'admin@circlepadel.com';
         DB.currentUser = {
           id: user.uid,
           firstName: user.displayName?.split(' ')[0] || user.email?.split('@')[0] || 'Joueur',
           lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
           email: user.email,
-          role: 'player',
-          status: 'active',
-          level: 3,
+          role: isAdminEmail ? 'admin' : 'player',
+          status: isAdminEmail ? 'active' : 'pending',
+          level: isAdminEmail ? 7 : null,
         };
       }
       saveDB(DB);
@@ -2530,6 +2638,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderHomeScreen();
     } else {
       console.log('👤 Mode démo joueur (non authentifié)');
+      updateAuthRoleUI();
     }
   });
 
