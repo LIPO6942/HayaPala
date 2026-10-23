@@ -1,58 +1,52 @@
 <!DOCTYPE html>
+<!-- HayaPala v1.1 · Firebase Firestore + Auth · circlepadel -->
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>HayaPala - L'Expérience Padel Nouvelle Génération</title>
-  
-  <meta name="theme-color" content="#090C12" />
+  <title>HayaPala – Club de Padel · Réservation &amp; Matchmaking</title>
+  <meta name="description" content="Réservez votre terrain, rejoignez un match ouvert et suivez votre progression validée par le coach. L'app officielle de votre club de padel." />
+  <meta name="theme-color" content="#080B10" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="HayaPala" />
   <meta name="mobile-web-app-capable" content="yes" />
-  
-  <link rel="manifest" href="/manifest.json" />
-  <link rel="icon" type="image/jpeg" href="/images/pwa-icon.jpg" />
-  <link rel="apple-touch-icon" href="/images/pwa-icon.jpg" />
-  <link rel="stylesheet" href="/css/app.css" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" type="image/jpeg" href="./images/pwa-icon.jpg" />
+  <link rel="apple-touch-icon" href="./images/pwa-icon.jpg" />
+  <link rel="stylesheet" href="./css/app.css" />
 </head>
 <body>
 
   <!-- ======================================================================
-       TOP CONTROL BAR (Switch between Player App & Club Back-Office)
+       TOP CONTROL BAR
+       Switcher Joueur / Dashboard Gérant / Login
        ====================================================================== -->
   <header class="platform-control-bar">
     <div class="brand-section">
-      <div class="hayapala-logo-badge" onclick="switchViewMode('player-app')" style="cursor: pointer;">
-        <div class="pala-icon-symbol"><img src="/images/pwa-icon.jpg" alt="HayaPala Pala Racket" class="pala-head-img" /></div>
+      <div class="hayapala-logo-badge" onclick="switchViewMode('player-app')" style="cursor:pointer">
+        <div class="pala-icon-symbol">
+          <img src="./images/pwa-icon.jpg" alt="HayaPala" class="pala-head-img" />
+        </div>
         <div class="hayapala-brand-text">HayaPala</div>
       </div>
-      <span class="brand-tag">Padel 2.0</span>
+      <span class="brand-tag">Padel Club</span>
     </div>
 
-    <!-- View Mode Switcher -->
     <div class="view-mode-tabs" role="tablist">
       <button class="view-tab-btn active" data-mode="player-app" id="tabModePlayerApp">
         <span>🎾</span> App Joueur
       </button>
       <button class="view-tab-btn" data-mode="backoffice-dashboard" id="tabModeDashboard">
-        <span>⚡</span> Club Pro Admin
+        <span>⚡</span> Gérant
       </button>
       <button class="view-tab-btn" data-mode="backoffice-login" id="tabModeLogin">
-        <span>🔐</span> Portail Club
+        <span>🔑</span> Portail
       </button>
     </div>
 
-    <!-- Right Quick Controls -->
     <div class="right-controls">
-      <div class="live-points-pill" id="topLivePointsPill" title="Cliquer pour recharger vos points">
-        <span>⚡</span>
-        <span id="topLivePointsValue">125.00 Points</span>
-        <span style="font-size: 11px; opacity: 0.9;">(+)</span>
-      </div>
-      <button class="btn-reset-demo" id="btnResetDemoData" title="Réinitialiser les données de démo">
-        ↺ Reset Démo
-      </button>
+      <button class="btn-reset-demo" id="btnResetDemoData">↺ Reset</button>
     </div>
   </header>
 
@@ -61,504 +55,674 @@
        ====================================================================== -->
   <main class="workspace-canvas">
 
-    <!-- ====================================================================
-         VIEW MODE 1: PLAYER WEB APP (Full Standalone Experience)
-         ==================================================================== -->
+    <!-- ==================================================================
+         VUE 1 : APP JOUEUR (Mobile PWA)
+         ================================================================== -->
     <div class="player-app-shell" id="playerAppContainer">
 
       <!-- Scrollable Screen Viewport -->
       <div class="app-screen-viewport">
 
-        <!-- --------------------------------------------------------------
-             SCREEN 1: ACCUEIL (HOME)
-             -------------------------------------------------------------- -->
+        <!-- ----------------------------------------------------------------
+             ÉCRAN J3 : ACCUEIL (HOME)
+             ---------------------------------------------------------------- -->
         <section class="app-screen active" id="screen-home">
-          <!-- In-App Header -->
+
+          <!-- Top header -->
           <div class="home-header">
-            <div class="user-avatar-wrap" onclick="navigateToScreen('screen-profile')" title="Mon profil">
-              <span style="font-size: 28px;">🎾</span>
+            <div class="user-avatar-wrap" id="homeAvatarBtn" onclick="navigateToScreen('screen-profile')" title="Mon profil">
+              <span style="font-size:22px">🎾</span>
             </div>
-            
             <div class="home-header-center">
-              <span class="home-club-pro-badge" onclick="switchViewMode('backoffice-dashboard')" title="Accéder à l'espace gestionnaire">
-                ⚡ Mode Club Pro
+              <span class="home-club-pro-badge" onclick="switchViewMode('backoffice-dashboard')">
+                ⚡ Espace Gérant
               </span>
             </div>
+            <button class="notif-bell-btn" id="navBtnNotifs" onclick="navigateToScreen('screen-notifications')">
+              🔔
+              <span class="notif-dot" id="notifDot"></span>
+            </button>
+          </div>
 
-            <div class="top-right-wallet">
-              <div class="points-badge-pill" id="homePointsBadge" title="Recharger mes points">
-                <span id="homePointsBadgeValue">125.00 Points</span>
-                <div class="points-plus-icon">+</div>
+          <!-- Greeting -->
+          <div class="home-greeting-block">
+            <div class="greeting-text">Bonjour 👋</div>
+            <div class="user-display-name" id="homeUserName">Moslem Gouia</div>
+            <div class="user-level-row">
+              <div class="level-badge-pill" id="homeLevelBadge">
+                <div class="level-shield" id="homeLevelNumber">5</div>
+                Niveau Confirmé
               </div>
-              <div class="transfer-quick-btn" id="homeQuickTransferBtn" title="Transférer des points">
-                <span>⇄</span>
+              <span class="level-status-text" id="homePlayerStatus"></span>
+            </div>
+          </div>
+
+          <!-- Coach-validated notice -->
+          <div class="coach-validated-notice" id="coachValidatedNotice">
+            <span class="cv-icon">✅</span>
+            <div>
+              <strong>Niveau validé par le coach</strong> —
+              Votre niveau <strong id="cvLevel">5</strong>/7 a été certifié par votre coach.
+              Il ne peut être modifié que par lui.
+            </div>
+          </div>
+
+          <!-- Pending level banner (si niveau pas encore validé) -->
+          <div class="pending-level-banner hidden" id="pendingLevelBanner">
+            <span class="pending-banner-icon">⏳</span>
+            <div>
+              <div class="pending-banner-title">Niveau en attente de validation</div>
+              <div class="pending-banner-desc">
+                Le coach évaluera bientôt votre niveau. Vous pourrez rejoindre des matchs ouverts après validation.
               </div>
             </div>
           </div>
 
-          <div class="greeting-text">Bienvenue sur HayaPala 👋</div>
-          <div class="user-display-name">Moslem Gouia</div>
-          <div class="user-level-row">
-            <span class="gold-star-icon">⭐</span>
-            <span>Votre niveau certifié est de <strong>5.49</strong></span>
-          </div>
-
-          <!-- Featured Banner Card: Tournoi HayaPala Masters -->
-          <div class="tournament-card">
-            <div class="tournament-top-row">
-              <div class="tournament-title-wrap">
-                <span style="font-size: 20px;">🏆</span>
-                <span>HayaPala Masters 2026</span>
-              </div>
-              <button class="btn-join-now" onclick="joinFeaturedTournament()">Join now</button>
-            </div>
-
-            <div class="tournament-players-row">
-              <div class="tournament-player-card">
-                <div class="player-card-avatar">👨</div>
-                <div class="player-card-name">krima mohamed Bilel</div>
-                <div class="player-card-level">⭐ 8.00</div>
-              </div>
-              <div class="tournament-player-card">
-                <div class="player-card-avatar">🧔</div>
-                <div class="player-card-name">Écoinçon Fabian</div>
-                <div class="player-card-level">⭐ 7.00</div>
-              </div>
-              <div class="tournament-player-card">
-                <div class="player-card-avatar">👤</div>
-                <div class="player-card-name">mehdi mehdi</div>
-                <div class="player-card-level">⭐ 6.00</div>
-              </div>
-            </div>
-
-            <div class="dots-carousel-indicator">
-              <div class="carousel-dot active"></div>
-              <div class="carousel-dot"></div>
-            </div>
-          </div>
-
-          <!-- Section: Jouez votre match -->
+          <!-- Matchs ouverts compatibles -->
           <div class="section-title-tag">
-            <span class="yellow-bullet"></span>
-            <span>Jouez votre match</span>
+            <span class="gold-bullet"></span>
+            <span>Matchs ouverts · Votre niveau</span>
+            <a class="section-link" onclick="navigateToScreen('screen-join-match')">Voir tout</a>
+          </div>
+
+          <div class="open-matches-scroll" id="homeOpenMatchesScroll">
+            <!-- Peuplé dynamiquement par JS -->
+          </div>
+
+          <!-- Actions rapides -->
+          <div class="section-title-tag" style="margin-top:4px">
+            <span class="gold-bullet"></span>
+            <span>Jouer</span>
           </div>
 
           <div class="play-match-grid">
-            <div class="action-quick-card" id="quickCardBookCourt">
-              <div class="quick-card-icon">📞</div>
+            <div class="action-quick-card" id="quickCardBookCourt" onclick="navigateToScreen('screen-book-court')">
+              <div class="quick-card-icon">🏟️</div>
               <div class="quick-card-bottom">
-                <div class="quick-card-title">Réserver votre<br />terrain</div>
-                <div class="quick-card-arrow">&gt;</div>
+                <div class="quick-card-title">Réserver<br>un terrain</div>
+                <div class="quick-card-arrow">›</div>
               </div>
             </div>
-
-            <div class="action-quick-card" id="quickCardJoinMatch">
+            <div class="action-quick-card" id="quickCardJoinMatch" onclick="navigateToScreen('screen-join-match')">
               <div class="quick-card-icon">🎾</div>
               <div class="quick-card-bottom">
-                <div class="quick-card-title">Rejoindre une<br />partie</div>
-                <div class="quick-card-arrow">&gt;</div>
+                <div class="quick-card-title">Rejoindre<br>un match</div>
+                <div class="quick-card-arrow">›</div>
               </div>
             </div>
           </div>
 
-          <!-- Section: Paires Officielles & ELO Duo -->
+          <!-- Mon prochain match -->
           <div class="section-title-tag">
-            <span class="yellow-bullet"></span>
-            <span>Compétition en Équipe</span>
+            <span class="gold-bullet"></span>
+            <span>Mes réservations</span>
+            <a class="section-link" onclick="navigateToScreen('screen-my-bookings')">Voir tout</a>
           </div>
 
-          <div class="duo-banner-card" id="btnOpenOfficialTeams">
-            <div class="duo-banner-left">
-              <div class="duo-banner-icon">⚔️</div>
-              <div>
-                <div class="duo-banner-tag">CLASSEMENT ELO DES PAIRES</div>
-                <div class="duo-banner-title">Paires Officielles & Défis Duo</div>
-                <div class="duo-banner-sub">Votre duo : <strong>Les Smécheurs du Nord</strong> (#3 • 1550 ELO)</div>
-              </div>
-            </div>
-            <div class="quick-card-arrow">&gt;</div>
+          <div id="homeNextMatchContainer" style="padding: 0 20px 20px;">
+            <!-- Peuplé dynamiquement -->
           </div>
 
-          <!-- Section: Coaching -->
+          <!-- Community & Coaching -->
           <div class="section-title-tag">
-            <span class="yellow-bullet"></span>
-            <span>HayaPala Academy</span>
+            <span class="gold-bullet"></span>
+            <span>Communauté</span>
           </div>
 
-          <div class="coaching-card" onclick="showToast('Module de coaching avec les pros du Padel disponible !', 'info')">
-            <div class="coaching-left">
-              <div class="coaching-icon-wrap">🎓</div>
+          <div class="feature-banner-card" onclick="navigateToScreen('screen-profile')">
+            <div class="feature-banner-left">
+              <div class="feature-banner-icon">📈</div>
               <div>
-                <div class="coaching-title">Cours particuliers & Collectifs</div>
-                <div class="coaching-sub">Perfectionnez votre vibora et bandeha avec nos coachs certifiés</div>
+                <div class="feature-banner-tag">Mon Profil</div>
+                <div class="feature-banner-title">Radar de compétences</div>
+                <div class="feature-banner-sub">Bandeja · Vibora · Placement · Régularité</div>
               </div>
             </div>
-            <div class="quick-card-arrow">&gt;</div>
+            <span class="chevron-icon">›</span>
           </div>
+
+          <div class="feature-banner-card" onclick="navigateToScreen('screen-my-bookings')" style="margin-top:8px; margin-bottom:28px">
+            <div class="feature-banner-left">
+              <div class="feature-banner-icon">📋</div>
+              <div>
+                <div class="feature-banner-tag">Historique</div>
+                <div class="feature-banner-title">Mes matchs et avis</div>
+                <div class="feature-banner-sub">Score de fiabilité · Évolution de niveau</div>
+              </div>
+            </div>
+            <span class="chevron-icon">›</span>
+          </div>
+
         </section>
 
-        <!-- --------------------------------------------------------------
-             SCREEN 2: REJOINDRE UNE PARTIE (MATCHES DISPONIBLES)
-             -------------------------------------------------------------- -->
-        <section class="app-screen" id="screen-join-match">
+        <!-- ----------------------------------------------------------------
+             ÉCRAN J4 : PLANNING DES TERRAINS
+             ---------------------------------------------------------------- -->
+        <section class="app-screen" id="screen-book-court">
           <div class="screen-header-bar">
-            <button class="back-btn-icon back-to-home-btn">&larr;</button>
-            <div class="screen-header-title">Rejoindre une partie</div>
-            <button class="filter-btn-icon" onclick="showToast('Filtres de niveau (1.0 à 7.0) appliqués', 'info')">≡</button>
+            <button class="back-btn-icon back-to-home-btn">←</button>
+            <div class="screen-header-title">Planning des terrains</div>
+            <button class="filter-btn-icon" id="btnAddManualBooking" onclick="openModal('modal-book-court')">+</button>
           </div>
 
-          <!-- Tabs: Disponibles vs Mes matches -->
-          <div class="match-tabs-toggle">
+          <!-- Sélecteur de date -->
+          <div class="planning-date-bar" id="planningDateBar">
+            <!-- Peuplé dynamiquement -->
+          </div>
+
+          <!-- Grille des 4 terrains -->
+          <div class="courts-planning-grid" id="courtsPlanningGrid">
+            <!-- Peuplé dynamiquement -->
+          </div>
+
+          <div style="height:20px"></div>
+        </section>
+
+        <!-- ----------------------------------------------------------------
+             ÉCRAN J5 : REJOINDRE / MATCHS OUVERTS
+             ---------------------------------------------------------------- -->
+        <section class="app-screen" id="screen-join-match">
+          <div class="screen-header-bar">
+            <button class="back-btn-icon back-to-home-btn">←</button>
+            <div class="screen-header-title">Matchs ouverts</div>
+            <button class="filter-btn-icon" id="btnFilterMatches" title="Filtres">≡</button>
+          </div>
+
+          <!-- Filtres de niveau -->
+          <div class="matches-filter-bar" id="matchesFilterBar">
+            <button class="filter-chip active" data-level="all">Tous niveaux</button>
+            <button class="filter-chip" data-level="1-2">1–2 Débutant</button>
+            <button class="filter-chip" data-level="3-4">3–4 Intermédiaire</button>
+            <button class="filter-chip" data-level="5-6">5–6 Confirmé</button>
+            <button class="filter-chip" data-level="7">7 Élite</button>
+          </div>
+
+          <!-- Onglets Disponibles / Mes matchs -->
+          <div class="match-tabs-toggle" style="margin:0 20px 16px">
             <button class="match-tab active" id="tabMatchesAvailable">Disponibles</button>
             <button class="match-tab" id="tabMatchesMy">Mes matches</button>
           </div>
 
-          <!-- Matches List Container -->
-          <div id="matchesListContainer">
-            <!-- Dynamically populated via JS -->
+          <!-- Liste des matchs -->
+          <div class="matches-list-container" id="matchesListContainer">
+            <!-- Peuplé dynamiquement -->
           </div>
 
-          <!-- Floating CTA: Lancer un match -->
-          <button class="btn-launch-match-cta" id="btnLaunchMatchCta">
-            <span>+</span> Lancer un match
+          <!-- FAB : Lancer un match -->
+          <button class="btn-launch-match-cta" id="btnLaunchMatchCta" onclick="openModal('modal-create-match')">
+            <span>+</span> Lancer un match ouvert
           </button>
+
+          <div style="height:80px"></div>
         </section>
 
-        <!-- --------------------------------------------------------------
-             SCREEN 3: RÉSERVER VOTRE TERRAIN (CLUBS DIRECTORY)
-             -------------------------------------------------------------- -->
-        <section class="app-screen" id="screen-book-court">
+        <!-- ----------------------------------------------------------------
+             ÉCRAN J7 : MES RÉSERVATIONS
+             ---------------------------------------------------------------- -->
+        <section class="app-screen" id="screen-my-bookings">
           <div class="screen-header-bar">
-            <button class="back-btn-icon back-to-home-btn">&larr;</button>
-            <div class="screen-header-title">Réserver votre terrain</div>
-            <button class="filter-btn-icon" onclick="showToast('Filtres de terrains appliqués', 'info')">≡</button>
+            <button class="back-btn-icon back-to-home-btn">←</button>
+            <div class="screen-header-title">Mes réservations</div>
+            <div style="width:36px"></div>
           </div>
 
-          <!-- Search Bar & View Toggle -->
-          <div class="search-controls-bar">
-            <div class="search-input-wrap">
-              <span>🔍</span>
-              <input type="text" id="clubSearchInput" placeholder="Rechercher un club ou une ville..." />
-            </div>
-            <button class="map-view-toggle-btn" onclick="showToast('Vue Carte géographique activée !', 'info')">
-              <span>🗺️</span>
-            </button>
-          </div>
-
-          <!-- Clubs List Container -->
-          <div class="clubs-cards-list" id="clubsListContainer">
-            <!-- Dynamically populated via JS -->
+          <div id="myBookingsContainer" style="padding:16px 20px; display:flex; flex-direction:column; gap:12px">
+            <!-- Peuplé dynamiquement -->
           </div>
         </section>
 
-        <!-- --------------------------------------------------------------
-             SCREEN 4: MON PROFIL (USER STATS & WALLET)
-             -------------------------------------------------------------- -->
+        <!-- ----------------------------------------------------------------
+             ÉCRAN J8 : MON PROFIL JOUEUR
+             ---------------------------------------------------------------- -->
         <section class="app-screen" id="screen-profile">
           <div class="screen-header-bar">
-            <button class="back-btn-icon back-to-home-btn">&larr;</button>
-            <div class="screen-header-title">Mon Profil Joueur</div>
-            <button class="filter-btn-icon" onclick="openModal('modal-rating-simulator')" title="Calculateur ELO">⚡ ELO</button>
+            <button class="back-btn-icon back-to-home-btn">←</button>
+            <div class="screen-header-title">Mon profil</div>
+            <button class="filter-btn-icon" onclick="navigateToScreen('screen-settings')" title="Paramètres">⚙</button>
           </div>
 
-          <!-- Profile Top Card -->
+          <!-- Hero card -->
           <div class="profile-hero-card">
-            <div class="profile-avatar-large">🎾</div>
-            <div class="profile-name">Moslem Gouia</div>
-            <div class="profile-phone">+216 22 227 041</div>
+            <div class="profile-avatar-large" id="profileAvatarLarge">🎾</div>
+            <div class="profile-name" id="profileName">Moslem Gouia</div>
+            <div class="profile-phone" id="profilePhone">+216 22 227 041</div>
 
-            <div class="profile-points-pill" id="profilePointsBadge">
-              <span>⚡ Portefeuille :</span>
-              <strong id="profilePointsBadgeValue">125.00 Points</strong>
-              <span style="font-size: 11px; opacity: 0.8;">(1 DT = 1 Pt)</span>
+            <!-- Level display -->
+            <div class="profile-level-display">
+              <div class="level-number-big" id="profileLevelBig">5</div>
+              <div class="level-info-col">
+                <div class="level-info-label">Niveau officiel</div>
+                <div class="level-info-title" id="profileLevelTitle">Confirmé</div>
+                <div class="level-info-coach" id="profileLevelCoach">Validé par le coach</div>
+              </div>
             </div>
 
-            <div class="profile-quick-actions-row">
-              <button class="btn-profile-recharge" onclick="openModal('modal-recharge-points')">
-                <span>+</span> Recharger
-              </button>
-              <button class="btn-profile-transfer" onclick="openModal('modal-transfer-points')">
-                <span>⇄</span> Transférer
-              </button>
-              <button class="btn-profile-sim" id="btnOpenRatingSimulator">
-                <span>📈</span> Simuler ELO
-              </button>
+            <!-- Stats rapides -->
+            <div class="profile-stats-row">
+              <div class="profile-stat-item">
+                <div class="stat-value" id="statMatchesPlayed">0</div>
+                <div class="stat-label">Matchs</div>
+              </div>
+              <div class="profile-stat-item">
+                <div class="stat-value" id="statReliability">–</div>
+                <div class="stat-label">Fiabilité</div>
+              </div>
+              <div class="profile-stat-item">
+                <div class="stat-value" id="statSide">D</div>
+                <div class="stat-label">Côté</div>
+              </div>
+              <div class="profile-stat-item">
+                <div class="stat-value" id="statStyle">OFF</div>
+                <div class="stat-label">Style</div>
+              </div>
+            </div>
+
+            <!-- Player tags -->
+            <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center">
+              <span class="info-badge gold" id="profileSideBadge">🖐 Droitier</span>
+              <span class="info-badge gold" id="profileStyleBadge">⚡ Offensif</span>
+              <span class="info-badge green" id="profileStatusBadge">✔ Actif</span>
             </div>
           </div>
 
-          <!-- Official Level & Reliability Rating -->
+          <!-- Radar compétences -->
           <div class="section-title-tag">
-            <span class="yellow-bullet"></span>
-            <span>Niveau Certifié HayaPala</span>
+            <span class="gold-bullet"></span>
+            <span>Radar de compétences</span>
           </div>
 
-          <div class="rating-display-card">
-            <div class="rating-col">
-              <div class="rating-label">NIVEAU ACTUEL</div>
-              <div class="rating-number" id="profileLevelNumber">5.49</div>
-              <div class="rating-sub">Avancé / Compétiteur</div>
-            </div>
-            <div class="rating-divider-line"></div>
-            <div class="rating-col">
-              <div class="rating-label">FIABILITÉ</div>
-              <div class="rating-number" id="profileReliabilityNumber" style="color: var(--hayapala-cyan);">48.5%</div>
-              <div class="rating-sub" id="profileMatchesCount">29 Matches officiels</div>
-            </div>
+          <div class="radar-chart-wrap">
+            <div class="radar-chart-title">Évaluation coach · 7 critères</div>
+            <svg class="radar-svg" id="skillsRadarSvg" width="260" height="220" viewBox="0 0 260 220">
+              <!-- Généré par JS -->
+            </svg>
           </div>
 
-          <!-- Match History List -->
+          <!-- Skills list -->
           <div class="section-title-tag">
-            <span class="yellow-bullet"></span>
-            <span>Historique des Matches</span>
+            <span class="gold-bullet"></span>
+            <span>Détail des compétences</span>
+          </div>
+
+          <div class="skills-list" id="skillsList">
+            <!-- Peuplé par JS -->
+          </div>
+
+          <!-- Historique niveau -->
+          <div class="section-title-tag" style="margin-top:20px">
+            <span class="gold-bullet"></span>
+            <span>Historique du niveau</span>
+          </div>
+
+          <div id="levelHistoryContainer" style="padding:0 20px">
+            <!-- Peuplé par JS -->
+          </div>
+
+          <!-- Historique matchs -->
+          <div class="section-title-tag" style="margin-top:20px">
+            <span class="gold-bullet"></span>
+            <span>Historique des matchs</span>
           </div>
 
           <div class="match-history-list" id="profileHistoryContainer">
-            <!-- Dynamically populated via JS -->
+            <!-- Peuplé par JS -->
+          </div>
+
+          <div style="height:24px"></div>
+        </section>
+
+        <!-- ----------------------------------------------------------------
+             ÉCRAN J10 : AVIS APRÈS MATCH (Post-match review)
+             ---------------------------------------------------------------- -->
+        <section class="app-screen" id="screen-review">
+          <div class="screen-header-bar">
+            <button class="back-btn-icon back-to-home-btn">←</button>
+            <div class="screen-header-title">Avis après match</div>
+            <div style="width:36px"></div>
+          </div>
+
+          <div style="padding:16px 20px">
+            <p style="font-size:13px; color:var(--text-secondary); margin-bottom:20px; line-height:1.5">
+              Ces avis aident le coach à mieux vous évaluer. Ils ne modifient jamais votre niveau automatiquement.
+            </p>
+          </div>
+
+          <!-- Players to review -->
+          <div id="reviewPlayersContainer" style="padding:0 20px; display:flex; flex-direction:column; gap:16px">
+            <!-- Peuplé par JS -->
+          </div>
+
+          <div style="padding:20px">
+            <button class="btn-primary-action" id="btnSubmitReviews">Envoyer mes avis</button>
           </div>
         </section>
 
-        <!-- --------------------------------------------------------------
-             SCREEN 5: PARAMÈTRES / SETTINGS
-             -------------------------------------------------------------- -->
+        <!-- ----------------------------------------------------------------
+             ÉCRAN J11 : NOTIFICATIONS
+             ---------------------------------------------------------------- -->
+        <section class="app-screen" id="screen-notifications">
+          <div class="screen-header-bar">
+            <button class="back-btn-icon back-to-home-btn">←</button>
+            <div class="screen-header-title">Notifications</div>
+            <button class="filter-btn-icon" id="btnMarkAllRead" title="Tout marquer lu">✔</button>
+          </div>
+
+          <div class="notif-list" id="notifListContainer" style="margin-top:12px">
+            <!-- Peuplé par JS -->
+          </div>
+
+          <div style="height:20px"></div>
+        </section>
+
+        <!-- ----------------------------------------------------------------
+             ÉCRAN J12 : PARAMÈTRES
+             ---------------------------------------------------------------- -->
         <section class="app-screen" id="screen-settings">
           <div class="screen-header-bar">
-            <button class="back-btn-icon back-to-home-btn">&larr;</button>
-            <div class="screen-header-title">Paramètres & Compte</div>
-            <div style="width: 36px;"></div>
+            <button class="back-btn-icon back-to-home-btn">←</button>
+            <div class="screen-header-title">Paramètres</div>
+            <div style="width:36px"></div>
           </div>
 
+          <div class="settings-section-label">Mon compte</div>
           <div class="settings-list-group">
-            <div class="settings-item" id="settingsRechargePoints">
+            <div class="settings-item" onclick="navigateToScreen('screen-profile')">
               <div class="settings-item-left">
-                <span>⚡</span>
+                <div class="settings-icon-wrap">👤</div>
                 <div>
-                  <div class="settings-title">Recharger mon portefeuille</div>
-                  <div class="settings-desc">Flouci, D17, Carte Bancaire</div>
+                  <div class="settings-title">Mon profil joueur</div>
+                  <div class="settings-desc">Photo, côté, style, niveau</div>
                 </div>
               </div>
-              <span class="settings-arrow">&gt;</span>
+              <span class="settings-arrow">›</span>
             </div>
-
-            <div class="settings-item" id="settingsTransferPoints">
+            <div class="settings-item" onclick="navigateToScreen('screen-notifications')">
               <div class="settings-item-left">
-                <span>⇄</span>
+                <div class="settings-icon-wrap">🔔</div>
                 <div>
-                  <div class="settings-title">Transférer des points à un ami</div>
-                  <div class="settings-desc">Envoi instantané par numéro de téléphone</div>
+                  <div class="settings-title">Notifications</div>
+                  <div class="settings-desc">Push et WhatsApp</div>
                 </div>
               </div>
-              <span class="settings-arrow">&gt;</span>
+              <span class="settings-arrow">›</span>
             </div>
+            <div class="settings-item" onclick="navigateToScreen('screen-my-bookings')">
+              <div class="settings-item-left">
+                <div class="settings-icon-wrap">📋</div>
+                <div>
+                  <div class="settings-title">Mes réservations</div>
+                  <div class="settings-desc">Historique et annulations</div>
+                </div>
+              </div>
+              <span class="settings-arrow">›</span>
+            </div>
+          </div>
 
+          <div class="settings-section-label" style="margin-top:8px">Confidentialité</div>
+          <div class="settings-list-group">
+            <div class="settings-item" onclick="showToast('Export de vos données en cours de préparation...', 'info')">
+              <div class="settings-item-left">
+                <div class="settings-icon-wrap">📤</div>
+                <div>
+                  <div class="settings-title">Exporter mes données</div>
+                  <div class="settings-desc">Profil, historique, avis</div>
+                </div>
+              </div>
+              <span class="settings-arrow">›</span>
+            </div>
+            <div class="settings-item" onclick="showToast('Demande de suppression envoyée au gérant', 'info')">
+              <div class="settings-item-left">
+                <div class="settings-icon-wrap">🗑️</div>
+                <div>
+                  <div class="settings-title" style="color:var(--red)">Supprimer mon compte</div>
+                  <div class="settings-desc">Action irréversible</div>
+                </div>
+              </div>
+              <span class="settings-arrow">›</span>
+            </div>
+          </div>
+
+          <div class="settings-section-label" style="margin-top:8px">Club</div>
+          <div class="settings-list-group">
             <div class="settings-item" onclick="switchViewMode('backoffice-dashboard')">
               <div class="settings-item-left">
-                <span>💻</span>
+                <div class="settings-icon-wrap">💻</div>
                 <div>
-                  <div class="settings-title">Espace Directeur de Club (Admin)</div>
-                  <div class="settings-desc">Planning interactif, gestion des terrains & membres</div>
+                  <div class="settings-title">Espace gérant / admin</div>
+                  <div class="settings-desc">Planning, membres, statistiques</div>
                 </div>
               </div>
-              <span class="settings-arrow">&gt;</span>
+              <span class="settings-arrow">›</span>
             </div>
-
             <div class="settings-item" onclick="resetDemoData()">
               <div class="settings-item-left">
-                <span>↺</span>
+                <div class="settings-icon-wrap">↺</div>
                 <div>
-                  <div class="settings-title">Réinitialiser les données</div>
-                  <div class="settings-desc">Remettre la base de données à l'état initial</div>
+                  <div class="settings-title">Réinitialiser la démo</div>
+                  <div class="settings-desc">Remet les données à l'état initial</div>
                 </div>
               </div>
-              <span class="settings-arrow">&gt;</span>
+              <span class="settings-arrow">›</span>
             </div>
+          </div>
+
+          <div style="padding:24px 20px; text-align:center; font-size:11px; color:var(--text-muted)">
+            HayaPala v1.0.0 · Club de Padel · Tunisie 🇹🇳
           </div>
         </section>
 
-      </div>
+      </div><!-- /.app-screen-viewport -->
 
-      <!-- Native Mobile Bottom Navigation Bar (Fixed) -->
+      <!-- ────────────────────────────────────────────────────────────────
+           BARRE DE NAVIGATION INFÉRIEURE
+           ──────────────────────────────────────────────────────────────── -->
       <nav class="app-bottom-nav">
         <button class="nav-item-btn active" data-screen="screen-home" id="navBtnHome">
+          <span class="nav-active-dot"></span>
           <span class="nav-icon">🏠</span>
           <span>Accueil</span>
         </button>
 
         <button class="nav-item-btn" data-screen="screen-join-match" id="navBtnMatches">
+          <span class="nav-active-dot"></span>
           <span class="nav-icon">🎾</span>
-          <span>Matches</span>
+          <span>Matchs</span>
         </button>
 
-        <!-- Floating Emblem Central Action Button -->
-        <div class="nav-center-action-btn" id="navCenterEmblem" title="Action rapide">
+        <!-- Bouton central HayaPala -->
+        <div class="nav-center-action-btn" id="navCenterEmblem" onclick="openModal('modal-create-match')" title="Lancer un match">
           <div class="nav-center-glow"></div>
           <div class="nav-center-inner">
-            <img src="/images/pwa-icon.jpg" alt="HayaPala Pala Action" class="ball-fuzzy-img" />
+            <img src="./images/pwa-icon.jpg" alt="HayaPala" class="ball-fuzzy-img" />
           </div>
         </div>
 
         <button class="nav-item-btn" data-screen="screen-book-court" id="navBtnCourts">
-          <span class="nav-icon">📞</span>
+          <span class="nav-active-dot"></span>
+          <span class="nav-icon">🏟️</span>
           <span>Terrains</span>
         </button>
 
         <button class="nav-item-btn" data-screen="screen-profile" id="navBtnProfile">
+          <span class="nav-active-dot"></span>
           <span class="nav-icon">👤</span>
           <span>Profil</span>
         </button>
       </nav>
 
-    </div>
+    </div><!-- /.player-app-shell -->
 
-    <!-- ====================================================================
-         VIEW MODE 2: CLUB PRO DASHBOARD (Full Admin Management System)
-         ==================================================================== -->
-    <div class="backoffice-viewport" id="backofficeDashboard" style="display: none;">
-      
-      <!-- Top Admin Bar -->
+
+    <!-- ==================================================================
+         VUE 2 : DASHBOARD GÉRANT (Back-office web)
+         ================================================================== -->
+    <div class="backoffice-viewport" id="backofficeDashboard" style="display:none">
+
+      <!-- ── Admin Top Nav ── -->
       <div class="admin-top-nav">
-        <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+        <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap">
           <div class="hayapala-logo-badge">
-            <div class="pala-icon-symbol"><img src="/images/pwa-icon.jpg" alt="HayaPala Pala" class="pala-head-img" /></div>
-            <div class="hayapala-brand-text">HayaPala <span style="font-size: 13px; color: var(--hayapala-cyan); font-weight: 700;">Club Pro</span></div>
+            <div class="pala-icon-symbol">
+              <img src="./images/pwa-icon.jpg" alt="HayaPala" class="pala-head-img" />
+            </div>
+            <div class="hayapala-brand-text">HayaPala <span style="font-size:13px; color:var(--gold); font-weight:700">Club Pro</span></div>
           </div>
+          <div class="admin-live-badge">🟢 EN LIGNE</div>
           <select class="admin-club-select-dropdown" id="adminClubSelect">
-            <option value="">-- Aucun Club --</option>
+            <option value="hp">HayaPala · Votre Club de Padel</option>
           </select>
-          <button class="btn-court-toggle" id="btnAdminOpenCreateClub" style="background: rgba(204, 255, 0, 0.15); border-color: var(--hayapala-volt); color: var(--hayapala-volt); font-weight: 800;">
-            + Nouveau Club
-          </button>
-          <div class="admin-live-badge">🟢 CLUB EN LIGNE</div>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
-          <span style="font-size: 13px; color: var(--text-secondary);">Directeur Sportif : <strong style="color: var(--text-white);">Hassen K.</strong></span>
-          <button class="btn-admin-switch-player" onclick="switchViewMode('player-app')" title="Retourner à l'expérience joueur">
-            🎾 Retour App Joueur
-          </button>
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap">
+          <span style="font-size:13px; color:var(--text-secondary)">Gérant : <strong style="color:var(--text-white)" id="adminManagerName">Admin</strong></span>
+          <button class="btn-admin-switch-player" onclick="switchViewMode('player-app')">🎾 App Joueur</button>
           <button class="btn-reset-demo" onclick="switchViewMode('backoffice-login')">Déconnexion</button>
         </div>
       </div>
 
-      <!-- KPI Ribbon -->
+      <!-- ── KPI Strip ── -->
       <div class="admin-kpis-strip">
         <div class="admin-kpi-card">
-          <div class="kpi-label">Réservations Aujourd'hui</div>
-          <div class="kpi-value" id="kpiBookingsValue" style="color: var(--hayapala-volt);">14 Créneaux</div>
+          <div class="kpi-label">Réservations · Aujourd'hui</div>
+          <div class="kpi-value" id="kpiBookingsValue" style="color:var(--gold)">–</div>
         </div>
         <div class="admin-kpi-card">
-          <div class="kpi-label">Taux d'Occupation</div>
-          <div class="kpi-value" id="kpiOccupancyValue" style="color: var(--hayapala-cyan);">88.5%</div>
+          <div class="kpi-label">Taux d'occupation</div>
+          <div class="kpi-value" id="kpiOccupancyValue" style="color:var(--green)">–</div>
         </div>
         <div class="admin-kpi-card">
-          <div class="kpi-label">Heures Jouées</div>
-          <div class="kpi-value" id="kpiHoursValue">21.0 Heures</div>
+          <div class="kpi-label">CA · Aujourd'hui</div>
+          <div class="kpi-value" id="kpiRevenueValue" style="color:var(--gold)">–</div>
         </div>
         <div class="admin-kpi-card">
-          <div class="kpi-label">Chiffre d'Affaires du Jour</div>
-          <div class="kpi-value" id="kpiRevenueValue" style="color: #34D399;">1,120 DT</div>
+          <div class="kpi-label">Membres actifs</div>
+          <div class="kpi-value" id="kpiPlayersValue">–</div>
         </div>
         <div class="admin-kpi-card">
-          <div class="kpi-label">Membres & Joueurs</div>
-          <div class="kpi-value" id="kpiPlayersValue">13 Joueurs</div>
+          <div class="kpi-label">Alertes matchs incomplets</div>
+          <div class="kpi-value" id="kpiAlertsValue" style="color:var(--red)">0</div>
         </div>
         <div class="admin-kpi-card">
-          <div class="kpi-label">Tournois Actifs</div>
-          <div class="kpi-value" id="kpiTournamentsValue" style="color: #FBBF24;">2 Ouverts</div>
+          <div class="kpi-label">No-shows · Ce mois</div>
+          <div class="kpi-value" id="kpiNoShowsValue" style="color:var(--amber)">–</div>
         </div>
       </div>
 
-      <!-- Admin Functional Tabs Navigation -->
+      <!-- ── Sub-nav tabs ── -->
       <div class="admin-subnav-bar">
-        <button class="admin-tab-btn active" data-admin-tab="planning">📅 Planning & Réservations</button>
-        <button class="admin-tab-btn" data-admin-tab="courts">🎾 Gestion des Terrains</button>
-        <button class="admin-tab-btn" data-admin-tab="tournaments">🏆 Tournois & Compétitions</button>
-        <button class="admin-tab-btn" data-admin-tab="players">👥 Annuaire des Joueurs & Crédits</button>
-        <button class="admin-tab-btn" data-admin-tab="matches">⚔️ Supervision Matches Publics</button>
-        <button class="admin-tab-btn" data-admin-tab="finances">💳 Finances & Transactions</button>
-        <button class="admin-tab-btn" data-admin-tab="settings">⚙️ Paramètres Club</button>
+        <button class="admin-tab-btn active" data-admin-tab="planning">📅 Planning &amp; Réservations</button>
+        <button class="admin-tab-btn" data-admin-tab="courts">🏟️ Terrains</button>
+        <button class="admin-tab-btn" data-admin-tab="players">👥 Membres &amp; Évaluation</button>
+        <button class="admin-tab-btn" data-admin-tab="matches">⚡ Matchs ouverts</button>
+        <button class="admin-tab-btn" data-admin-tab="alerts">🚨 Alertes</button>
+        <button class="admin-tab-btn" data-admin-tab="stats">📊 Statistiques</button>
+        <button class="admin-tab-btn" data-admin-tab="settings">⚙️ Paramètres club</button>
       </div>
 
-      <!-- Admin Tab 1: Planning & Réservations -->
+      <!-- ── TAB G3 : Planning des 4 terrains ── -->
       <div class="admin-tab-content active" id="adminContentPlanning">
         <div class="schedule-container">
           <div class="schedule-header-actions">
             <div>
-              <h2 style="font-size: 20px; font-weight: 900; color: var(--text-white); font-family: 'Outfit', sans-serif;">Planning Interactif des Terrains</h2>
-              <p style="font-size: 12px; color: var(--text-secondary);">Cliquez sur une case libre pour enregistrer un joueur au guichet, ou sur une réservation pour la gérer.</p>
+              <h2 style="font-family:'Outfit',sans-serif; font-size:22px; font-weight:900; color:var(--text-white); letter-spacing:-0.03em; margin-bottom:4px">
+                Planning interactif des 4 terrains
+              </h2>
+              <p style="font-size:13px; color:var(--text-secondary)">
+                Cliquez sur un créneau libre pour créer une réservation manuelle (guichet / téléphone).
+              </p>
             </div>
             <button class="btn-new-admin-booking" id="btnAdminDirectBooking">
-              <span>+</span> Nouvelle Réservation Directe
+              <span>+</span> Nouvelle réservation
             </button>
           </div>
 
-          <table class="timetable-grid-table">
-            <thead>
-              <tr id="adminTimetableHeadRow">
-                <!-- Dynamically populated -->
-              </tr>
-            </thead>
-            <tbody id="adminTimetableBody">
-              <!-- Dynamically populated with bookings -->
-            </tbody>
-          </table>
+          <!-- Date picker & navigation -->
+          <div class="schedule-controls-bar">
+            <button class="schedule-nav-btn" id="btnPrevDay">‹</button>
+            <span class="schedule-date-display" id="adminCurrentDate">–</span>
+            <button class="schedule-nav-btn" id="btnNextDay">›</button>
+            <button class="filter-chip" id="btnTodayAdmin" style="font-size:12px; padding:6px 14px">Aujourd'hui</button>
+          </div>
+
+          <!-- Légende -->
+          <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px">
+            <span style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-muted)">
+              <span style="width:12px;height:12px; border-radius:3px; background:rgba(52,152,219,0.4); border:1px solid rgba(52,152,219,0.5)"></span> Privée
+            </span>
+            <span style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-muted)">
+              <span style="width:12px;height:12px; border-radius:3px; background:rgba(46,204,113,0.4); border:1px solid rgba(46,204,113,0.5)"></span> Match ouvert
+            </span>
+            <span style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-muted)">
+              <span style="width:12px;height:12px; border-radius:3px; background:rgba(243,156,18,0.4); border:1px solid rgba(243,156,18,0.5)"></span> Cours coach
+            </span>
+            <span style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-muted)">
+              <span style="width:12px;height:12px; border-radius:3px; background:rgba(255,255,255,0.08); border:1px solid var(--border-subtle)"></span> Bloqué / Maintenance
+            </span>
+          </div>
+
+          <!-- Grille planning -->
+          <div style="overflow-x:auto">
+            <table class="timetable-grid-table">
+              <thead>
+                <tr id="adminTimetableHeadRow">
+                  <!-- Peuplé par JS -->
+                </tr>
+              </thead>
+              <tbody id="adminTimetableBody">
+                <!-- Peuplé par JS -->
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      <!-- Admin Tab 2: Gestion des Terrains (Courts) -->
+      <!-- ── TAB G2 : Gestion des terrains ── -->
       <div class="admin-tab-content" id="adminContentCourts">
         <div class="admin-panel-container">
           <div class="panel-header-row">
             <div>
-              <h2 class="panel-title">Infrastructures & Terrains de Padel</h2>
-              <p class="panel-subtitle">Gérez les pistes de padel du club, le type de surface et l'état opérationnel.</p>
+              <h2 class="panel-title">Gestion des 4 terrains</h2>
+              <p class="panel-subtitle">Statut, surface, taux d'occupation et configuration de chaque terrain.</p>
             </div>
             <button class="btn-new-admin-booking" id="btnAdminAddCourt">
-              <span>+</span> Ajouter un Nouveau Terrain
+              <span>+</span> Ajouter un terrain
             </button>
           </div>
-
           <div class="courts-management-grid" id="adminCourtsListContainer">
-            <!-- Dynamically populated via JS -->
+            <!-- Peuplé par JS -->
           </div>
         </div>
       </div>
 
-      <!-- Admin Tab 3: Gestion des Tournois -->
-      <div class="admin-tab-content" id="adminContentTournaments">
-        <div class="admin-panel-container">
-          <div class="panel-header-row">
-            <div>
-              <h2 class="panel-title">Tournois & Compétitions HayaPala</h2>
-              <p class="panel-subtitle">Organisez vos opens P100, P250, Masters et suivez les inscriptions.</p>
-            </div>
-            <button class="btn-new-admin-booking" id="btnAdminCreateTournament">
-              <span>+</span> Créer un Nouveau Tournoi
-            </button>
-          </div>
-
-          <div class="tournaments-admin-grid" id="adminTournamentsListContainer">
-            <!-- Dynamically populated via JS -->
-          </div>
-        </div>
-      </div>
-
-      <!-- Admin Tab 4: Annuaire des Joueurs & Crédits Portefeuille -->
+      <!-- ── TAB G6/G7 : Membres & Évaluation ── -->
       <div class="admin-tab-content" id="adminContentPlayers">
         <div class="admin-panel-container">
           <div class="panel-header-row">
             <div>
-              <h2 class="panel-title">Membres & Communauté HayaPala</h2>
-              <p class="panel-subtitle">Consultez les niveaux officiels et créditez les portefeuilles en cas de règlement espèces au club.</p>
+              <h2 class="panel-title">Membres &amp; Évaluation coach</h2>
+              <p class="panel-subtitle">
+                Le niveau de chaque joueur ne peut être modifié que depuis cet espace.
+                Il est validé sous dictée du coach.
+              </p>
             </div>
-            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-              <button class="btn-new-admin-booking" id="btnAdminOpenRegisterPlayer">
-                <span>+</span> Inscrire un Membre
-              </button>
-              <div class="search-input-wrap" style="max-width: 250px;">
-                <span>🔍</span>
-                <input type="text" id="adminPlayerSearchInput" placeholder="Rechercher un membre..." />
+            <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center">
+              <div style="position:relative">
+                <input type="text" id="adminPlayerSearchInput" class="login-field"
+                  placeholder="🔍 Rechercher un membre..."
+                  style="padding-left:16px; max-width:240px; height:38px" />
               </div>
+              <button class="btn-new-admin-booking" id="btnAdminOpenRegisterPlayer">
+                <span>+</span> Inscrire un membre
+              </button>
             </div>
+          </div>
+
+          <!-- Filtres statut -->
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px">
+            <button class="filter-chip active" data-player-filter="all">Tous</button>
+            <button class="filter-chip" data-player-filter="active">✔ Actifs (validés)</button>
+            <button class="filter-chip" data-player-filter="pending">⏳ En attente de validation</button>
+            <button class="filter-chip" data-player-filter="suspended">⛔ Suspendus</button>
           </div>
 
           <div class="admin-table-responsive-wrap">
@@ -566,950 +730,427 @@
               <thead>
                 <tr>
                   <th>Joueur</th>
-                  <th>Contact</th>
-                  <th>Niveau ELO</th>
+                  <th>Téléphone</th>
+                  <th>Niveau officiel</th>
+                  <th>Côté / Style</th>
                   <th>Fiabilité</th>
-                  <th>Matches</th>
-                  <th>Solde Points</th>
-                  <th>Actions Régie</th>
+                  <th>Matchs</th>
+                  <th>Statut</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody id="adminPlayersTableBody">
-                <!-- Dynamically populated via JS -->
+                <!-- Peuplé par JS -->
               </tbody>
             </table>
           </div>
         </div>
       </div>
 
-      <!-- Admin Tab 5: Supervision Matches Publics -->
+      <!-- ── TAB G5 : Matchs ouverts (supervision) ── -->
       <div class="admin-tab-content" id="adminContentMatches">
         <div class="admin-panel-container">
           <div class="panel-header-row">
             <div>
-              <h2 class="panel-title">Supervision des Parties Ouvertes</h2>
-              <p class="panel-subtitle">Suivi en direct des parties en cours, des places vacantes et validation des scores.</p>
+              <h2 class="panel-title">Supervision des matchs ouverts</h2>
+              <p class="panel-subtitle">Suivi en temps réel des places disponibles et des joueurs inscrits.</p>
             </div>
+            <button class="btn-new-admin-booking" id="btnAdminCreateOpenMatch" onclick="openModal('modal-admin-create-slot')">
+              <span>+</span> Créer un match ouvert
+            </button>
           </div>
-
-          <div class="matches-admin-grid" id="adminMatchesListContainer">
-            <!-- Dynamically populated via JS -->
+          <div id="adminMatchesListContainer" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px">
+            <!-- Peuplé par JS -->
           </div>
         </div>
       </div>
 
-      <!-- Admin Tab 6: Finances & Transactions -->
-      <div class="admin-tab-content" id="adminContentFinances">
+      <!-- ── TAB G11 : Alertes ── -->
+      <div class="admin-tab-content" id="adminContentAlerts">
         <div class="admin-panel-container">
           <div class="panel-header-row">
             <div>
-              <h2 class="panel-title">Audit Financier & Flux de Trésorerie</h2>
-              <p class="panel-subtitle">Historique des transactions, recharges (Flouci, D17, CB) et règlements de terrains.</p>
+              <h2 class="panel-title">Alertes &amp; Actions urgentes</h2>
+              <p class="panel-subtitle">Matchs incomplets, no-shows récurrents, créneaux creux.</p>
+            </div>
+          </div>
+          <div class="alert-list" id="adminAlertsContainer">
+            <!-- Peuplé par JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB G10 : Statistiques ── -->
+      <div class="admin-tab-content" id="adminContentStats">
+        <div class="admin-panel-container">
+          <div class="panel-header-row">
+            <div>
+              <h2 class="panel-title">Statistiques &amp; Performances</h2>
+              <p class="panel-subtitle">Taux de remplissage, revenus, activité des membres.</p>
             </div>
           </div>
 
-          <div class="admin-table-responsive-wrap">
-            <table class="admin-data-table">
+          <!-- KPI cards -->
+          <div class="stats-grid" id="statsGridContainer">
+            <!-- Peuplé par JS -->
+          </div>
+
+          <!-- Occupation par terrain -->
+          <div style="background:var(--bg-card); border:1px solid var(--border-card); border-radius:var(--radius-lg); padding:20px; margin-bottom:16px">
+            <div style="font-family:'Outfit',sans-serif; font-size:15px; font-weight:800; color:var(--text-white); margin-bottom:4px">
+              Taux d'occupation par terrain
+            </div>
+            <div id="courtOccupancyBars" style="display:flex; flex-direction:column; gap:12px; margin-top:16px">
+              <!-- Peuplé par JS -->
+            </div>
+          </div>
+
+          <!-- Transactions -->
+          <div style="background:var(--bg-card); border:1px solid var(--border-card); border-radius:var(--radius-lg); padding:20px">
+            <div style="font-family:'Outfit',sans-serif; font-size:15px; font-weight:800; color:var(--text-white); margin-bottom:16px">
+              Transactions du jour
+            </div>
+            <table class="admin-data-table" id="transactionsTable">
               <thead>
                 <tr>
-                  <th>Date & Heure</th>
-                  <th>Utilisateur</th>
-                  <th>Opération</th>
-                  <th>Montant (DT)</th>
-                  <th>Canal de Paiement</th>
-                  <th>Description</th>
-                  <th>Statut</th>
+                  <th>Heure</th>
+                  <th>Joueur</th>
+                  <th>Terrain</th>
+                  <th>Type</th>
+                  <th>Montant</th>
                 </tr>
               </thead>
-              <tbody id="adminTransactionsTableBody">
-                <!-- Dynamically populated via JS -->
+              <tbody id="transactionsTableBody">
+                <!-- Peuplé par JS -->
               </tbody>
             </table>
           </div>
         </div>
       </div>
 
-      <!-- Admin Tab 7: Paramètres Club -->
+      <!-- ── TAB G12 : Paramètres club ── -->
       <div class="admin-tab-content" id="adminContentSettings">
         <div class="admin-panel-container">
           <div class="panel-header-row">
             <div>
-              <h2 class="panel-title">Configuration de l'Établissement</h2>
-              <p class="panel-subtitle">Horaires d'ouverture, tarification par joueur et coordonnées officielles.</p>
+              <h2 class="panel-title">Paramètres du club</h2>
+              <p class="panel-subtitle">Tarifs, règles de matchmaking, notifications et configuration générale.</p>
             </div>
           </div>
 
-          <form id="adminClubSettingsForm" class="club-settings-form-grid">
-            <div class="login-input-group">
-              <label>Nom du Club</label>
-              <input type="text" id="settingClubName" class="login-field" required />
-            </div>
-            <div class="login-input-group">
-              <label>Adresse postale</label>
-              <input type="text" id="settingClubAddress" class="login-field" required />
-            </div>
-            <div class="login-input-group">
-              <label>Téléphone de contact</label>
-              <input type="text" id="settingClubPhone" class="login-field" required />
-            </div>
-            <div class="login-input-group">
-              <label>Email professionnel</label>
-              <input type="email" id="settingClubEmail" class="login-field" required />
-            </div>
-            <div class="login-input-group">
-              <label>Heure d'ouverture</label>
-              <input type="time" id="settingClubOpen" class="login-field" required />
-            </div>
-            <div class="login-input-group">
-              <label>Heure de fermeture</label>
-              <input type="time" id="settingClubClose" class="login-field" required />
-            </div>
-            <div class="login-input-group">
-              <label>Tarif par joueur (DT / Points pour 90 min)</label>
-              <input type="number" id="settingClubPrice" class="login-field" min="10" max="60" required />
-            </div>
-            <div style="grid-column: 1 / -1; margin-top: 10px;">
-              <button type="submit" class="btn-primary-login" style="max-width: 280px;">Enregistrer les Paramètres</button>
-            </div>
-          </form>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- ====================================================================
-         VIEW MODE 3: PORTAIL LOGIN (HayaPala Club Pro Login)
-         ==================================================================== -->
-    <div class="backoffice-viewport" id="backofficeLogin" style="display: none;">
-      <div class="login-view-wrapper">
-        <div class="login-box-card">
-          <div style="display: flex; justify-content: center; margin-bottom: 18px;">
-            <div class="hayapala-logo-badge">
-              <div class="pala-icon-symbol" style="width: 58px; height: 58px;"><img src="/images/pwa-icon.jpg" alt="HayaPala Pala" class="pala-head-img" /></div>
-              <div class="hayapala-brand-text" style="font-size: 28px;">HayaPala</div>
-            </div>
-          </div>
-          <div class="login-title-msg">Espace Club & Gestionnaire</div>
-
-          <form id="loginFormAdmin">
-            <div class="login-input-group">
-              <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Email professionnel</label>
-              <input type="email" class="login-field" placeholder="manager@hayapala.com" value="manager@hayapala.com" required />
-            </div>
-
-            <div class="login-input-group">
-              <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Mot de passe</label>
-              <input type="password" id="adminPassword" class="login-field" placeholder="Mot de passe" value="••••••••" required />
-              <span class="input-addon-icon" id="togglePassword"><span>👁️</span></span>
-            </div>
-
-            <div class="login-options-row">
-              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                <input type="checkbox" checked />
-                <span>Se souvenir de moi</span>
-              </label>
-              <a href="#" onclick="showToast('Lien de réinitialisation envoyé par email', 'info')">Mot de passe oublié ?</a>
-            </div>
-
-            <button type="submit" class="btn-primary-login">Accéder à HayaPala Club Pro</button>
-          </form>
-
-          <div style="margin-top: 20px; font-size: 11px; color: var(--text-muted);">
-            Plateforme propulsée par <strong>HayaPala Architecture</strong>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </main>
-
-  <!-- ======================================================================
-       INTERACTIVE MODALS
-       ====================================================================== -->
-
-  <!-- Modal 1: Recharger mes points -->
-  <div class="modal-overlay" id="modal-recharge-points">
-    <div class="modal-card">
-      <div class="modal-header">
-        <div class="modal-title">Recharger mes points HayaPala</div>
-        <button class="modal-close-btn">&times;</button>
-      </div>
-
-      <div style="background: rgba(204, 255, 0, 0.08); border: 1px solid rgba(204, 255, 0, 0.25); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; font-size: 13px;">
-        <span style="color: var(--hayapala-volt); font-weight: 800;">Taux fixe :</span> <strong>1 Dinar Tunisien (DT) = 1 Point HayaPala</strong>
-      </div>
-
-      <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
-        1. Choisissez le montant à recharger
-      </p>
-
-      <div class="pack-recharge-grid">
-        <div class="pack-card" data-points="25">
-          <div>
-            <div class="pack-points">25.00 Points</div>
-            <div style="font-size: 11px; color: var(--text-secondary);">Votre part pour 1 match (90 min)</div>
-          </div>
-          <div class="pack-price">25 DT</div>
-        </div>
-
-        <div class="pack-card selected" data-points="50">
-          <div>
-            <div class="pack-points">50.00 Points</div>
-            <div style="font-size: 11px; color: var(--text-secondary);">2 matches ou 1 court avec un ami</div>
-          </div>
-          <div class="pack-price">50 DT</div>
-        </div>
-
-        <div class="pack-card" data-points="100">
-          <div>
-            <div class="pack-points">100.00 Points <span style="font-size: 11px; color: var(--hayapala-volt);">(+10 pts bonus)</span></div>
-            <div style="font-size: 11px; color: var(--text-secondary);">1 terrain complet privatisé (4 parts)</div>
-          </div>
-          <div class="pack-price">100 DT</div>
-        </div>
-
-        <div class="pack-card" data-points="250">
-          <div>
-            <div class="pack-points">250.00 Points <span style="font-size: 11px; color: var(--hayapala-volt);">(+35 pts bonus)</span></div>
-            <div style="font-size: 11px; color: var(--text-secondary);">Pack Compétition Master</div>
-          </div>
-          <div class="pack-price">250 DT</div>
-        </div>
-      </div>
-
-      <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
-        2. Mode de paiement instantané
-      </p>
-
-      <div class="payment-methods-stack">
-        <div class="payment-method-card selected" data-method="flouci">
-          <div class="pm-radio-wrap"><input type="radio" name="payMethod" checked /></div>
-          <div class="pm-icon">📱</div>
-          <div class="pm-details">
-            <div class="pm-name">Flouci Mobile Pay</div>
-            <div class="pm-sub">Sans frais • Validation instantanée</div>
-          </div>
-        </div>
-
-        <div class="payment-method-card" data-method="d17">
-          <div class="pm-radio-wrap"><input type="radio" name="payMethod" /></div>
-          <div class="pm-icon">📮</div>
-          <div class="pm-details">
-            <div class="pm-name">D17 (La Poste Tunisienne)</div>
-            <div class="pm-sub">Paiement mobile sécurisé</div>
-          </div>
-        </div>
-
-        <div class="payment-method-card" data-method="cb">
-          <div class="pm-radio-wrap"><input type="radio" name="payMethod" /></div>
-          <div class="pm-icon">💳</div>
-          <div class="pm-details">
-            <div class="pm-name">Carte Bancaire (GNT / CMI)</div>
-            <div class="pm-sub">Toutes banques tunisiennes</div>
-          </div>
-        </div>
-      </div>
-
-      <button class="btn-primary-action" id="btnConfirmRecharge" style="margin-top: 16px;">
-        Valider et créditer mes points
-      </button>
-    </div>
-  </div>
-
-  <!-- Modal 2: Transférer des points à un ami -->
-  <div class="modal-overlay" id="modal-transfer-points">
-    <div class="modal-card">
-      <div class="modal-header">
-        <div class="modal-title">Transférer des points</div>
-        <button class="modal-close-btn">&times;</button>
-      </div>
-
-      <div style="margin-bottom: 16px; font-size: 13px; color: var(--text-secondary);">
-        Envoyez des points à un partenaire pour qu'il règle sa part de match.
-      </div>
-
-      <div class="login-input-group">
-        <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; display: block;">Numéro de téléphone du destinataire</label>
-        <input type="tel" id="transferRecipientInput" class="login-field" placeholder="+216 98 123 456" />
-      </div>
-
-      <div class="login-input-group">
-        <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; display: block;">Montant en points</label>
-        <input type="number" id="transferAmountInput" class="login-field" value="25" min="5" max="500" />
-      </div>
-
-      <button class="btn-primary-action" id="btnConfirmTransfer" style="margin-top: 10px;">
-        Transférer instantanément
-      </button>
-    </div>
-  </div>
-
-  <!-- Modal 3: Lancer un match public -->
-  <div class="modal-overlay" id="modal-create-match">
-    <div class="modal-card">
-      <div class="modal-header">
-        <div class="modal-title">Lancer un Match Public</div>
-        <button class="modal-close-btn">&times;</button>
-      </div>
-
-      <form id="formCreateMatch">
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Choisir le Club</label>
-          <select id="createMatchClubSelect" class="login-field">
-            <option value="club_connection">Padel Connection (Borj Louzir)</option>
-            <option value="club_arena">Arena Padel Premium (La Soukra)</option>
-            <option value="club_country">Padel Country Club (Lac Palace)</option>
-          </select>
-        </div>
-
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Horaire du match</label>
-          <select id="createMatchTime" class="login-field">
-            <option value="17:00 h - 18:30 h">17:00 h - 18:30 h</option>
-            <option value="18:30 h - 20:00 h">18:30 h - 20:00 h</option>
-            <option value="20:00 h - 21:30 h">20:00 h - 21:30 h</option>
-            <option value="21:30 h - 23:00 h">21:30 h - 23:00 h</option>
-          </select>
-        </div>
-
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Fourchette de niveau acceptée</label>
-          <select id="createMatchLevelRange" class="login-field">
-            <option value="1.0-2.5">1.0 - 2.5 (Débutants)</option>
-            <option value="2.5-4.0">2.5 - 4.0 (Intermédiaires légers)</option>
-            <option value="4.0-5.5" selected>4.0 - 5.5 (Confirmés)</option>
-            <option value="5.5-7.0">5.5 - 7.0 (Avancés / Tournoi)</option>
-            <option value="7.0-8.0">7.0 - 8.0 (Masters Pros)</option>
-          </select>
-        </div>
-
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Coût individuel par joueur</label>
-          <input type="number" id="createMatchPointsCost" class="login-field" value="25" />
-        </div>
-
-        <button type="submit" class="btn-primary-action" style="margin-top: 14px;">
-          Publier le match sur HayaPala
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <!-- Modal 4: Réserver un terrain (Court Booking) -->
-  <div class="modal-overlay" id="modal-book-court">
-    <div class="modal-card">
-      <div class="modal-header">
-        <div class="modal-title">Réserver un terrain</div>
-        <button class="modal-close-btn">&times;</button>
-      </div>
-
-      <div class="modal-club-summary-card">
-        <div class="modal-club-name" id="modalBookClubName">Arena Padel Premium</div>
-        <div class="modal-club-address" id="modalBookClubAddress">Rue du parc, La Soukra</div>
-        <div class="modal-club-rate" id="modalBookPointsRate">25.00 Points / joueur</div>
-      </div>
-
-      <form id="formConfirmBooking">
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Sélectionnez le court</label>
-          <select id="bookCourtSelect" class="login-field">
-            <!-- Dynamically populated based on club -->
-          </select>
-        </div>
-
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Créneau horaire (90 min)</label>
-          <select id="bookTimeSelect" class="login-field">
-            <option value="08:30 - 10:00">08:30 - 10:00</option>
-            <option value="10:00 - 11:30">10:00 - 11:30</option>
-            <option value="11:30 - 13:00">11:30 - 13:00</option>
-            <option value="14:00 - 15:30">14:00 - 15:30</option>
-            <option value="15:30 - 17:00">15:30 - 17:00</option>
-            <option value="17:00 - 18:30" selected>17:00 - 18:30</option>
-            <option value="18:30 - 20:00">18:30 - 20:00</option>
-            <option value="20:00 - 21:30">20:00 - 21:30</option>
-            <option value="21:30 - 23:00">21:30 - 23:00</option>
-          </select>
-        </div>
-
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Formule de réservation</label>
-          <select id="bookTypeSelect" class="login-field">
-            <option value="Partie Ouverte">Partie Ouverte (Split-Pay : vous payez 25 DT, les 3 autres places sont ouvertes)</option>
-            <option value="Privée">Privée (Terrain complet réglé : 100 DT pour vous et vos 3 invités)</option>
-          </select>
-        </div>
-
-        <div class="booking-price-summary-box">
-          <div style="font-size: 12px; color: var(--text-secondary);">Montant débité maintenant :</div>
-          <div class="booking-share-amount" id="bookingShareDue">25.0 Points (25 DT)</div>
-          <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;" id="bookingShareNote">
-            ✓ Les 3 autres joueurs régleront chacun 25 DT directement sur HayaPala en rejoignant la partie.
-          </div>
-        </div>
-
-        <div class="login-input-group" style="margin-top: 12px;">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Nom du réservataire</label>
-          <input type="text" id="bookClientName" class="login-field" value="Moslem Gouia" />
-        </div>
-
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Numéro de téléphone</label>
-          <input type="tel" id="bookClientPhone" class="login-field" value="+216 22 227 041" />
-        </div>
-
-        <button type="submit" class="btn-primary-action" id="btnSubmitBookCourt" style="margin-top: 14px;">
-          Valider et payer ma part (25 Pts)
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <!-- Modal 5: Paires Officielles & Défis Duo -->
-  <div class="modal-overlay" id="modal-official-teams">
-    <div class="modal-card" style="max-width: 520px;">
-      <div class="modal-header">
-        <div class="modal-title">⚔️ Paires Officielles & ELO Duo</div>
-        <button class="modal-close-btn">&times;</button>
-      </div>
-
-      <div class="duo-tabs-bar">
-        <button class="duo-tab-btn active" id="tabDuoRanking">🏆 Classement Général</button>
-        <button class="duo-tab-btn" id="tabDuoCreate">➕ Former un Nouveau Duo</button>
-      </div>
-
-      <!-- Tab 1: Classement -->
-      <div id="duoRankingListContainer">
-        <!-- Hero Card for User's Team -->
-        <div class="user-duo-highlight-card" id="userDuoHeroCard">
-          <!-- Dynamically populated -->
-        </div>
-
-        <div style="font-size: 11px; font-weight: 800; color: var(--text-secondary); margin: 16px 0 8px; text-transform: uppercase; letter-spacing: 0.6px;">
-          Leaderboard National Padel Duo
-        </div>
-
-        <div id="officialTeamsListWrapper">
-          <!-- Dynamically populated -->
-        </div>
-      </div>
-
-      <!-- Tab 2: Création de Binôme avec Joueurs Inscrits -->
-      <div id="duoFormContainer" style="display: none;">
-        <form id="formCreateDuo">
-          <div class="login-input-group">
-            <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Nom officiel de la paire</label>
-            <input type="text" id="duoTeamNameInput" class="login-field" placeholder="Ex: Bandja Kings La Marsa" required />
-          </div>
-
-          <div class="login-input-group">
-            <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Club de rattachement</label>
-            <select id="duoHomeClubSelect" class="login-field">
-              <option value="Padel Connection">Padel Connection (Borj Louzir)</option>
-              <option value="Arena Padel Premium">Arena Padel Premium (La Soukra)</option>
-              <option value="Padel Country Club">Padel Country Club (Lac Palace)</option>
-            </select>
-          </div>
-
-          <div class="login-input-group">
-            <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">
-              Sélectionnez votre coéquipier parmi les joueurs certifiés :
-            </label>
-            
-            <div class="partner-search-box">
-              <span>🔍</span>
-              <input type="text" id="partnerSearchQuery" placeholder="Rechercher par nom (Ahmed, Karim, Dhouib...)" />
-            </div>
-
-            <div class="registered-players-scroll-list" id="registeredPlayersDirectory">
-              <!-- Dynamically populated -->
-            </div>
-
-            <div class="selected-partner-banner" id="selectedPartnerCard" style="display: none;">
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <span id="selectedPartnerAvatar" style="font-size: 24px;">👨</span>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; max-width:800px">
+            <!-- Tarifs -->
+            <div style="background:var(--bg-card); border:1px solid var(--border-card); border-radius:var(--radius-lg); padding:20px">
+              <div style="font-size:14px; font-weight:700; color:var(--text-white); margin-bottom:16px">💰 Tarifs</div>
+              <div style="display:flex; flex-direction:column; gap:12px">
                 <div>
-                  <div id="selectedPartnerName" style="font-weight: 800; color: var(--text-white);">Ahmed Horrigue</div>
-                  <div style="font-size: 11px; color: var(--text-secondary);" id="selectedPartnerClub">Padel Connection</div>
+                  <label style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em">Match ouvert / joueur</label>
+                  <input type="number" class="login-field" value="25" style="height:36px; margin-top:4px" />
+                </div>
+                <div>
+                  <label style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em">Réservation privée / heure</label>
+                  <input type="number" class="login-field" value="80" style="height:36px; margin-top:4px" />
+                </div>
+                <div>
+                  <label style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em">Cours coach / séance</label>
+                  <input type="number" class="login-field" value="120" style="height:36px; margin-top:4px" />
                 </div>
               </div>
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span id="selectedPartnerLevel" class="slot-level">⭐ 5.00</span>
-                <button type="button" class="btn-change-partner" id="btnChangePartner">Changer</button>
+            </div>
+
+            <!-- Matchmaking -->
+            <div style="background:var(--bg-card); border:1px solid var(--border-card); border-radius:var(--radius-lg); padding:20px">
+              <div style="font-size:14px; font-weight:700; color:var(--text-white); margin-bottom:16px">🎾 Matchmaking</div>
+              <div style="display:flex; flex-direction:column; gap:12px">
+                <div>
+                  <label style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em">Écart de niveau max</label>
+                  <input type="number" class="login-field" value="2" min="1" max="6" style="height:36px; margin-top:4px" />
+                </div>
+                <div>
+                  <label style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em">Durée match ouvert (min)</label>
+                  <input type="number" class="login-field" value="90" style="height:36px; margin-top:4px" />
+                </div>
               </div>
             </div>
-
-            <input type="hidden" id="selectedPartnerId" />
           </div>
 
-          <!-- Duo live projection -->
-          <div class="duo-projection-card">
-            <div style="font-size: 11px; color: var(--text-secondary);">PROJECTION DE DÉPART DU BINÔME :</div>
-            <div class="duo-proj-row">
-              <div>Partenaire : <strong id="duoProjPartner" style="color: var(--text-white);">Ahmed Horrigue</strong></div>
-              <div>Niveau Moyen : <strong id="duoProjLevel" style="color: var(--hayapala-cyan);">5.25</strong></div>
-            </div>
-            <div class="duo-proj-row">
-              <div>ELO Initial Estimé : <strong id="duoProjElo" style="color: var(--hayapala-volt);">1525 ELO</strong></div>
-              <div>Statut : <strong style="color: #10B981;">Certifié HayaPala</strong></div>
+          <div style="margin-top:20px">
+            <button class="btn-primary-action" style="max-width:200px">Enregistrer</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /.backoffice-viewport -->
+
+
+    <!-- ==================================================================
+         VUE 3 : LOGIN PORTAIL GÉRANT
+         ================================================================== -->
+    <div class="backoffice-viewport" id="backofficeLogin" style="display:none">
+      <div class="login-screen-wrap">
+        <div class="login-logo-area">
+          <div class="hayapala-logo-badge" style="justify-content:center">
+            <div class="pala-icon-symbol" style="width:56px;height:56px">
+              <img src="./images/pwa-icon.jpg" alt="HayaPala" class="pala-head-img" style="border-radius:50%" />
             </div>
           </div>
+          <div class="login-brand-title">HayaPala</div>
+          <div class="login-brand-sub">Portail Gérant &amp; Administration</div>
+        </div>
 
-          <button type="submit" class="btn-primary-action" style="margin-top: 16px;">
-            ⚔️ Valider & Enregistrer la Paire
+        <div class="login-card">
+          <div class="login-card-title">Connexion</div>
+
+          <div class="login-field-group">
+            <label class="login-label">Identifiant gérant</label>
+            <input type="text" class="login-field" id="loginUsernameField" placeholder="admin" autocomplete="username" />
+          </div>
+
+          <div class="login-field-group">
+            <label class="login-label">Mot de passe</label>
+            <input type="password" class="login-field" id="loginPasswordField" placeholder="••••••••" autocomplete="current-password" />
+          </div>
+
+          <button class="btn-primary-action" id="btnLoginSubmit" style="margin-top:4px">
+            Accéder au tableau de bord
           </button>
-        </form>
-      </div>
 
+          <div class="login-demo-hint">
+            Démo : admin / admin — Accès complet au tableau de bord gérant
+          </div>
+        </div>
+
+        <button class="btn-back-to-player" onclick="switchViewMode('player-app')">
+          ← Retour à l'app joueur
+        </button>
+      </div>
     </div>
-  </div>
 
-  <!-- Modal 6: Simulateur de Niveau ELO / Glicko-2 -->
-  <div class="modal-overlay" id="modal-rating-simulator">
-    <div class="modal-card">
-      <div class="modal-header">
-        <div class="modal-title">📈 Simulateur ELO HayaPala</div>
-        <button class="modal-close-btn">&times;</button>
+  </main><!-- /.workspace-canvas -->
+
+
+  <!-- ======================================================================
+       MODALES GLOBALES
+       ====================================================================== -->
+
+  <!-- ── Modale : Évaluation Coach ── -->
+  <div class="modal-overlay" id="modal-evaluate-player" role="dialog" aria-modal="true" aria-labelledby="evalModalTitle">
+    <div class="modal-sheet" style="max-width:560px">
+      <div class="modal-drag-indicator"></div>
+      <div class="modal-top-bar">
+        <div class="modal-title" id="evalModalTitle">Évaluation · <span id="evalPlayerName">Joueur</span></div>
+        <button class="modal-close-btn" onclick="closeModal('modal-evaluate-player')" aria-label="Fermer">—</button>
       </div>
 
-      <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 14px;">
-        Algorithme officiel prédictif basé sur la probabilité logistique et le facteur d'incertitude (K-Factor dynamique).
-      </div>
-
-      <div class="sim-user-status-card">
+      <!-- Player info mini card -->
+      <div id="evalPlayerMiniCard" style="background:var(--bg-card-2); border:1px solid var(--border-card); border-radius:var(--radius-md); padding:14px 16px; margin-bottom:20px; display:flex; align-items:center; gap:12px">
+        <div style="width:40px;height:40px; background:var(--bg-card); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px">🎾</div>
         <div>
-          <div style="font-size: 11px; color: var(--text-secondary);">VOTRE NIVEAU ACTUEL</div>
-          <div style="font-size: 20px; font-weight: 900; color: var(--hayapala-volt);" id="simPlayerCurrentLevel">5.49</div>
-        </div>
-        <div>
-          <div style="font-size: 11px; color: var(--text-secondary);">INDICE DE FIABILITÉ</div>
-          <div style="font-size: 20px; font-weight: 900; color: var(--hayapala-cyan);" id="simPlayerCurrentRel">48.5%</div>
+          <div style="font-weight:700; color:var(--text-white)" id="evalPlayerNameCard">—</div>
+          <div style="font-size:12px; color:var(--text-secondary)" id="evalPlayerPhone">—</div>
+          <div id="evalPlayerCurrentLevel" style="margin-top:4px"></div>
         </div>
       </div>
 
-      <div class="login-input-group">
-        <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Niveau de votre partenaire</label>
-        <select id="simTeamLevelSelect" class="login-field">
-          <option value="4.50">4.50 (Léger)</option>
-          <option value="5.00" selected>5.00 (Équilibré - Ahmed)</option>
-          <option value="5.80">5.80 (Kotrane)</option>
-          <option value="6.90">6.90 (Dhouib)</option>
-        </select>
+      <!-- Compétences techniques -->
+      <div class="eval-section-label">Compétences techniques (notées de 1 à 10)</div>
+      <div class="skills-eval-grid" id="skillsEvalGrid">
+        <!-- Peuplé dynamiquement par JS -->
       </div>
 
-      <div class="login-input-group">
-        <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Niveau moyen de la paire adverse</label>
-        <select id="simOpponentLevelSelect" class="login-field">
-          <option value="4.80">4.80 (Paire plus faible)</option>
-          <option value="5.50">5.50 (Niveau égal)</option>
-          <option value="6.20" selected>6.20 (Paire plus forte - Défi)</option>
-          <option value="7.50">7.50 (Top Légendes)</option>
-        </select>
+      <!-- Niveau global officiel -->
+      <div class="eval-section-label" style="margin-top:20px">Niveau global officiel (1 à 7) · Dictée coach</div>
+      <div class="level-selector-row" id="evalLevelSelector">
+        <!-- Peuplé dynamiquement par JS -->
+      </div>
+      <div style="font-size:11px; color:var(--gold); margin-top:8px; line-height:1.4">
+        ⚠️ Ce niveau sera le niveau officiel du joueur. Il ne peut être modifié que par le gérant sous dictée du coach.
       </div>
 
-      <div class="login-input-group">
-        <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Score simulé du match</label>
-        <select id="simScoreSelect" class="login-field">
-          <option value="2-0">Victoire nette (2 - 0)</option>
-          <option value="2-1" selected>Victoire serrée (2 - 1)</option>
-          <option value="1-2">Défaite serrée (1 - 2)</option>
-          <option value="0-2">Défaite sans appel (0 - 2)</option>
-        </select>
-      </div>
+      <!-- Commentaire coach -->
+      <div class="eval-section-label" style="margin-top:20px">Commentaire du coach (visible par le joueur)</div>
+      <textarea class="login-field" id="evalCoachComment" rows="3"
+        placeholder="Ex : Excellent placement, doit travailler à la vitre..."
+        style="resize:vertical; min-height:80px"></textarea>
 
-      <div class="sim-result-box">
-        <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px;">PROJECTION DE L'ALGORITHME :</div>
-        <div class="sim-result-row">
-          <span>Chances estimées de victoire :</span>
-          <strong id="simExpectedWinRate" style="color: var(--text-white);">42.1%</strong>
-        </div>
-        <div class="sim-result-row">
-          <span>Nouveau Niveau Estimé :</span>
-          <strong id="simNewLevelResult" style="color: #27AE60; font-size: 16px;">5.64 (+0.15)</strong>
-        </div>
-        <div class="sim-result-row">
-          <span>Nouvelle Fiabilité :</span>
-          <strong id="simNewRelResult" style="color: var(--hayapala-cyan);">50.3% (+1.8%)</strong>
-        </div>
-      </div>
-
-      <button class="btn-primary-action" id="btnApplySimulatedResult" style="margin-top: 14px;">
-        Enregistrer ce match dans mon profil
+      <button class="btn-primary-action" id="btnSubmitEvaluation" style="margin-top:16px">
+        ✔ Valider l'évaluation
       </button>
     </div>
   </div>
 
-  <!-- Modal 7: Menu Action Rapide (Central Emblem Button) -->
-  <div class="modal-overlay" id="modal-quick-action">
-    <div class="modal-card">
-      <div class="modal-header">
-        <div class="modal-title">Action Rapide HayaPala</div>
-        <button class="modal-close-btn">&times;</button>
+  <!-- ── Modale : Réservation terrain (Joueur) ── -->
+  <div class="modal-overlay" id="modal-book-court" role="dialog" aria-modal="true">
+    <div class="modal-sheet">
+      <div class="modal-drag-indicator"></div>
+      <div class="modal-top-bar">
+        <div class="modal-title">Réserver un terrain</div>
+        <button class="modal-close-btn" onclick="closeModal('modal-book-court')" aria-label="Fermer">—</button>
       </div>
 
-      <div class="quick-action-list-modal">
-        <div class="quick-modal-item" onclick="closeAllModals(); openModal('modal-create-match');">
-          <div class="qm-icon">🎾</div>
-          <div>
-            <div class="qm-title">Lancer une partie ouverte</div>
-            <div class="qm-sub">Créer un match et inviter d'autres joueurs</div>
-          </div>
+      <div class="modal-field-group">
+        <label class="modal-label">Terrain</label>
+        <select class="login-field" id="bookCourtSelect">
+          <option value="1">Terrain 1</option>
+          <option value="2">Terrain 2</option>
+          <option value="3">Terrain 3</option>
+          <option value="4">Terrain 4</option>
+        </select>
+      </div>
+      <div class="modal-field-group">
+        <label class="modal-label">Date</label>
+        <input type="date" class="login-field" id="bookDateInput" />
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+        <div class="modal-field-group">
+          <label class="modal-label">Heure début</label>
+          <select class="login-field" id="bookStartTime">
+            <option>08:00</option><option>09:30</option><option>11:00</option>
+            <option>12:30</option><option>14:00</option><option>15:30</option>
+            <option>17:00</option><option>18:30</option><option>20:00</option><option>21:30</option>
+          </select>
         </div>
-
-        <div class="quick-modal-item" onclick="closeAllModals(); navigateToScreen('screen-book-court');">
-          <div class="qm-icon">📞</div>
-          <div>
-            <div class="qm-title">Réserver un terrain</div>
-            <div class="qm-sub">Padel Connection, Arena Padel, Padel Country Club</div>
-          </div>
-        </div>
-
-        <div class="quick-modal-item" onclick="closeAllModals(); openOfficialTeamsModal();">
-          <div class="qm-icon">⚔️</div>
-          <div>
-            <div class="qm-title">Paires Officielles & Défis Duo</div>
-            <div class="qm-sub">Consulter le classement ELO ou lancer un défi</div>
-          </div>
-        </div>
-
-        <div class="quick-modal-item" onclick="closeAllModals(); openModal('modal-recharge-points');">
-          <div class="qm-icon">⚡</div>
-          <div>
-            <div class="qm-title">Recharger mes points</div>
-            <div class="qm-sub">Flouci, D17 ou Carte Bancaire (1 DT = 1 Pt)</div>
-          </div>
-        </div>
-
-        <div class="quick-modal-item" onclick="closeAllModals(); switchViewMode('backoffice-dashboard');">
-          <div class="qm-icon">💻</div>
-          <div>
-            <div class="qm-title">Portail Club Pro (Directeur)</div>
-            <div class="qm-sub">Accéder au planning et à la gestion administrative</div>
-          </div>
+        <div class="modal-field-group">
+          <label class="modal-label">Durée</label>
+          <select class="login-field" id="bookDuration">
+            <option value="90">1h30</option>
+            <option value="120">2h00</option>
+          </select>
         </div>
       </div>
+      <div class="modal-field-group">
+        <label class="modal-label">Type de réservation</label>
+        <select class="login-field" id="bookType">
+          <option value="private">Privée (entre amis)</option>
+          <option value="open_match">Match ouvert (matchmaking)</option>
+        </select>
+      </div>
+      <button class="btn-primary-action" id="btnConfirmBooking">Confirmer la réservation</button>
     </div>
   </div>
 
-  <!-- ======================================================================
-       ADMIN MODALS (Club Back-Office Operations)
-       ====================================================================== -->
-
-  <!-- Admin Modal: Nouvelle Réservation Directe -->
-  <div class="modal-overlay" id="modal-admin-direct-booking">
-    <div class="modal-card">
-      <div class="modal-header">
-        <div class="modal-title">⚡ Nouvelle Réservation Directe (Admin)</div>
-        <button class="modal-close-btn">&times;</button>
+  <!-- ── Modale : Créer un match ouvert ── -->
+  <div class="modal-overlay" id="modal-create-match" role="dialog" aria-modal="true">
+    <div class="modal-sheet">
+      <div class="modal-drag-indicator"></div>
+      <div class="modal-top-bar">
+        <div class="modal-title">🎾 Lancer un match ouvert</div>
+        <button class="modal-close-btn" onclick="closeModal('modal-create-match')" aria-label="Fermer">—</button>
       </div>
 
-      <form id="formAdminDirectBooking">
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Terrain / Court</label>
-          <select id="adminDirectCourtSelect" class="login-field">
-            <!-- Dynamically populated -->
-          </select>
-        </div>
-
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Créneau horaire</label>
-          <select id="adminDirectTimeSelect" class="login-field">
-            <option value="08:30 - 10:00">08:30 - 10:00</option>
-            <option value="10:00 - 11:30">10:00 - 11:30</option>
-            <option value="11:30 - 13:00">11:30 - 13:00</option>
-            <option value="14:00 - 15:30">14:00 - 15:30</option>
-            <option value="15:30 - 17:00">15:30 - 17:00</option>
-            <option value="17:00 - 18:30" selected>17:00 - 18:30</option>
-            <option value="18:30 - 20:00">18:30 - 20:00</option>
-            <option value="20:00 - 21:30">20:00 - 21:30</option>
-            <option value="21:30 - 23:00">21:30 - 23:00</option>
-          </select>
-        </div>
-
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Nom du Client ou Référence</label>
-          <input type="text" id="adminDirectClientName" class="login-field" placeholder="Ex: Karim Ben Amor" required />
-        </div>
-
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Téléphone</label>
-          <input type="tel" id="adminDirectClientPhone" class="login-field" placeholder="+216 98 000 000" />
-        </div>
-
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Type de réservation</label>
-          <select id="adminDirectTypeSelect" class="login-field">
-            <option value="Privée">Privée (Terrain complet payé / bloqué)</option>
-            <option value="Partie Ouverte">Partie Ouverte (Split-Pay)</option>
-          </select>
-        </div>
-
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Mode de règlement guichet</label>
-          <select id="adminDirectPaySelect" class="login-field">
-            <option value="Espèces (Comptant Guichet)">Espèces (Comptant Guichet)</option>
-            <option value="TPE Carte Bancaire">TPE Carte Bancaire</option>
-            <option value="Chèque Club">Chèque Club</option>
-            <option value="Débit Solde HayaPala">Débit Solde HayaPala</option>
-          </select>
-        </div>
-
-        <button type="submit" class="btn-primary-action" style="margin-top: 14px;">
-          Enregistrer au planning du club
-        </button>
-      </form>
+      <div class="modal-field-group">
+        <label class="modal-label">Terrain</label>
+        <select class="login-field" id="createMatchCourt">
+          <option value="1">Terrain 1</option>
+          <option value="2">Terrain 2</option>
+          <option value="3">Terrain 3</option>
+          <option value="4">Terrain 4</option>
+        </select>
+      </div>
+      <div class="modal-field-group">
+        <label class="modal-label">Date &amp; Heure</label>
+        <input type="datetime-local" class="login-field" id="createMatchDateTime" />
+      </div>
+      <div class="modal-field-group">
+        <label class="modal-label">Niveau requis</label>
+        <select class="login-field" id="createMatchLevel">
+          <option value="1-2">1–2 · Débutant</option>
+          <option value="3-4">3–4 · Intermédiaire</option>
+          <option value="4-6" selected>4–6 · Confirmé</option>
+          <option value="6-7">6–7 · Élite</option>
+        </select>
+      </div>
+      <div class="modal-field-group">
+        <label class="modal-label">Note (optionnel)</label>
+        <input type="text" class="login-field" id="createMatchNote" placeholder="Ex : vibes décontractées, progressif..." />
+      </div>
+      <button class="btn-primary-action" id="btnConfirmCreateMatch">Créer le match ouvert</button>
     </div>
   </div>
 
-  <!-- Admin Modal: Gérer la Réservation -->
-  <div class="modal-overlay" id="modal-admin-manage-booking">
-    <div class="modal-card">
-      <div class="modal-header">
-        <div class="modal-title">Détails de la Réservation</div>
-        <button class="modal-close-btn">&times;</button>
+  <!-- ── Modale : Inscrire un nouveau membre ── -->
+  <div class="modal-overlay" id="modal-register-player" role="dialog" aria-modal="true">
+    <div class="modal-sheet">
+      <div class="modal-drag-indicator"></div>
+      <div class="modal-top-bar">
+        <div class="modal-title">👤 Inscrire un membre</div>
+        <button class="modal-close-btn" onclick="closeModal('modal-register-player')" aria-label="Fermer">—</button>
       </div>
 
-      <div class="modal-club-summary-card">
-        <div class="modal-club-name" id="manageBookingCourtName">Court A - Indoor Bleu</div>
-        <div class="modal-club-address" id="manageBookingTimeSlot">17:00 - 18:30</div>
-        <div class="modal-club-rate" id="manageBookingStatusPill">Statut : Confirmé</div>
-      </div>
-
-      <div style="margin-bottom: 16px; font-size: 13px;">
-        <div style="margin-bottom: 6px;">Client : <strong id="manageBookingClient" style="color: var(--text-white);">Moslem Gouia</strong></div>
-        <div style="margin-bottom: 6px;">Téléphone : <strong id="manageBookingPhone" style="color: var(--text-white);">+216 22 227 041</strong></div>
-        <div style="margin-bottom: 6px;">Type : <strong id="manageBookingType" style="color: var(--hayapala-cyan);">Privée</strong></div>
-        <div>Places réglées : <strong id="manageBookingPaid" style="color: var(--hayapala-volt);">4 / 4</strong></div>
-      </div>
-
-      <input type="hidden" id="manageBookingId" />
-
-      <div style="display: flex; gap: 10px; margin-top: 18px;">
-        <button class="btn-profile-recharge" id="btnAdminConfirmBooking" style="flex: 1;">
-          ✓ Marquer Confirmé
-        </button>
-        <button class="btn-profile-transfer" id="btnAdminDeleteBooking" style="flex: 1; border-color: #EF4444; color: #EF4444;">
-          🗑️ Annuler / Libérer
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Admin Modal: Ajouter un Nouveau Terrain -->
-  <div class="modal-overlay" id="modal-admin-add-court">
-    <div class="modal-card">
-      <div class="modal-header">
-        <div class="modal-title">🎾 Ajouter un Terrain de Padel</div>
-        <button class="modal-close-btn">&times;</button>
-      </div>
-
-      <form id="formAdminAddCourt">
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Nom du Terrain</label>
-          <input type="text" id="adminAddCourtName" class="login-field" placeholder="Ex: Court 5 - Panoramique Outdoor" required />
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+        <div class="modal-field-group" style="grid-column:1/-1">
+          <label class="modal-label">Nom complet</label>
+          <input type="text" class="login-field" id="regPlayerName" placeholder="Prénom Nom" />
         </div>
-
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Type de piste</label>
-          <select id="adminAddCourtType" class="login-field">
-            <option value="Indoor">Indoor (Couvert)</option>
-            <option value="Outdoor">Outdoor (Plein air)</option>
+        <div class="modal-field-group">
+          <label class="modal-label">Téléphone</label>
+          <input type="tel" class="login-field" id="regPlayerPhone" placeholder="+216 XX XXX XXX" />
+        </div>
+        <div class="modal-field-group">
+          <label class="modal-label">Email</label>
+          <input type="email" class="login-field" id="regPlayerEmail" placeholder="joueur@email.com" />
+        </div>
+        <div class="modal-field-group">
+          <label class="modal-label">Côté dominant</label>
+          <select class="login-field" id="regPlayerSide">
+            <option value="right">Droitier</option>
+            <option value="left">Gaucher</option>
           </select>
         </div>
-
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Type de surface</label>
-          <select id="adminAddCourtSurface" class="login-field">
-            <option value="Mondo Supercourt">Mondo Supercourt (Officiel WPT)</option>
-            <option value="Gazon WPT">Gazon Synthétique WPT</option>
-            <option value="Bleu Pro">Bleu Pro Monofilament</option>
-            <option value="Standard">Standard Padel</option>
+        <div class="modal-field-group">
+          <label class="modal-label">Style de jeu</label>
+          <select class="login-field" id="regPlayerStyle">
+            <option value="offensive">Offensif</option>
+            <option value="defensive">Défensif</option>
+            <option value="balanced">Équilibré</option>
           </select>
         </div>
-
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Tarif par joueur (DT / Points pour 90 min)</label>
-          <input type="number" id="adminAddCourtPrice" class="login-field" value="25" min="15" max="50" required />
-        </div>
-
-        <button type="submit" class="btn-primary-action" style="margin-top: 14px;">
-          Créer et Activer le Court
-        </button>
-      </form>
+      </div>
+      <div style="background:var(--bg-card-2); border:1px solid var(--border-gold-sm); border-radius:var(--radius-md); padding:12px 14px; font-size:12px; color:var(--text-secondary); line-height:1.5; margin-bottom:16px">
+        ⚠️ Le niveau officiel sera attribué par le coach lors de l'évaluation. Le joueur sera en statut <strong style="color:var(--amber)">En attente</strong> jusqu'à validation.
+      </div>
+      <button class="btn-primary-action" id="btnConfirmRegisterPlayer">Inscrire le membre</button>
     </div>
   </div>
 
-  <!-- Admin Modal: Créer un Tournoi -->
-  <div class="modal-overlay" id="modal-admin-create-tournament">
-    <div class="modal-card">
-      <div class="modal-header">
-        <div class="modal-title">🏆 Créer un Nouveau Tournoi</div>
-        <button class="modal-close-btn">&times;</button>
+  <!-- ── Modale : Admin créer créneau ouvert ── -->
+  <div class="modal-overlay" id="modal-admin-create-slot" role="dialog" aria-modal="true">
+    <div class="modal-sheet">
+      <div class="modal-drag-indicator"></div>
+      <div class="modal-top-bar">
+        <div class="modal-title">⚡ Nouveau créneau match ouvert</div>
+        <button class="modal-close-btn" onclick="closeModal('modal-admin-create-slot')" aria-label="Fermer">—</button>
       </div>
-
-      <form id="formAdminCreateTournament">
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Titre de la compétition</label>
-          <input type="text" id="adminTournTitle" class="login-field" placeholder="Ex: Open Printemps P250" required />
-        </div>
-
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Format du tournoi</label>
-          <select id="adminTournFormat" class="login-field">
-            <option value="P100 Hommes">P100 Hommes</option>
-            <option value="P250 Hommes" selected>P250 Hommes</option>
-            <option value="P500 Open Master">P500 Open Master</option>
-            <option value="Tournoi Mixte">Tournoi Mixte</option>
-            <option value="Open Féminin">Open Féminin</option>
-          </select>
-        </div>
-
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Dates de l'événement</label>
-          <input type="text" id="adminTournDate" class="login-field" placeholder="Ex: 07-08 Novembre 2026" required />
-        </div>
-
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Nombre maximum d'équipes</label>
-          <input type="number" id="adminTournMaxTeams" class="login-field" value="16" min="4" max="64" required />
-        </div>
-
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Frais d'inscription par équipe (DT)</label>
-          <input type="number" id="adminTournFee" class="login-field" value="40" required />
-        </div>
-
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Dotation / Prize Pool (DT)</label>
-          <input type="number" id="adminTournPrize" class="login-field" value="1500" required />
-        </div>
-
-        <button type="submit" class="btn-primary-action" style="margin-top: 14px;">
-          Publier le Tournoi
-        </button>
-      </form>
+      <div class="modal-field-group">
+        <label class="modal-label">Terrain</label>
+        <select class="login-field" id="adminSlotCourt">
+          <option value="1">Terrain 1</option>
+          <option value="2">Terrain 2</option>
+          <option value="3">Terrain 3</option>
+          <option value="4">Terrain 4</option>
+        </select>
+      </div>
+      <div class="modal-field-group">
+        <label class="modal-label">Date &amp; Heure</label>
+        <input type="datetime-local" class="login-field" id="adminSlotDateTime" />
+      </div>
+      <div class="modal-field-group">
+        <label class="modal-label">Niveau visé</label>
+        <select class="login-field" id="adminSlotLevel">
+          <option value="1-2">1–2 · Débutant</option>
+          <option value="3-4">3–4 · Intermédiaire</option>
+          <option value="4-6" selected>4–6 · Confirmé</option>
+          <option value="6-7">6–7 · Élite</option>
+        </select>
+      </div>
+      <button class="btn-primary-action" id="btnAdminConfirmCreateSlot">Créer le créneau</button>
     </div>
   </div>
 
-  <!-- Admin Modal: Ajuster Solde Joueur (Créditer / Débiter Points) -->
-  <div class="modal-overlay" id="modal-admin-adjust-points">
-    <div class="modal-card">
-      <div class="modal-header">
-        <div class="modal-title">⚡ Régie Guichet : Ajuster Solde</div>
-        <button class="modal-close-btn">&times;</button>
-      </div>
+  <!-- ── Toast notification ── -->
+  <div class="toast-notification" id="toastNotification" role="alert" aria-live="polite"></div>
 
-      <div style="margin-bottom: 14px; font-size: 13px;">
-        Joueur : <strong id="adminAdjustPlayerName" style="color: var(--text-white);">Ahmed Horrigue</strong>
-      </div>
-
-      <input type="hidden" id="adminAdjustPlayerId" />
-
-      <form id="formAdminAdjustPoints">
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Montant à créditer (+) ou débiter (-) en Points (1 DT = 1 Pt)</label>
-          <input type="number" id="adminAdjustAmount" class="login-field" value="50" step="5" required />
-        </div>
-
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Motif de l'opération</label>
-          <select id="adminAdjustReason" class="login-field">
-            <option value="Paiement espèces reçu au guichet du club">Paiement espèces reçu au guichet du club</option>
-            <option value="Règlement TPE Carte Bancaire sur place">Règlement TPE Carte Bancaire sur place</option>
-            <option value="Gain de tournoi / Récompense">Gain de tournoi / Récompense</option>
-            <option value="Régularisation administrative">Régularisation administrative</option>
-          </select>
-        </div>
-
-        <button type="submit" class="btn-primary-action" style="margin-top: 14px;">
-          Valider l'ajustement de solde
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <!-- Admin Modal: Créer un Nouveau Club -->
-  <div class="modal-overlay" id="modal-admin-create-club">
-    <div class="modal-card">
-      <div class="modal-header">
-        <div class="modal-title">🏢 Créer un Nouveau Club de Padel</div>
-        <button class="modal-close-btn">&times;</button>
-      </div>
-
-      <form id="formAdminCreateClub">
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Nom du Club</label>
-          <input type="text" id="adminNewClubName" class="login-field" placeholder="Ex: Padel Club Carthage" required />
-        </div>
-
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Ville & Adresse</label>
-          <input type="text" id="adminNewClubAddress" class="login-field" placeholder="Ex: Rue de Carthage, Tunis" required />
-        </div>
-
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Numéro de Téléphone</label>
-          <input type="tel" id="adminNewClubPhone" class="login-field" placeholder="+216 22 000 000" required />
-        </div>
-
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Tarif de base par joueur (DT / Points pour 90 min)</label>
-          <input type="number" id="adminNewClubPrice" class="login-field" value="25" min="10" max="60" required />
-        </div>
-
-        <button type="submit" class="btn-primary-action" style="margin-top: 14px;">
-          Enregistrer et Activer le Club
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <!-- Admin Modal: Inscrire un Nouveau Joueur -->
-  <div class="modal-overlay" id="modal-admin-create-player">
-    <div class="modal-card">
-      <div class="modal-header">
-        <div class="modal-title">👤 Inscrire un Nouveau Membre / Joueur</div>
-        <button class="modal-close-btn">&times;</button>
-      </div>
-
-      <form id="formAdminCreatePlayer">
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Nom complet</label>
-          <input type="text" id="adminNewPlayerName" class="login-field" placeholder="Ex: Mohamed Ali" required />
-        </div>
-
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Téléphone</label>
-          <input type="tel" id="adminNewPlayerPhone" class="login-field" placeholder="+216 98 000 000" required />
-        </div>
-
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Ville / Localité</label>
-          <input type="text" id="adminNewPlayerCity" class="login-field" placeholder="Ex: La Marsa" value="Tunis" />
-        </div>
-
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Niveau initial officiel (1.00 à 8.00)</label>
-          <input type="number" id="adminNewPlayerLevel" class="login-field" value="5.00" step="0.1" min="1.0" max="8.0" required />
-        </div>
-
-        <div class="login-input-group">
-          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">Solde initial crédité (DT / Points)</label>
-          <input type="number" id="adminNewPlayerPoints" class="login-field" value="0" min="0" />
-        </div>
-
-        <button type="submit" class="btn-primary-action" style="margin-top: 14px;">
-          Enregistrer le Joueur
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <!-- Global Toast Notice -->
-  <div class="toast-notice" id="globalToastNotice">
-    <span>ℹ️</span> <span>Notification</span>
-  </div>
-
-  <script src="/js/app.js"></script>
+  <!-- Firebase via CDN ESM — app.js chargé en module -->
+  <script type="module" src="./js/app.js"></script>
 </body>
 </html>

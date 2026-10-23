@@ -1,2030 +1,2363 @@
-/**
- * HayaPala Platform - Application Logic
- * Next-Gen Padel: Standalone Player Web App & Club Pro Management Back-Office
- */
+﻿/* ==========================================================================
+   HAYAPALA — APPLICATION LOGIC v1.1
+   Club de Padel · Firebase Firestore + Auth · circlepadel
+   Vanilla JS, no framework — ES Module (type="module" dans index.html)
+   ========================================================================== */
 
-// Global Application State
-let AppState = {
-  user: null,
-  clubs: [],
-  courts: [],
-  matches: [],
-  userMatchHistory: [],
-  tournaments: [],
-  tournament: null,
-  clubBookings: [],
-  officialTeams: [],
-  communityPlayers: [],
+// ── Firebase imports (CDN ESM) ─────────────────────────────────────────────
+import {
+  fbSignIn, fbSignOut, fbOnAuthChange,
+  fbGetPlayers, fbGetPlayer, fbSavePlayer, fbUpdatePlayerLevel, fbListenPlayers,
+  fbGetCourts,
+  fbGetBookings, fbAddBooking, fbUpdateBooking, fbCancelBooking, fbListenBookings,
+  fbGetOpenMatches, fbJoinMatch, fbCreateOpenMatch, fbListenOpenMatches,
+  fbGetNotifications, fbMarkNotifRead, fbAddNotification,
+  fbGetConfig, fbSaveConfig,
+  fbSeedIfEmpty, fbTrack,
+} from './firebase.js';
+
+'use strict';
+
+// ============================================================================
+// BASE DE DONNÉES LOCALE (simulation → sera remplacée par Firestore)
+// ============================================================================
+
+const DB_KEY = 'hayapala_db_v1';
+
+const SEED_DATA = {
+  appConfig: {
+    clubName: 'HayaPala Padel Club',
+    address: 'Route de La Marsa, Tunis, Tunisie',
+    phone: '+216 71 000 000',
+    email: 'contact@hayapala.tn',
+    openTime: '08:00',
+    closeTime: '23:00',
+    pricePeak: 25,
+    priceOffPeak: 18,
+    matchmakingTolerance: 1,
+    alertBeforeMatchHours: 2,
+    slotDurationMinutes: 90,
+    cancelDeadlineHours: 2,
+    maxPlayersPerMatch: 4,
+  },
+
+  currentUser: {
+    id: 'user_moslem',
+    firstName: 'Moslem',
+    lastName: 'Gouia',
+    phone: '+216 22 227 041',
+    email: 'moslem@hayapala.tn',
+    avatar: null,
+    role: 'manager',            // 'player' | 'manager'
+  },
+
+  players: [
+    {
+      id: 'user_moslem',
+      firstName: 'Moslem', lastName: 'Gouia',
+      phone: '+216 22 227 041', email: 'moslem@hayapala.tn',
+      avatar: null, role: 'manager',
+      status: 'active',          // 'pending' | 'active' | 'suspended'
+      level: 5,                  // 1–7, entier, validé coach uniquement
+      levelValidatedAt: '2026-09-15T10:00:00Z',
+      levelValidatedBy: 'coach_ali',
+      preferredSide: 'right',
+      playStyle: 'offensive',
+      reliabilityScore: 82,
+      totalMatchesPlayed: 24,
+      skills: { bandeja:7, vibora:5, salida_cristal:4, volee:7, placement:8, regularite:7, mental:8 },
+      levelHistory: [
+        { previousLevel:4, newLevel:5, changedAt:'2026-09-15T10:00:00Z', changedBy:'coach_ali', coachComment:'Excellent progrès sur les volées et le placement. Vibora à travailler.' }
+      ],
+      consentSignedAt: '2026-08-01T09:00:00Z',
+      createdAt: '2026-08-01T09:00:00Z',
+    },
+    {
+      id: 'player_yassine',
+      firstName: 'Yassine', lastName: 'Ben Salah',
+      phone: '+216 55 123 456', email: 'yassine@example.com',
+      avatar: null, role: 'player',
+      status: 'active',
+      level: 4,
+      levelValidatedAt: '2026-10-01T10:00:00Z',
+      levelValidatedBy: 'coach_ali',
+      preferredSide: 'left',
+      playStyle: 'defensive',
+      reliabilityScore: 91,
+      totalMatchesPlayed: 38,
+      skills: { bandeja:6, vibora:4, salida_cristal:6, volee:5, placement:7, regularite:8, mental:7 },
+      levelHistory: [],
+      consentSignedAt: '2026-07-10T09:00:00Z',
+      createdAt: '2026-07-10T09:00:00Z',
+    },
+    {
+      id: 'player_sana',
+      firstName: 'Sana', lastName: 'Trabelsi',
+      phone: '+216 98 765 432', email: 'sana@example.com',
+      avatar: null, role: 'player',
+      status: 'active',
+      level: 3,
+      levelValidatedAt: '2026-09-20T10:00:00Z',
+      levelValidatedBy: 'coach_ali',
+      preferredSide: 'right',
+      playStyle: 'all-around',
+      reliabilityScore: 75,
+      totalMatchesPlayed: 12,
+      skills: { bandeja:4, vibora:3, salida_cristal:4, volee:5, placement:6, regularite:6, mental:5 },
+      levelHistory: [],
+      consentSignedAt: '2026-09-01T09:00:00Z',
+      createdAt: '2026-09-01T09:00:00Z',
+    },
+    {
+      id: 'player_mehdi',
+      firstName: 'Mehdi', lastName: 'Khalfallah',
+      phone: '+216 21 000 111', email: 'mehdi@example.com',
+      avatar: null, role: 'player',
+      status: 'active',
+      level: 6,
+      levelValidatedAt: '2026-10-10T10:00:00Z',
+      levelValidatedBy: 'coach_ali',
+      preferredSide: 'right',
+      playStyle: 'offensive',
+      reliabilityScore: 95,
+      totalMatchesPlayed: 67,
+      skills: { bandeja:8, vibora:8, salida_cristal:7, volee:8, placement:9, regularite:8, mental:9 },
+      levelHistory: [],
+      consentSignedAt: '2026-06-01T09:00:00Z',
+      createdAt: '2026-06-01T09:00:00Z',
+    },
+    {
+      id: 'player_rania',
+      firstName: 'Rania', lastName: 'Chahed',
+      phone: '+216 50 111 222', email: '',
+      avatar: null, role: 'player',
+      status: 'pending',        // pas encore validée
+      level: null,
+      levelValidatedAt: null,
+      levelValidatedBy: null,
+      preferredSide: 'left',
+      playStyle: 'defensive',
+      reliabilityScore: 50,
+      totalMatchesPlayed: 0,
+      skills: {},
+      levelHistory: [],
+      consentSignedAt: '2026-10-22T09:00:00Z',
+      createdAt: '2026-10-22T09:00:00Z',
+    },
+  ],
+
+  courts: [
+    { id: 'court_1', name: 'Terrain 1', surface: 'Gazon synthétique bleu', isActive: true, amenities: ['Éclairage LED', 'Chauffage'] },
+    { id: 'court_2', name: 'Terrain 2', surface: 'Gazon synthétique bleu', isActive: true, amenities: ['Éclairage LED'] },
+    { id: 'court_3', name: 'Terrain 3', surface: 'Gazon synthétique vert', isActive: true, amenities: ['Éclairage LED', 'Chauffage'] },
+    { id: 'court_4', name: 'Terrain 4', surface: 'Moquette indoor', isActive: true, amenities: ['Éclairage LED', 'Climatisation'] },
+  ],
+
+  bookings: [
+    {
+      id: 'bk_001',
+      courtId: 'court_1', courtName: 'Terrain 1',
+      date: getTodayStr(),
+      startTime: '10:00', endTime: '11:30',
+      type: 'private', status: 'confirmed',
+      players: [
+        { userId:'user_moslem', name:'Moslem Gouia', level:5, isOrganizer:true },
+        { userId:'player_yassine', name:'Yassine Ben Salah', level:4, isOrganizer:false },
+        { userId:'player_mehdi', name:'Mehdi Khalfallah', level:6, isOrganizer:false },
+        { userId:'player_sana', name:'Sana Trabelsi', level:3, isOrganizer:false },
+      ],
+      waitlist: [],
+      pricePerPlayer: 25,
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: 'bk_002',
+      courtId: 'court_2', courtName: 'Terrain 2',
+      date: getTodayStr(),
+      startTime: '18:30', endTime: '20:00',
+      type: 'open', status: 'confirmed',
+      minLevel: 4, maxLevel: 6,
+      players: [
+        { userId:'player_mehdi', name:'Mehdi Khalfallah', level:6, isOrganizer:true },
+        { userId:'player_yassine', name:'Yassine Ben Salah', level:4, isOrganizer:false },
+      ],
+      waitlist: [],
+      pricePerPlayer: 25,
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: 'bk_003',
+      courtId: 'court_3', courtName: 'Terrain 3',
+      date: getTodayStr(),
+      startTime: '09:30', endTime: '11:00',
+      type: 'course', status: 'confirmed',
+      players: [],
+      notes: 'Cours débutants · Coach Ali',
+      pricePerPlayer: 0,
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: 'bk_004',
+      courtId: 'court_1', courtName: 'Terrain 1',
+      date: getTodayStr(),
+      startTime: '20:00', endTime: '21:30',
+      type: 'open', status: 'confirmed',
+      minLevel: 3, maxLevel: 5,
+      players: [
+        { userId:'player_sana', name:'Sana Trabelsi', level:3, isOrganizer:true },
+      ],
+      waitlist: [],
+      pricePerPlayer: 25,
+      createdAt: new Date().toISOString(),
+    },
+  ],
+
+  notifications: [
+    {
+      id: 'notif_001',
+      userId: 'user_moslem',
+      type: 'match_available',
+      title: 'Match disponible · Niveau 4–6',
+      body: 'Un match ouvert ce soir à 18:30 sur Terrain 2 cherche 2 joueurs.',
+      isRead: false,
+      sentAt: new Date(Date.now() - 30 * 60000).toISOString(),
+    },
+    {
+      id: 'notif_002',
+      userId: 'user_moslem',
+      type: 'level_updated',
+      title: 'Votre niveau a été mis à jour',
+      body: 'Le coach a validé votre niveau à 5/7. Commentaire : Excellent progrès !',
+      isRead: true,
+      sentAt: new Date(Date.now() - 3 * 3600000).toISOString(),
+    },
+    {
+      id: 'notif_003',
+      userId: 'user_moslem',
+      type: 'match_alert',
+      title: '🚨 Alerte — Match incomplet dans 2h',
+      body: 'Le match de 20:00 sur Terrain 1 n\'a que 1 joueur inscrit. Il faut 3 joueurs de plus.',
+      isRead: false,
+      sentAt: new Date(Date.now() - 5 * 60000).toISOString(),
+    },
+  ],
+
+  matchReviews: [],
   transactions: [],
-  activeScreen: 'screen-home',
-  activeViewMode: 'player-app', // 'player-app' | 'backoffice-dashboard' | 'backoffice-login'
-  activeAdminTab: 'planning', // 'planning' | 'courts' | 'tournaments' | 'players' | 'matches' | 'finances' | 'settings'
-  activeMatchTab: 'tab-available',
-  selectedClubForBooking: null,
-  selectedCourtForBooking: null,
-  selectedTimeSlot: '17:00 - 18:30',
-  selectedPartnerForDuo: null,
-  currentAdminClubId: 'club_connection'
 };
 
-// Initialize Application on DOM Ready
-document.addEventListener('DOMContentLoaded', async () => {
-  setupEventListeners();
-  await loadStateFromServer();
+// ============================================================================
+// DATABASE — COUCHE HYBRIDE (localStorage cache + Firebase Firestore)
+// ============================================================================
 
-  // Check URL routing / hash to restore admin or app
-  const path = window.location.pathname;
-  const hash = window.location.hash;
-  if (path === '/admin' || hash === '#admin') {
-    switchViewMode('backoffice-dashboard');
-  } else {
-    switchViewMode('player-app');
-  }
+const DB_KEY = 'hayapala_db_v2';
 
-  renderAllViews();
-});
-
-// Fetch unified state from server (persistent database)
-async function loadStateFromServer() {
+// Cache local (rendu immédiat de l'UI, synchronisé avec Firestore en arrière-plan)
+let DB = (() => {
   try {
-    const res = await fetch('/api/state');
-    if (res.ok) {
-      const data = await res.json();
-      AppState.user = data.user;
-      AppState.clubs = data.clubs || [];
-      AppState.matches = data.matches || [];
-      AppState.userMatchHistory = data.userMatchHistory || [];
-      AppState.tournaments = data.tournaments || [];
-      AppState.tournament = data.tournament || (data.tournaments && data.tournaments[0]);
-      AppState.clubBookings = data.clubBookings || [];
-      AppState.officialTeams = data.officialTeams || [];
-      AppState.communityPlayers = data.communityPlayers || [];
-      AppState.transactions = data.transactions || [];
-      updateHeaderPoints();
+    const raw = localStorage.getItem(DB_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  const seed = JSON.parse(JSON.stringify(SEED_DATA));
+  seed.bookings.forEach(b => { try { b.date = new Date().toISOString().split('T')[0]; } catch(e) {} });
+  return seed;
+})();
+
+function saveDB(data) {
+  try { localStorage.setItem(DB_KEY, JSON.stringify(data)); } catch (e) {}
+}
+
+function getTodayStr() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function getTomorrowStr() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().split('T')[0];
+}
+
+/** Synchronise le cache local depuis Firestore (appelé au démarrage) */
+async function syncFromFirestore() {
+  try {
+    const [players, courts, bookings, config] = await Promise.all([
+      fbGetPlayers(),
+      fbGetCourts(),
+      fbGetBookings(),
+      fbGetConfig(),
+    ]);
+    if (players.length)  DB.players   = players;
+    if (courts.length)   DB.courts    = courts;
+    if (bookings.length) DB.bookings  = bookings;
+    if (config)          DB.appConfig = { ...DB.appConfig, ...config };
+    saveDB(DB);
+    console.log('🔥 Firestore sync OK —', players.length, 'joueurs,', bookings.length, 'réservations');
+  } catch (e) {
+    console.warn('⚠️ Firestore hors-ligne, cache local utilisé :', e.message);
+  }
+}
+
+/** Active les listeners Firestore temps-réel */
+function startRealtimeListeners() {
+  fbListenPlayers(players => {
+    DB.players = players;
+    saveDB(DB);
+    renderAdminPlayersTable();
+    updateKPIs();
+  });
+
+  fbListenBookings(getTodayStr(), bookings => {
+    const other = DB.bookings.filter(b => b.date !== getTodayStr());
+    DB.bookings = [...other, ...bookings];
+    saveDB(DB);
+    renderAdminTimetable();
+    renderCourtsPlanningGrid();
+    renderHomeOpenMatches();
+    updateKPIs();
+  });
+
+  fbListenOpenMatches(matches => {
+    const other = DB.bookings.filter(b => b.type !== 'open' || b.date !== getTodayStr());
+    DB.bookings = [...other, ...matches];
+    saveDB(DB);
+    renderMatchesList();
+    renderHomeOpenMatches();
+  });
+}
+
+/** Reset démo — efface localStorage et force re-seed Firestore */
+async function resetDemoData() {
+  showToast('Réinitialisation en cours...', 'gold');
+  localStorage.removeItem(DB_KEY);
+  showToast('Données réinitialisées ✓', 'gold');
+  setTimeout(() => location.reload(), 800);
+}
+
+
+
+// ============================================================================
+// MATCHMAKING ENGINE
+// ============================================================================
+
+/**
+ * Retourne les créneaux de matchs ouverts compatibles avec un joueur
+ * @param {string} playerId
+ * @returns {Array} bookings compatibles
+ */
+function getCompatibleMatches(playerId) {
+  const player = DB.players.find(p => p.id === playerId);
+  if (!player || player.status !== 'active' || !player.level) return [];
+
+  const tolerance = DB.appConfig.matchmakingTolerance;
+  const today = getTodayStr();
+
+  return DB.bookings.filter(b => {
+    if (b.type !== 'open') return false;
+    if (b.status !== 'confirmed') return false;
+    // Must be today or future
+    if (b.date < today) return false;
+    // Player not already in this match
+    if (b.players.some(p => p.userId === playerId)) return false;
+    // Must have room
+    if ((b.players || []).length >= DB.appConfig.maxPlayersPerMatch) return false;
+    // Level check
+    const minOk = player.level >= (b.minLevel - tolerance);
+    const maxOk = player.level <= (b.maxLevel + tolerance);
+    return minOk && maxOk;
+  });
+}
+
+/**
+ * Rejoindre un match ouvert
+ */
+function joinOpenMatch(bookingId, playerId) {
+  const booking = DB.bookings.find(b => b.id === bookingId);
+  const player = DB.players.find(p => p.id === playerId);
+  if (!booking || !player) return { success: false, message: 'Introuvable' };
+  if (player.status !== 'active') return { success: false, message: 'Votre niveau doit être validé par le coach avant de rejoindre un match.' };
+  if (booking.players.length >= DB.appConfig.maxPlayersPerMatch) {
+    // → waitlist
+    if (!booking.waitlist.includes(playerId)) {
+      booking.waitlist.push(playerId);
+      saveDB(DB);
     }
-  } catch (err) {
-    console.error("Failed to load state from server, using local fallback", err);
+    return { success: false, waitlist: true, message: 'Ce match est complet. Vous avez été ajouté à la liste d\'attente.' };
   }
+  if (booking.players.some(p => p.userId === playerId)) return { success: false, message: 'Vous êtes déjà inscrit à ce match.' };
+
+  booking.players.push({ userId: playerId, name: `${player.firstName} ${player.lastName}`, level: player.level, isOrganizer: false });
+  saveDB(DB);
+  checkMatchAlerts();
+  return { success: true, message: 'Vous avez rejoint le match ! 🎾 Paiement sur place au démarrage.' };
 }
 
-// Update points across all badges
-function updateHeaderPoints() {
-  if (!AppState.user) return;
-  const pts = Number(AppState.user.points).toFixed(2);
-  
-  const livePill = document.getElementById('topLivePointsValue');
-  if (livePill) livePill.textContent = `${pts} Points`;
-  
-  const homeBadge = document.getElementById('homePointsBadgeValue');
-  if (homeBadge) homeBadge.textContent = `${pts} Points`;
+/**
+ * Vérifie les matchs incomplets et génère des alertes
+ */
+function checkMatchAlerts() {
+  const alertHours = DB.appConfig.alertBeforeMatchHours;
+  const now = new Date();
+  const alerts = [];
 
-  const profileBadge = document.getElementById('profilePointsBadgeValue');
-  if (profileBadge) profileBadge.textContent = `${pts} Points`;
+  DB.bookings.forEach(b => {
+    if (b.type !== 'open' || b.status !== 'confirmed') return;
+    const [h, m] = b.startTime.split(':').map(Number);
+    const matchDate = new Date(b.date);
+    matchDate.setHours(h, m, 0, 0);
+    const diffHours = (matchDate - now) / 3600000;
+    if (diffHours > 0 && diffHours <= alertHours && b.players.length < DB.appConfig.maxPlayersPerMatch) {
+      alerts.push({
+        bookingId: b.id,
+        court: b.courtName,
+        time: b.startTime,
+        playersMissing: DB.appConfig.maxPlayersPerMatch - b.players.length,
+      });
+    }
+  });
+
+  return alerts;
 }
 
-// Setup Event Listeners
-function setupEventListeners() {
-  // Top View Mode Switcher
+// ============================================================================
+// VIEW MODE SWITCHER
+// ============================================================================
+
+let currentMode = 'player-app';
+
+function switchViewMode(mode) {
+  currentMode = mode;
+  document.getElementById('playerAppContainer').style.display = (mode === 'player-app') ? '' : 'none';
+  document.getElementById('backofficeDashboard').style.display = (mode === 'backoffice-dashboard') ? '' : 'none';
+  document.getElementById('backofficeLogin').style.display = (mode === 'backoffice-login') ? '' : 'none';
+
   document.querySelectorAll('.view-tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const mode = btn.dataset.mode;
-      switchViewMode(mode);
-    });
+    btn.classList.toggle('active', btn.dataset.mode === mode);
   });
 
-  // Mobile Bottom Navigation
+  if (mode === 'backoffice-dashboard') {
+    renderAdminDashboard();
+  }
+}
+
+// ============================================================================
+// SCREEN NAVIGATION (App joueur)
+// ============================================================================
+
+let currentScreen = 'screen-home';
+
+function navigateToScreen(screenId) {
+  document.querySelectorAll('.app-screen').forEach(s => s.classList.remove('active'));
+  const target = document.getElementById(screenId);
+  if (target) {
+    target.classList.add('active');
+    target.scrollTop = 0;
+    currentScreen = screenId;
+  }
+  // Update bottom nav active state
   document.querySelectorAll('.nav-item-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const targetScreen = btn.dataset.screen;
-      if (targetScreen) {
-        navigateToScreen(targetScreen);
-      }
-    });
+    btn.classList.toggle('active', btn.dataset.screen === screenId);
   });
 
-  // Center Floating Emblem Button
-  const centerActionBtn = document.getElementById('navCenterEmblem');
-  if (centerActionBtn) {
-    centerActionBtn.addEventListener('click', () => {
-      openModal('modal-quick-action');
+  // Render screen-specific content
+  if (screenId === 'screen-home') renderHomeScreen();
+  if (screenId === 'screen-join-match') renderJoinMatchScreen();
+  if (screenId === 'screen-book-court') renderCourtPlanningScreen();
+  if (screenId === 'screen-profile') renderProfileScreen();
+  if (screenId === 'screen-my-bookings') renderMyBookings();
+  if (screenId === 'screen-notifications') renderNotifications();
+}
+
+// ============================================================================
+// HOME SCREEN RENDER
+// ============================================================================
+
+function renderHomeScreen() {
+  const user = DB.players.find(p => p.id === DB.currentUser.id);
+  if (!user) return;
+
+  // Greeting
+  document.getElementById('homeUserName').textContent = `${user.firstName} ${user.lastName}`;
+
+  // Level badge
+  const isActive = user.status === 'active';
+  document.getElementById('homeLevelNumber').textContent = user.level || '?';
+
+  if (isActive && user.level) {
+    document.getElementById('cvLevel').textContent = user.level;
+    document.getElementById('coachValidatedNotice').classList.remove('hidden');
+    document.getElementById('pendingLevelBanner').classList.add('hidden');
+  } else {
+    document.getElementById('coachValidatedNotice').classList.add('hidden');
+    document.getElementById('pendingLevelBanner').classList.remove('hidden');
+  }
+
+  // Open matches compatible
+  renderHomeOpenMatches(user);
+
+  // Next booking
+  renderHomeNextMatch(user);
+
+  // Notif dot
+  const unread = DB.notifications.filter(n => !n.isRead && n.userId === user.id);
+  document.getElementById('notifDot').style.display = unread.length > 0 ? '' : 'none';
+}
+
+function renderHomeOpenMatches(user) {
+  const container = document.getElementById('homeOpenMatchesScroll');
+  const matches = getCompatibleMatches(user.id);
+
+  if (matches.length === 0) {
+    container.innerHTML = `
+      <div style="padding:16px 0; min-width:260px; color:var(--text-muted); font-size:13px">
+        Aucun match ouvert disponible pour votre niveau actuellement.
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = matches.slice(0, 5).map(b => {
+    const spots = DB.appConfig.maxPlayersPerMatch - b.players.length;
+    const filledSlots = b.players.slice(0, 4).map(p =>
+      `<div class="player-slot filled" title="${p.name}">🎾</div>`
+    ).join('');
+    const emptySlots = Array(spots).fill(0).map(() =>
+      `<div class="player-slot empty">+</div>`
+    ).join('');
+
+    return `
+    <div class="match-card" onclick="handleJoinMatch('${b.id}')">
+      <div class="match-card-header">
+        <div class="match-court-name">${b.courtName}</div>
+        <div class="match-time-badge">${b.startTime}</div>
+      </div>
+      <div class="match-level-range">
+        <span>Niveau</span>
+        <span class="match-level-pill">${b.minLevel}–${b.maxLevel}</span>
+        <span>${b.date === getTodayStr() ? 'Aujourd\'hui' : formatDate(b.date)}</span>
+      </div>
+      <div class="match-players-row">
+        ${filledSlots}${emptySlots}
+        <span class="match-spots-text">${spots} place${spots > 1 ? 's' : ''} libre${spots > 1 ? 's' : ''}</span>
+      </div>
+      <button class="btn-join-match" onclick="event.stopPropagation(); handleJoinMatch('${b.id}')">
+        Rejoindre · ${b.pricePerPlayer} DT
+      </button>
+    </div>`;
+  }).join('');
+}
+
+function renderHomeNextMatch(user) {
+  const container = document.getElementById('homeNextMatchContainer');
+  const today = getTodayStr();
+  const myBookings = DB.bookings.filter(b =>
+    b.players.some(p => p.userId === user.id) &&
+    b.date >= today &&
+    b.status === 'confirmed'
+  ).sort((a, b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
+
+  if (myBookings.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state" style="padding:24px 0">
+        <div class="empty-state-icon">🏟️</div>
+        <div class="empty-state-title">Aucune réservation à venir</div>
+        <div class="empty-state-desc">Réservez un terrain ou rejoignez un match ouvert</div>
+      </div>`;
+    return;
+  }
+
+  const b = myBookings[0];
+  const spotsLeft = DB.appConfig.maxPlayersPerMatch - b.players.length;
+  container.innerHTML = `
+    <div class="match-list-card" onclick="navigateToScreen('screen-my-bookings')">
+      <div class="match-list-top">
+        <div>
+          <div class="match-list-court">${b.courtName}</div>
+          <div class="match-list-date">
+            ${b.date === today ? 'Aujourd\'hui' : formatDate(b.date)} · ${b.startTime} – ${b.endTime}
+          </div>
+        </div>
+        <span class="match-status-badge ${b.type === 'open' && spotsLeft > 0 ? 'open' : 'full'}">
+          ${b.type === 'private' ? 'Privée' : b.type === 'course' ? 'Cours' : spotsLeft > 0 ? `${spotsLeft} place${spotsLeft > 1 ? 's' : ''} libre${spotsLeft > 1 ? 's' : ''}` : 'Complet'}
+        </span>
+      </div>
+      <div class="match-list-players">
+        ${b.players.map(p => `<div class="player-avatar-sm filled" title="${p.name}">🎾</div>`).join('')}
+        ${Array(Math.max(0, 4 - b.players.length)).fill('<div class="player-avatar-sm empty">+</div>').join('')}
+      </div>
+      <div class="match-list-bottom">
+        <span class="match-price-tag">${b.pricePerPlayer} DT <span>/joueur · sur place</span></span>
+        <span style="font-size:11px; color:var(--text-muted)">${b.players.length}/4 joueurs</span>
+      </div>
+    </div>`;
+}
+
+// ============================================================================
+// JOIN MATCH SCREEN
+// ============================================================================
+
+let activeMatchTab = 'available';
+let activeLevelFilter = 'all';
+
+function renderJoinMatchScreen() {
+  renderMatchesList();
+}
+
+function renderMatchesList() {
+  const container = document.getElementById('matchesListContainer');
+  const user = DB.players.find(p => p.id === DB.currentUser.id);
+  const today = getTodayStr();
+
+  let bookings;
+  if (activeMatchTab === 'available') {
+    bookings = DB.bookings.filter(b => {
+      if (b.type !== 'open' || b.status !== 'confirmed') return false;
+      if (b.date < today) return false;
+      if ((b.players || []).length >= DB.appConfig.maxPlayersPerMatch) return false;
+      // Level filter
+      if (activeLevelFilter !== 'all') {
+        const [minF, maxF] = activeLevelFilter.split('-').map(Number);
+        if (b.maxLevel < minF || b.minLevel > (maxF || minF)) return false;
+      }
+      return true;
+    });
+  } else {
+    bookings = DB.bookings.filter(b =>
+      b.players.some(p => p.userId === DB.currentUser.id) && b.date >= today
+    );
+  }
+
+  if (bookings.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">🎾</div>
+        <div class="empty-state-title">Aucun match disponible</div>
+        <div class="empty-state-desc">Créez un match ouvert pour trouver des partenaires</div>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = bookings.map(b => {
+    const spots = DB.appConfig.maxPlayersPerMatch - b.players.length;
+    const isCompatible = user && user.status === 'active' && user.level &&
+      user.level >= (b.minLevel - DB.appConfig.matchmakingTolerance) &&
+      user.level <= ((b.maxLevel || 7) + DB.appConfig.matchmakingTolerance);
+    const alreadyIn = b.players.some(p => p.userId === DB.currentUser.id);
+    const isFull = spots <= 0;
+
+    let btnLabel, btnClass;
+    if (alreadyIn) { btnLabel = '✓ Inscrit'; btnClass = 'full'; }
+    else if (isFull) { btnLabel = 'Complet · Liste d\'attente'; btnClass = 'waitlist'; }
+    else if (!isCompatible) { btnLabel = `Niveau ${b.minLevel}–${b.maxLevel} requis`; btnClass = 'full'; }
+    else { btnLabel = `Rejoindre · ${b.pricePerPlayer} DT`; btnClass = ''; }
+
+    return `
+    <div class="match-list-card">
+      <div class="match-list-top">
+        <div>
+          <div class="match-list-court">${b.courtName}</div>
+          <div class="match-list-date">${b.date === today ? 'Aujourd\'hui' : formatDate(b.date)} · ${b.startTime} – ${b.endTime}</div>
+        </div>
+        <span class="match-status-badge ${isFull ? 'full' : spots === 1 ? 'almost-full' : 'open'}">
+          ${isFull ? 'Complet' : `${spots} libre${spots > 1 ? 's' : ''}`}
+        </span>
+      </div>
+      <div class="match-list-info-row">
+        <div class="match-info-chip">
+          <span class="chip-icon">🏆</span>
+          <span>Niveaux ${b.minLevel}–${b.maxLevel}</span>
+        </div>
+        <div class="match-info-chip">
+          <span class="chip-icon">🏟️</span>
+          <span>${b.courtName}</span>
+        </div>
+        <div class="match-info-chip">
+          <span class="chip-icon">💰</span>
+          <span>${b.pricePerPlayer} DT</span>
+        </div>
+      </div>
+      <div class="match-list-bottom">
+        <div class="match-list-players">
+          ${b.players.map(p => `<div class="player-avatar-sm filled" title="${p.name} · Niv.${p.level}">🎾</div>`).join('')}
+          ${Array(Math.max(0, 4 - b.players.length)).fill('<div class="player-avatar-sm empty">+</div>').join('')}
+          <span style="font-size:11px; color:var(--text-muted); margin-left:6px">${b.players.length}/4</span>
+        </div>
+        <button class="btn-join-match ${btnClass}" onclick="handleJoinMatch('${b.id}')" ${alreadyIn || (!isCompatible && !isFull) ? 'disabled style="opacity:0.5;cursor:not-allowed"' : ''}>
+          ${btnLabel}
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function handleJoinMatch(bookingId) {
+  const user = DB.players.find(p => p.id === DB.currentUser.id);
+  if (!user || user.status !== 'active') {
+    showToast('Votre niveau doit être validé par le coach avant de rejoindre un match.', 'error');
+    return;
+  }
+  const result = joinOpenMatch(bookingId, DB.currentUser.id);
+  showToast(result.message, result.success ? 'success' : (result.waitlist ? 'info' : 'error'));
+  if (result.success) {
+    renderHomeScreen();
+    renderMatchesList();
+  }
+}
+
+// ============================================================================
+// COURT PLANNING SCREEN (mobile)
+// ============================================================================
+
+let planningSelectedDate = getTodayStr();
+
+const SLOT_TIMES = ['08:00','09:30','11:00','12:30','14:00','15:30','17:00','18:30','20:00','21:30'];
+
+function addMinutes(timeStr, mins) {
+  const [h, m] = timeStr.split(':').map(Number);
+  const total = h * 60 + m + mins;
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
+function renderCourtPlanningScreen() {
+  renderPlanningDateBar();
+  renderCourtsGrid();
+}
+
+function renderPlanningDateBar() {
+  const bar = document.getElementById('planningDateBar');
+  const days = [];
+  const now = new Date();
+  const dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+  const monthNames = ['jan', 'fév', 'mar', 'avr', 'mai', 'jun', 'jul', 'aoû', 'sep', 'oct', 'nov', 'déc'];
+
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(now);
+    d.setDate(now.getDate() + i);
+    const dateStr = d.toISOString().split('T')[0];
+    days.push({
+      dateStr,
+      dayName: i === 0 ? 'Auj.' : dayNames[d.getDay()],
+      dayNum: d.getDate(),
+      monthName: monthNames[d.getMonth()],
     });
   }
 
-  // Quick action cards on Home
-  document.getElementById('quickCardBookCourt')?.addEventListener('click', () => navigateToScreen('screen-book-court'));
-  document.getElementById('quickCardJoinMatch')?.addEventListener('click', () => navigateToScreen('screen-join-match'));
+  bar.innerHTML = days.map(d => `
+    <button class="date-chip ${d.dateStr === planningSelectedDate ? 'active' : ''}"
+      onclick="selectPlanningDate('${d.dateStr}')">
+      <span class="day-name">${d.dayName}</span>
+      <span class="day-num">${d.dayNum}</span>
+      <span class="month-name">${d.monthName}</span>
+    </button>
+  `).join('');
+}
 
-  // Back buttons on screens
+function selectPlanningDate(dateStr) {
+  planningSelectedDate = dateStr;
+  renderPlanningDateBar();
+  renderCourtsGrid();
+}
+
+function renderCourtsGrid() {
+  const grid = document.getElementById('courtsPlanningGrid');
+  const duration = DB.appConfig.slotDurationMinutes;
+
+  grid.innerHTML = DB.courts.filter(c => c.isActive).map(court => {
+    const slots = SLOT_TIMES.map(time => {
+      const endTime = addMinutes(time, duration);
+      const booking = DB.bookings.find(b =>
+        b.courtId === court.id && b.date === planningSelectedDate && b.startTime === time && b.status === 'confirmed'
+      );
+
+      let slotClass = '', badgeClass = 'available', badgeText = 'Libre', dotHtml = '';
+      if (booking) {
+        const spots = DB.appConfig.maxPlayersPerMatch - (booking.players || []).length;
+        if (booking.type === 'private') { slotClass = 'booked'; badgeClass = 'private'; badgeText = 'Privée'; }
+        else if (booking.type === 'open') { slotClass = 'open-match'; badgeClass = 'open'; badgeText = `Ouvert · ${spots} libre${spots > 1 ? 's' : ''}`; }
+        else if (booking.type === 'course') { slotClass = 'booked'; badgeClass = 'course'; badgeText = 'Cours'; }
+        else if (booking.type === 'blocked') { slotClass = 'blocked'; badgeClass = 'blocked'; badgeText = 'Bloqué'; }
+
+        if (booking.type !== 'blocked' && booking.type !== 'course') {
+          const filled = (booking.players || []).length;
+          dotHtml = Array(4).fill(0).map((_, i) =>
+            `<div class="slot-dot ${i < filled ? 'filled' : 'empty'}"></div>`
+          ).join('');
+        }
+      }
+
+      const clickHandler = booking
+        ? `openModal('modal-slot-detail'); renderSlotDetail('${booking.id}')`
+        : `openBookingFromSlot('${court.id}', '${time}')`;
+
+      return `
+        <div class="slot-item ${slotClass}" onclick="${clickHandler}">
+          <span class="slot-time">${time} – ${endTime}</span>
+          <span class="slot-type-badge ${badgeClass}">${badgeText}</span>
+          <div class="slot-players-mini">${dotHtml}</div>
+        </div>`;
+    }).join('');
+
+    return `
+    <div class="court-planning-card">
+      <div class="court-planning-header">
+        <div>
+          <div class="court-planning-name">${court.name}</div>
+          <div style="font-size:11px; color:var(--text-muted)">${court.surface}</div>
+        </div>
+        <div class="court-status-dot"></div>
+      </div>
+      <div class="court-slots-list">${slots}</div>
+    </div>`;
+  }).join('');
+}
+
+function openBookingFromSlot(courtId, time) {
+  const court = DB.courts.find(c => c.id === courtId);
+  document.getElementById('bookCourtSelect').value = courtId.replace('court_', '');
+  document.getElementById('bookTimeSelect').value = time;
+  document.getElementById('bookDate').value = planningSelectedDate;
+  openModal('modal-book-court');
+}
+
+// ============================================================================
+// PROFILE SCREEN
+// ============================================================================
+
+const LEVEL_LABELS = { 1:'Débutant', 2:'Débutant+', 3:'Intermédiaire', 4:'Intermédiaire+', 5:'Confirmé', 6:'Avancé', 7:'Élite' };
+const SIDE_LABELS = { right:'Droitier', left:'Gaucher', both:'Ambidextre' };
+const STYLE_LABELS = { offensive:'Offensif', defensive:'Défensif', 'all-around':'Équilibré' };
+const SKILL_LABELS = { bandeja:'Bandeja', vibora:'Víbora', salida_cristal:'Sortie de vitre', volee:'Volée', placement:'Placement', regularite:'Régularité', mental:'Mental' };
+
+function renderProfileScreen() {
+  const user = DB.players.find(p => p.id === DB.currentUser.id);
+  if (!user) return;
+
+  document.getElementById('profileName').textContent = `${user.firstName} ${user.lastName}`;
+  document.getElementById('profilePhone').textContent = user.phone || '—';
+  document.getElementById('profileLevelBig').textContent = user.level || '?';
+  document.getElementById('profileLevelTitle').textContent = LEVEL_LABELS[user.level] || 'En attente';
+  document.getElementById('profileLevelCoach').textContent = user.levelValidatedAt
+    ? `Validé le ${formatDate(user.levelValidatedAt.split('T')[0])}`
+    : 'Pas encore validé';
+  document.getElementById('statMatchesPlayed').textContent = user.totalMatchesPlayed || 0;
+  document.getElementById('statReliability').textContent = user.reliabilityScore ? `${user.reliabilityScore}%` : '—';
+  document.getElementById('statSide').textContent = user.preferredSide === 'right' ? 'D' : user.preferredSide === 'left' ? 'G' : '±';
+  document.getElementById('statStyle').textContent = user.playStyle === 'offensive' ? 'OFF' : user.playStyle === 'defensive' ? 'DEF' : 'EQ';
+  document.getElementById('profileSideBadge').textContent = `🖐 ${SIDE_LABELS[user.preferredSide] || '—'}`;
+  document.getElementById('profileStyleBadge').textContent = `⚡ ${STYLE_LABELS[user.playStyle] || '—'}`;
+  document.getElementById('profileStatusBadge').textContent = user.status === 'active' ? '✔ Actif' : '⏳ En attente';
+
+  // Radar SVG
+  renderRadarChart(user.skills);
+
+  // Skills list
+  renderSkillsList(user.skills);
+
+  // Level history
+  renderLevelHistory(user);
+
+  // Match history (from bookings)
+  renderProfileHistory(user);
+}
+
+function renderRadarChart(skills) {
+  const svg = document.getElementById('skillsRadarSvg');
+  const keys = Object.keys(SKILL_LABELS);
+  const n = keys.length;
+  const cx = 130, cy = 110, R = 90;
+  const levels = 5;
+
+  if (!skills || Object.keys(skills).length === 0) {
+    svg.innerHTML = `<text x="130" y="110" text-anchor="middle" fill="var(--text-muted)" font-size="13">Pas encore évalué</text>`;
+    return;
+  }
+
+  let html = '';
+
+  // Grid polygons
+  for (let l = 1; l <= levels; l++) {
+    const r = (R * l) / levels;
+    const pts = keys.map((_, i) => {
+      const angle = (2 * Math.PI * i / n) - Math.PI / 2;
+      return `${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`;
+    }).join(' ');
+    html += `<polygon points="${pts}" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>`;
+  }
+
+  // Axes
+  keys.forEach((_, i) => {
+    const angle = (2 * Math.PI * i / n) - Math.PI / 2;
+    const x = cx + R * Math.cos(angle);
+    const y = cy + R * Math.sin(angle);
+    html += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>`;
+  });
+
+  // Data polygon
+  const pts = keys.map((k, i) => {
+    const val = (skills[k] || 0) / 10;
+    const angle = (2 * Math.PI * i / n) - Math.PI / 2;
+    return `${cx + R * val * Math.cos(angle)},${cy + R * val * Math.sin(angle)}`;
+  }).join(' ');
+  html += `<polygon points="${pts}" fill="rgba(200,169,110,0.2)" stroke="var(--gold)" stroke-width="2" stroke-linejoin="round"/>`;
+
+  // Dots
+  keys.forEach((k, i) => {
+    const val = (skills[k] || 0) / 10;
+    const angle = (2 * Math.PI * i / n) - Math.PI / 2;
+    const x = cx + R * val * Math.cos(angle);
+    const y = cy + R * val * Math.sin(angle);
+    html += `<circle cx="${x}" cy="${y}" r="4" fill="var(--gold)" stroke="var(--bg-canvas)" stroke-width="2"/>`;
+  });
+
+  // Labels
+  keys.forEach((k, i) => {
+    const angle = (2 * Math.PI * i / n) - Math.PI / 2;
+    const lx = cx + (R + 18) * Math.cos(angle);
+    const ly = cy + (R + 18) * Math.sin(angle);
+    const anchor = lx < cx - 5 ? 'end' : lx > cx + 5 ? 'start' : 'middle';
+    html += `<text x="${lx}" y="${ly + 4}" text-anchor="${anchor}" fill="var(--text-secondary)" font-size="10" font-family="Plus Jakarta Sans, sans-serif" font-weight="600">${SKILL_LABELS[k]}</text>`;
+  });
+
+  svg.innerHTML = html;
+}
+
+function renderSkillsList(skills) {
+  const container = document.getElementById('skillsList');
+  if (!skills || Object.keys(skills).length === 0) {
+    container.innerHTML = '<div style="padding:16px; color:var(--text-muted); font-size:13px">Pas encore évalué par le coach.</div>';
+    return;
+  }
+  container.innerHTML = Object.keys(SKILL_LABELS).map(k => `
+    <div class="skill-item">
+      <span class="skill-name">${SKILL_LABELS[k]}</span>
+      <div class="skill-bar">
+        <div class="skill-bar-fill" style="width:${((skills[k] || 0) / 10) * 100}%"></div>
+      </div>
+      <span class="skill-score">${skills[k] || 0}<span style="font-size:9px; color:var(--text-muted)">/10</span></span>
+    </div>`
+  ).join('');
+}
+
+function renderLevelHistory(user) {
+  const container = document.getElementById('levelHistoryContainer');
+  const history = user.levelHistory || [];
+  if (history.length === 0) {
+    container.innerHTML = '<div style="color:var(--text-muted); font-size:13px; padding:8px 0">Aucun changement de niveau enregistré.</div>';
+    return;
+  }
+  container.innerHTML = history.map(h => `
+    <div style="display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-bottom:1px solid var(--border-subtle)">
+      <div style="width:40px; height:40px; border-radius:50%; background:var(--gold-glow-sm); border:1px solid var(--border-gold-sm); display:flex; align-items:center; justify-content:center; font-family:'Outfit',sans-serif; font-size:16px; font-weight:900; color:var(--gold); flex-shrink:0">
+        ${h.newLevel}
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:700; color:var(--text-white)">
+          Niveau ${h.previousLevel} → ${h.newLevel}
+          <span style="font-size:11px; color:${h.newLevel > h.previousLevel ? 'var(--green)' : 'var(--red)'}">
+            ${h.newLevel > h.previousLevel ? '▲' : '▼'}
+          </span>
+        </div>
+        <div style="font-size:11px; color:var(--text-muted); margin:2px 0">${formatDate(h.changedAt.split('T')[0])}</div>
+        ${h.coachComment ? `<div style="font-size:12px; color:var(--text-secondary); font-style:italic; margin-top:4px">"${h.coachComment}"</div>` : ''}
+      </div>
+    </div>`
+  ).join('');
+}
+
+function renderProfileHistory(user) {
+  const container = document.getElementById('profileHistoryContainer');
+  const myBookings = DB.bookings.filter(b =>
+    b.status === 'confirmed' && b.players.some(p => p.userId === user.id)
+  ).slice(0, 8);
+
+  if (myBookings.length === 0) {
+    container.innerHTML = '<div class="empty-state" style="padding:24px 0"><div class="empty-state-icon">🎾</div><div class="empty-state-title">Aucun match joué</div></div>';
+    return;
+  }
+
+  container.innerHTML = myBookings.map(b => `
+    <div class="history-item">
+      <div class="history-result-dot neutral"></div>
+      <div class="history-info">
+        <div class="history-court">${b.courtName} · ${b.type === 'open' ? 'Match ouvert' : b.type === 'private' ? 'Privée' : 'Cours'}</div>
+        <div class="history-date-level">${b.date === getTodayStr() ? 'Aujourd\'hui' : formatDate(b.date)} · ${b.startTime} · ${b.players.length} joueurs</div>
+      </div>
+      <span style="font-size:11px; color:var(--text-muted)">${b.pricePerPlayer} DT</span>
+    </div>`
+  ).join('');
+}
+
+// ============================================================================
+// MY BOOKINGS
+// ============================================================================
+
+function renderMyBookings() {
+  const container = document.getElementById('myBookingsContainer');
+  const today = getTodayStr();
+  const user = DB.currentUser;
+  const myBookings = DB.bookings.filter(b =>
+    b.players.some(p => p.userId === user.id)
+  ).sort((a, b) => (b.date + b.startTime).localeCompare(a.date + a.startTime));
+
+  if (myBookings.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-title">Aucune réservation</div></div>`;
+    return;
+  }
+
+  container.innerHTML = myBookings.map(b => {
+    const isPast = b.date < today;
+    const spots = DB.appConfig.maxPlayersPerMatch - b.players.length;
+    return `
+    <div class="match-list-card" style="${isPast ? 'opacity:0.6' : ''}">
+      <div class="match-list-top">
+        <div>
+          <div class="match-list-court">${b.courtName}</div>
+          <div class="match-list-date">${b.date === today ? 'Aujourd\'hui' : formatDate(b.date)} · ${b.startTime} – ${b.endTime}</div>
+        </div>
+        <span class="match-status-badge ${isPast ? '' : 'open'}">${isPast ? 'Terminé' : 'Confirmé'}</span>
+      </div>
+      <div class="match-list-info-row">
+        <div class="match-info-chip">
+          <span class="chip-icon">${b.type === 'open' ? '🎾' : b.type === 'private' ? '🔒' : '🎓'}</span>
+          <span>${b.type === 'open' ? `Match ouvert · Niv. ${b.minLevel||'?'}–${b.maxLevel||'?'}` : b.type === 'private' ? 'Privée' : 'Cours coach'}</span>
+        </div>
+      </div>
+      <div class="match-list-bottom">
+        <span class="match-price-tag">${b.pricePerPlayer} DT <span>/joueur</span></span>
+        ${!isPast && b.players.find(p => p.userId === user.id) ? `
+          <button onclick="cancelMyBooking('${b.id}')" style="padding:6px 14px; border-radius:var(--radius-full); border:1px solid rgba(231,76,60,0.3); background:transparent; color:var(--red); font-size:11px; font-weight:700;">
+            Annuler
+          </button>` : ''}
+      </div>
+      ${b.type === 'open' && !isPast && spots > 0 ? `
+        <div style="font-size:11px; color:var(--amber); margin-top:4px">⚡ ${spots} place${spots>1?'s':''} encore libre${spots>1?'s':''} — partagez le match !</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function cancelMyBooking(bookingId) {
+  const booking = DB.bookings.find(b => b.id === bookingId);
+  if (!booking) return;
+
+  const [h, m] = booking.startTime.split(':').map(Number);
+  const matchDate = new Date(booking.date);
+  matchDate.setHours(h, m, 0, 0);
+  const diffHours = (matchDate - new Date()) / 3600000;
+
+  if (diffHours < DB.appConfig.cancelDeadlineHours) {
+    showToast(`Annulation impossible : le délai de ${DB.appConfig.cancelDeadlineHours}h avant match est dépassé.`, 'error');
+    return;
+  }
+
+  // Remove player
+  booking.players = booking.players.filter(p => p.userId !== DB.currentUser.id);
+
+  // If organizer and no players left → cancel
+  if (booking.players.length === 0 && booking.type === 'open') {
+    booking.status = 'cancelled';
+  }
+
+  saveDB(DB);
+  showToast('Réservation annulée.', 'info');
+  renderMyBookings();
+}
+
+// ============================================================================
+// NOTIFICATIONS
+// ============================================================================
+
+function renderNotifications() {
+  const container = document.getElementById('notifListContainer');
+  const userNotifs = DB.notifications
+    .filter(n => n.userId === DB.currentUser.id)
+    .sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt));
+
+  if (userNotifs.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🔔</div><div class="empty-state-title">Aucune notification</div></div>`;
+    return;
+  }
+
+  const icons = { match_available:'🎾', level_updated:'⭐', match_alert:'🚨', cancellation:'❌', evaluation_pending:'📋' };
+
+  container.innerHTML = userNotifs.map(n => `
+    <div class="notif-item ${n.isRead ? '' : 'unread'}" onclick="markNotifRead('${n.id}')">
+      <div class="notif-icon-wrap">${icons[n.type] || '📣'}</div>
+      <div class="notif-body">
+        <div class="notif-title">${n.title}</div>
+        <div class="notif-msg">${n.body}</div>
+        <div class="notif-time">${timeAgo(n.sentAt)}</div>
+      </div>
+      ${!n.isRead ? '<div class="notif-unread-dot"></div>' : ''}
+    </div>`
+  ).join('');
+}
+
+function markNotifRead(notifId) {
+  const notif = DB.notifications.find(n => n.id === notifId);
+  if (notif) { notif.isRead = true; saveDB(DB); renderNotifications(); }
+}
+
+// ============================================================================
+// ADMIN DASHBOARD
+// ============================================================================
+
+let adminCurrentDate = getTodayStr();
+
+function renderAdminDashboard() {
+  renderAdminKPIs();
+  renderAdminTimetable();
+  renderAdminCourts();
+  renderAdminPlayers();
+  renderAdminMatches();
+  renderAdminAlerts();
+  renderAdminStats();
+  document.getElementById('adminCurrentDate').textContent = formatDate(adminCurrentDate);
+}
+
+function renderAdminKPIs() {
+  const todayBookings = DB.bookings.filter(b => b.date === getTodayStr() && b.status === 'confirmed');
+  const totalSlots = DB.courts.length * SLOT_TIMES.length;
+  const occupancy = totalSlots > 0 ? Math.round((todayBookings.length / totalSlots) * 100) : 0;
+  const revenue = todayBookings.reduce((sum, b) => sum + (b.pricePerPlayer * b.players.length), 0);
+  const activePlayers = DB.players.filter(p => p.status === 'active').length;
+  const alerts = checkMatchAlerts();
+  const noShows = 0; // Phase 2
+
+  document.getElementById('kpiBookingsValue').textContent = `${todayBookings.length} créneaux`;
+  document.getElementById('kpiOccupancyValue').textContent = `${occupancy}%`;
+  document.getElementById('kpiRevenueValue').textContent = `${revenue} DT`;
+  document.getElementById('kpiPlayersValue').textContent = `${activePlayers} actifs`;
+  document.getElementById('kpiAlertsValue').textContent = alerts.length;
+  document.getElementById('kpiNoShowsValue').textContent = `${noShows}`;
+}
+
+function renderAdminTimetable() {
+  const headRow = document.getElementById('adminTimetableHeadRow');
+  const body = document.getElementById('adminTimetableBody');
+  const duration = DB.appConfig.slotDurationMinutes;
+
+  // Header
+  headRow.innerHTML = `<th style="width:70px">Heure</th>` +
+    DB.courts.map(c => `<th>${c.name}</th>`).join('');
+
+  // Body
+  body.innerHTML = SLOT_TIMES.map(time => {
+    const endTime = addMinutes(time, duration);
+    const cells = DB.courts.map(court => {
+      const booking = DB.bookings.find(b =>
+        b.courtId === court.id && b.date === adminCurrentDate &&
+        b.startTime === time && b.status === 'confirmed'
+      );
+
+      if (!booking) {
+        return `<td onclick="openAdminSlotModal('${court.id}', '${time}', '${adminCurrentDate}')" style="cursor:pointer" title="Cliquer pour créer un créneau"></td>`;
+      }
+
+      const typeClass = { private:'type-private', open:'type-open', course:'type-course', blocked:'type-blocked' }[booking.type] || '';
+      const playerCount = (booking.players || []).length;
+      const subLabel = booking.type === 'open'
+        ? `${playerCount}/4 joueurs · Niv.${booking.minLevel}–${booking.maxLevel}`
+        : booking.type === 'private' ? `${playerCount} joueurs`
+        : booking.notes || booking.type;
+
+      const organizer = booking.players.find(p => p.isOrganizer);
+      const displayName = organizer ? organizer.name : booking.notes || '—';
+
+      return `<td>
+        <div class="cell-booking ${typeClass}" onclick="renderSlotDetail('${booking.id}'); openModal('modal-slot-detail')" style="cursor:pointer" title="Cliquer pour gérer">
+          <div class="cell-booking-name">${displayName}</div>
+          <div class="cell-booking-sub">${subLabel}</div>
+        </div>
+      </td>`;
+    }).join('');
+
+    return `<tr><td style="font-size:12px; font-weight:700; color:var(--text-muted); text-align:center; background:var(--bg-canvas); vertical-align:middle">${time}<br><span style="font-size:10px; color:var(--border-card)">—${endTime}</span></td>${cells}</tr>`;
+  }).join('');
+}
+
+function renderAdminCourts() {
+  const container = document.getElementById('adminCourtsListContainer');
+  const today = getTodayStr();
+
+  container.innerHTML = DB.courts.map(court => {
+    const todayBookings = DB.bookings.filter(b => b.courtId === court.id && b.date === today && b.status === 'confirmed');
+    const totalRevenue = todayBookings.reduce((s, b) => s + (b.pricePerPlayer * (b.players || []).length), 0);
+    const occ = Math.round((todayBookings.length / SLOT_TIMES.length) * 100);
+
+    return `
+    <div class="court-admin-card">
+      <div class="court-admin-header">
+        <div>
+          <div class="court-admin-name">${court.name}</div>
+          <div class="court-admin-surface">${court.surface}</div>
+        </div>
+        <div class="court-status-dot ${court.isActive ? '' : 'unavailable'}"></div>
+      </div>
+      <div class="court-occupancy-bar">
+        <div class="occupancy-label">
+          <span>Occupation aujourd'hui</span>
+          <strong style="color:var(--gold)">${occ}%</strong>
+        </div>
+        <div class="occupancy-track">
+          <div class="occupancy-fill" style="width:${occ}%"></div>
+        </div>
+      </div>
+      <div style="padding:10px 16px; font-size:12px; color:var(--text-secondary); border-bottom:1px solid var(--border-subtle)">
+        ${todayBookings.length} réservation${todayBookings.length !== 1 ? 's' : ''} · <strong style="color:var(--gold)">${totalRevenue} DT</strong>
+      </div>
+      <div class="court-admin-actions">
+        <button class="btn-table-action" onclick="openAdminSlotModal('${court.id}', '17:00', '${today}')">+ Créneau</button>
+        <button class="btn-table-action" onclick="showToast('Gestion du terrain ${court.name} — bientôt disponible', 'info')">Configurer</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderAdminPlayers() {
+  const tbody = document.getElementById('adminPlayersTableBody');
+
+  tbody.innerHTML = DB.players.map(p => {
+    const statusBadge = p.status === 'active'
+      ? '<span class="info-badge green">✔ Actif</span>'
+      : p.status === 'pending'
+      ? '<span class="info-badge" style="background:var(--amber-bg); border:1px solid rgba(243,156,18,0.2); color:var(--amber)">⏳ En attente</span>'
+      : '<span class="info-badge red">⛔ Suspendu</span>';
+
+    const levelCell = p.level
+      ? `<span class="level-badge">${p.level} <span class="coach-check">✓</span></span>`
+      : `<span class="level-badge pending">À évaluer</span>`;
+
+    return `
+    <tr>
+      <td>
+        <div style="display:flex; align-items:center; gap:10px">
+          <div class="player-table-avatar">🎾</div>
+          <div>
+            <div class="player-table-name">${p.firstName} ${p.lastName}</div>
+            <div style="font-size:11px; color:var(--text-muted)">${p.email || '—'}</div>
+          </div>
+        </div>
+      </td>
+      <td><span style="font-size:13px">${p.phone || '—'}</span></td>
+      <td>${levelCell}</td>
+      <td style="font-size:12px; color:var(--text-secondary)">
+        ${SIDE_LABELS[p.preferredSide] || '—'} · ${STYLE_LABELS[p.playStyle] || '—'}
+      </td>
+      <td>
+        <div style="display:flex; align-items:center; gap:6px">
+          <div style="width:40px; height:4px; background:var(--border-subtle); border-radius:2px; overflow:hidden">
+            <div style="width:${p.reliabilityScore || 50}%; height:100%; background:var(--gradient-gold)"></div>
+          </div>
+          <span style="font-size:12px; color:var(--text-secondary)">${p.reliabilityScore || 50}%</span>
+        </div>
+      </td>
+      <td style="font-family:'Outfit',sans-serif; font-size:16px; font-weight:900; color:var(--text-secondary)">${p.totalMatchesPlayed || 0}</td>
+      <td>${statusBadge}</td>
+      <td>
+        <button class="btn-table-action success" onclick="openPlayerEvalModal('${p.id}')">📋 Évaluer</button>
+        ${p.status === 'pending'
+          ? `<button class="btn-table-action" onclick="activatePlayer('${p.id}')">Activer</button>`
+          : `<button class="btn-table-action danger" onclick="suspendPlayer('${p.id}')">Suspendre</button>`}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderAdminMatches() {
+  const container = document.getElementById('adminMatchesListContainer');
+  const today = getTodayStr();
+  const openMatches = DB.bookings.filter(b => b.type === 'open' && b.date >= today && b.status === 'confirmed');
+
+  if (openMatches.length === 0) {
+    container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-state-icon">🎾</div><div class="empty-state-title">Aucun match ouvert</div></div>`;
+    return;
+  }
+
+  container.innerHTML = openMatches.map(b => {
+    const spots = DB.appConfig.maxPlayersPerMatch - b.players.length;
+    return `
+    <div class="court-admin-card">
+      <div class="court-admin-header">
+        <div>
+          <div class="court-admin-name">${b.courtName}</div>
+          <div class="court-admin-surface">${b.date === today ? 'Aujourd\'hui' : formatDate(b.date)} · ${b.startTime}</div>
+        </div>
+        <span class="match-status-badge ${spots === 0 ? 'full' : spots === 1 ? 'almost-full' : 'open'}">
+          ${spots === 0 ? 'Complet' : `${spots} libre${spots > 1 ? 's' : ''}`}
+        </span>
+      </div>
+      <div style="padding:12px 16px; border-bottom:1px solid var(--border-subtle)">
+        <div style="font-size:11px; color:var(--text-muted); margin-bottom:6px">NIVEAU REQUIS</div>
+        <span class="level-badge">${b.minLevel}–${b.maxLevel}</span>
+      </div>
+      <div style="padding:12px 16px; border-bottom:1px solid var(--border-subtle)">
+        <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px">JOUEURS INSCRITS (${b.players.length}/4)</div>
+        ${b.players.map(p => `
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px">
+            <div class="player-avatar-sm filled">🎾</div>
+            <span style="font-size:12px; color:var(--text-primary)">${p.name}</span>
+            <span class="level-badge" style="padding:1px 6px; font-size:10px">${p.level}</span>
+            ${p.isOrganizer ? '<span style="font-size:10px; color:var(--gold)">Organisateur</span>' : ''}
+          </div>`).join('')}
+        ${Array(spots).fill('<div style="display:flex; align-items:center; gap:8px; margin-bottom:4px"><div class="player-avatar-sm empty">+</div><span style="font-size:12px; color:var(--text-muted)">Place libre</span></div>').join('')}
+      </div>
+      <div class="court-admin-actions">
+        <button class="btn-table-action danger" onclick="adminCancelBooking('${b.id}')">Annuler</button>
+        <button class="btn-table-action" onclick="renderSlotDetail('${b.id}'); openModal('modal-slot-detail')">Détail</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderAdminAlerts() {
+  const container = document.getElementById('adminAlertsContainer');
+  const alerts = checkMatchAlerts();
+
+  const pendingPlayers = DB.players.filter(p => p.status === 'pending');
+
+  let html = '';
+
+  if (alerts.length === 0 && pendingPlayers.length === 0) {
+    html = `<div class="empty-state"><div class="empty-state-icon">✅</div><div class="empty-state-title">Aucune alerte</div><div class="empty-state-desc">Tout est en ordre</div></div>`;
+  }
+
+  alerts.forEach(a => {
+    html += `
+    <div class="alert-item critical">
+      <span class="alert-icon">🚨</span>
+      <div class="alert-body">
+        <div class="alert-title">Match incomplet — ${a.court} · ${a.time}</div>
+        <div class="alert-desc">Il manque <strong>${a.playersMissing} joueur${a.playersMissing > 1 ? 's' : ''}</strong> pour compléter ce match dans moins de ${DB.appConfig.alertBeforeMatchHours}h.</div>
+      </div>
+      <button class="alert-action-btn" onclick="showToast('Notifications envoyées aux joueurs compatibles', 'success')">Notifier</button>
+    </div>`;
+  });
+
+  if (pendingPlayers.length > 0) {
+    html += `
+    <div class="alert-item warning">
+      <span class="alert-icon">⏳</span>
+      <div class="alert-body">
+        <div class="alert-title">${pendingPlayers.length} joueur${pendingPlayers.length > 1 ? 's' : ''} en attente d'évaluation</div>
+        <div class="alert-desc">${pendingPlayers.map(p => `${p.firstName} ${p.lastName}`).join(', ')}</div>
+      </div>
+      <button class="alert-action-btn" onclick="switchAdminTab('players')">Évaluer</button>
+    </div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+function renderAdminStats() {
+  // KPI cards
+  const statsGrid = document.getElementById('statsGridContainer');
+  const today = getTodayStr();
+  const weekBookings = DB.bookings.filter(b => b.status === 'confirmed');
+  const totalRevenue = weekBookings.reduce((s, b) => s + b.pricePerPlayer * b.players.length, 0);
+  const activePlayers = DB.players.filter(p => p.status === 'active').length;
+  const totalMatchesPlayed = weekBookings.filter(b => b.players.length === 4).length;
+
+  statsGrid.innerHTML = [
+    { label: 'Revenus totaux', value: `${totalRevenue} DT`, sub: 'Base de données actuelle' },
+    { label: 'Réservations totales', value: weekBookings.length, sub: 'Tous statuts confondus' },
+    { label: 'Membres actifs', value: activePlayers, sub: 'Niveaux validés par coach' },
+    { label: 'Matchs complets (4/4)', value: totalMatchesPlayed, sub: 'Terrain optimisé' },
+  ].map(s => `
+    <div class="stat-card">
+      <div class="stat-card-label">${s.label}</div>
+      <div class="stat-card-value">${s.value}</div>
+      <div class="stat-card-sub">${s.sub}</div>
+    </div>`
+  ).join('');
+
+  // Occupancy chart (courts)
+  const chart = document.getElementById('occupancyChart');
+  chart.innerHTML = DB.courts.map(court => {
+    const booked = DB.bookings.filter(b => b.courtId === court.id && b.status === 'confirmed').length;
+    const pct = Math.min(100, Math.round((booked / (SLOT_TIMES.length * 7)) * 100));
+    return `
+    <div class="occ-bar-wrap">
+      <div class="occ-bar" style="height:${pct}%; min-height:4px" title="${court.name}: ${pct}%"></div>
+      <div class="occ-bar-label">${court.name.replace('Terrain ', 'T')}<br>${pct}%</div>
+    </div>`;
+  }).join('');
+
+  // Transactions table
+  const tbody = document.getElementById('adminTransactionsTableBody');
+  const recentBookings = DB.bookings.filter(b => b.status === 'confirmed').slice(-10).reverse();
+  if (recentBookings.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:20px">Aucune transaction</td></tr>';
+    return;
+  }
+  tbody.innerHTML = recentBookings.map(b => {
+    const organizer = b.players.find(p => p.isOrganizer) || b.players[0];
+    const amount = b.pricePerPlayer * b.players.length;
+    return `
+    <tr>
+      <td style="color:var(--text-secondary)">${b.date}</td>
+      <td>${organizer ? organizer.name : '—'}</td>
+      <td><span class="slot-type-badge ${b.type}">${b.type === 'open' ? 'Match ouvert' : b.type === 'private' ? 'Privée' : b.type}</span></td>
+      <td>${b.courtName}</td>
+      <td style="font-weight:700; color:var(--gold)">${amount} DT</td>
+      <td><span class="info-badge green" style="padding:2px 8px; font-size:10px">Sur place</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ============================================================================
+// SLOT DETAIL MODAL
+// ============================================================================
+
+function renderSlotDetail(bookingId) {
+  const b = DB.bookings.find(b => b.id === bookingId);
+  if (!b) return;
+  const spots = DB.appConfig.maxPlayersPerMatch - b.players.length;
+  const today = getTodayStr();
+
+  document.getElementById('slotDetailTitle').textContent = `${b.courtName} · ${b.startTime}`;
+  document.getElementById('slotDetailContent').innerHTML = `
+    <div style="display:flex; flex-direction:column; gap:12px">
+      <div style="display:flex; gap:8px; flex-wrap:wrap">
+        <span class="slot-type-badge ${b.type}" style="font-size:12px; padding:4px 12px">${b.type === 'open' ? 'Match ouvert' : b.type === 'private' ? 'Privée' : b.type === 'course' ? 'Cours' : 'Bloqué'}</span>
+        <span class="match-status-badge ${spots===0?'full':spots===1?'almost-full':'open'}">${b.status === 'cancelled' ? 'Annulé' : spots === 0 ? 'Complet' : `${spots} place${spots>1?'s':''} libre${spots>1?'s':''}`}</span>
+      </div>
+
+      <div style="background:var(--bg-card-2); border-radius:var(--radius-md); padding:14px; font-size:13px; display:flex; flex-direction:column; gap:6px">
+        <div><span style="color:var(--text-muted)">Terrain :</span> <strong>${b.courtName}</strong></div>
+        <div><span style="color:var(--text-muted)">Date :</span> <strong>${b.date === today ? 'Aujourd\'hui' : formatDate(b.date)}</strong></div>
+        <div><span style="color:var(--text-muted)">Créneau :</span> <strong>${b.startTime} – ${b.endTime}</strong></div>
+        ${b.minLevel ? `<div><span style="color:var(--text-muted)">Niveau requis :</span> <strong>${b.minLevel}–${b.maxLevel}</strong></div>` : ''}
+        <div><span style="color:var(--text-muted)">Prix par joueur :</span> <strong style="color:var(--gold)">${b.pricePerPlayer} DT</strong> <span style="font-size:11px; color:var(--text-muted)">(paiement sur place)</span></div>
+        ${b.notes ? `<div><span style="color:var(--text-muted)">Notes :</span> ${b.notes}</div>` : ''}
+      </div>
+
+      <div>
+        <div style="font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:8px">
+          Joueurs (${b.players.length}/4)
+        </div>
+        ${b.players.map(p => `
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px">
+            <div class="player-avatar-sm filled">🎾</div>
+            <div style="flex:1">
+              <div style="font-size:13px; font-weight:700; color:var(--text-primary)">${p.name}</div>
+              <div style="font-size:11px; color:var(--text-muted)">Niveau ${p.level} ${p.isOrganizer ? '· Organisateur' : ''}</div>
+            </div>
+            ${currentMode === 'backoffice-dashboard' ? `<button class="btn-table-action danger" onclick="removePlayerFromBooking('${b.id}','${p.userId}')">Retirer</button>` : ''}
+          </div>`).join('')}
+        ${Array(spots).fill(0).map(() => `
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px; opacity:0.4">
+            <div class="player-avatar-sm empty">+</div>
+            <span style="font-size:12px; color:var(--text-muted)">Place libre</span>
+          </div>`).join('')}
+      </div>
+
+      ${currentMode === 'backoffice-dashboard' ? `
+        <div style="display:flex; gap:10px; margin-top:8px">
+          <button class="btn-primary-action" style="flex:1" onclick="showToast('Rappel WhatsApp envoyé aux joueurs', 'success'); closeAllModals()">
+            📱 Rappel WhatsApp
+          </button>
+          <button class="btn-secondary-action" style="flex:1" onclick="adminCancelBooking('${b.id}')">
+            Annuler le créneau
+          </button>
+        </div>` : `
+        <div style="margin-top:8px">
+          <button class="btn-primary-action" onclick="closeAllModals()">Fermer</button>
+        </div>`}
+    </div>`;
+}
+
+function removePlayerFromBooking(bookingId, userId) {
+  const booking = DB.bookings.find(b => b.id === bookingId);
+  if (!booking) return;
+  booking.players = booking.players.filter(p => p.userId !== userId);
+  saveDB(DB);
+  showToast('Joueur retiré de la réservation.', 'info');
+  renderSlotDetail(bookingId);
+  renderAdminDashboard();
+}
+
+function adminCancelBooking(bookingId) {
+  const booking = DB.bookings.find(b => b.id === bookingId);
+  if (!booking) return;
+  booking.status = 'cancelled';
+  saveDB(DB);
+  showToast('Créneau annulé. Les joueurs ont été notifiés.', 'info');
+  closeAllModals();
+  renderAdminDashboard();
+}
+
+// ============================================================================
+// PLAYER EVALUATION MODAL
+// ============================================================================
+
+let evalCurrentPlayerId = null;
+let evalSkillValues = {};
+let evalLevelValue = null;
+
+function openPlayerEvalModal(playerId) {
+  const player = DB.players.find(p => p.id === playerId);
+  if (!player) return;
+
+  evalCurrentPlayerId = playerId;
+  evalSkillValues = player.skills ? { ...player.skills } : {};
+  evalLevelValue = player.level;
+
+  document.getElementById('evalModalTitle').textContent = `Évaluation · ${player.firstName} ${player.lastName}`;
+  document.getElementById('evalPlayerAvatar').textContent = '🎾';
+  document.getElementById('evalPlayerName').textContent = `${player.firstName} ${player.lastName}`;
+  document.getElementById('evalPlayerPhone').textContent = player.phone || '—';
+  document.getElementById('evalPlayerCurrentLevel').textContent = player.level ? `Niveau ${player.level}` : 'Non évalué';
+  document.getElementById('evalPlayerMatches').textContent = `${player.totalMatchesPlayed || 0} matchs`;
+
+  // Skill dots (1–10)
+  Object.keys(SKILL_LABELS).forEach(skill => {
+    const container = document.querySelector(`[data-skill="${skill}"]`);
+    if (!container) return;
+    const current = evalSkillValues[skill] || 0;
+    container.innerHTML = Array.from({ length: 10 }, (_, i) => i + 1).map(n => `
+      <button type="button" class="skill-dot-btn ${n <= current ? 'active' : ''}"
+        data-val="${n}" onclick="setSkillValue('${skill}', ${n})">${n}</button>`
+    ).join('');
+  });
+
+  // Level selector (1–7)
+  const levelSel = document.getElementById('evalLevelSelector');
+  levelSel.innerHTML = Array.from({ length: 7 }, (_, i) => i + 1).map(n => `
+    <div class="eval-level-btn ${n === evalLevelValue ? 'active' : ''}"
+      onclick="setEvalLevel(${n})" title="${LEVEL_LABELS[n]}">${n}</div>`
+  ).join('');
+
+  // Comment
+  document.getElementById('evalCoachComment').value = '';
+
+  openModal('modal-player-eval');
+}
+
+function setSkillValue(skill, val) {
+  evalSkillValues[skill] = val;
+  const container = document.querySelector(`[data-skill="${skill}"]`);
+  if (container) {
+    container.querySelectorAll('.skill-dot-btn').forEach(btn => {
+      btn.classList.toggle('active', parseInt(btn.dataset.val) <= val);
+    });
+  }
+}
+
+function setEvalLevel(level) {
+  evalLevelValue = level;
+  document.querySelectorAll('#evalLevelSelector .eval-level-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.textContent) === level);
+  });
+}
+
+function saveEvaluation(e) {
+  e.preventDefault();
+  if (!evalCurrentPlayerId || !evalLevelValue) {
+    showToast('Veuillez sélectionner un niveau global (1–7).', 'error');
+    return;
+  }
+
+  const player = DB.players.find(p => p.id === evalCurrentPlayerId);
+  if (!player) return;
+
+  const comment = document.getElementById('evalCoachComment').value.trim();
+  const previousLevel = player.level;
+
+  // Update player
+  player.skills = { ...evalSkillValues };
+  player.level = evalLevelValue;
+  player.status = 'active';
+  player.levelValidatedAt = new Date().toISOString();
+  player.levelValidatedBy = DB.currentUser.id;
+
+  // Level history entry
+  if (previousLevel !== evalLevelValue || !previousLevel) {
+    player.levelHistory = player.levelHistory || [];
+    player.levelHistory.push({
+      previousLevel: previousLevel || null,
+      newLevel: evalLevelValue,
+      changedAt: new Date().toISOString(),
+      changedBy: DB.currentUser.id,
+      coachComment: comment,
+    });
+
+    // Notification to player
+    DB.notifications.push({
+      id: `notif_${Date.now()}`,
+      userId: player.id,
+      type: 'level_updated',
+      title: `Votre niveau a été mis à jour`,
+      body: `Le coach a validé votre niveau à ${evalLevelValue}/7.${comment ? ` "${comment}"` : ''}`,
+      isRead: false,
+      sentAt: new Date().toISOString(),
+    });
+  }
+
+  saveDB(DB);
+  showToast(`✓ Évaluation enregistrée · Niveau ${evalLevelValue}/7 validé pour ${player.firstName}`, 'success');
+  closeAllModals();
+  renderAdminPlayers();
+  renderAdminKPIs();
+  renderAdminAlerts();
+}
+
+// ============================================================================
+// ADMIN SLOT CREATION
+// ============================================================================
+
+function openAdminSlotModal(courtId, time, date) {
+  document.getElementById('adminSlotCourt').value = courtId.replace('court_', '');
+  document.getElementById('adminSlotTime').value = time;
+  document.getElementById('adminSlotDate').value = date;
+  openModal('modal-admin-create-slot');
+}
+
+function createAdminSlot(e) {
+  e.preventDefault();
+  const type = document.getElementById('adminSlotType').value;
+  const courtNum = document.getElementById('adminSlotCourt').value;
+  const courtId = `court_${courtNum}`;
+  const court = DB.courts.find(c => c.id === courtId);
+  const time = document.getElementById('adminSlotTime').value;
+  const date = document.getElementById('adminSlotDate').value;
+  const notes = document.getElementById('adminSlotNotes').value;
+  const duration = DB.appConfig.slotDurationMinutes;
+
+  if (!date) { showToast('Veuillez sélectionner une date.', 'error'); return; }
+
+  const existing = DB.bookings.find(b => b.courtId === courtId && b.date === date && b.startTime === time && b.status === 'confirmed');
+  if (existing) { showToast('Ce créneau est déjà occupé.', 'error'); return; }
+
+  const newBooking = {
+    id: `bk_${Date.now()}`,
+    courtId, courtName: court ? court.name : `Terrain ${courtNum}`,
+    date, startTime: time, endTime: addMinutes(time, duration),
+    type, status: 'confirmed',
+    players: [],
+    waitlist: [],
+    notes,
+    pricePerPlayer: DB.appConfig.pricePeak,
+    createdAt: new Date().toISOString(),
+  };
+
+  if (type === 'open') {
+    newBooking.minLevel = parseInt(document.getElementById('adminSlotLevelMin').value) || 3;
+    newBooking.maxLevel = parseInt(document.getElementById('adminSlotLevelMax').value) || 5;
+    // Notify compatible players
+    notifyCompatiblePlayersForMatch(newBooking);
+  }
+
+  DB.bookings.push(newBooking);
+  saveDB(DB);
+  showToast(`Créneau créé · ${court?.name} · ${time}`, 'success');
+  closeAllModals();
+  renderAdminDashboard();
+}
+
+function notifyCompatiblePlayersForMatch(booking) {
+  const tolerance = DB.appConfig.matchmakingTolerance;
+  DB.players
+    .filter(p => p.status === 'active' && p.level &&
+      p.level >= (booking.minLevel - tolerance) &&
+      p.level <= (booking.maxLevel + tolerance) &&
+      !booking.players.some(bp => bp.userId === p.id))
+    .slice(0, 20)
+    .forEach(p => {
+      DB.notifications.push({
+        id: `notif_${Date.now()}_${p.id}`,
+        userId: p.id,
+        type: 'match_available',
+        title: `Match ouvert · Niveau ${booking.minLevel}–${booking.maxLevel}`,
+        body: `Un match est disponible ce ${booking.date} à ${booking.startTime} sur ${booking.courtName}.`,
+        isRead: false,
+        sentAt: new Date().toISOString(),
+        data: { bookingId: booking.id },
+      });
+    });
+}
+
+// ============================================================================
+// PLAYER REGISTRATION
+// ============================================================================
+
+function registerPlayer(e) {
+  e.preventDefault();
+  if (!document.getElementById('regConsent').checked) {
+    showToast('Le consentement RGPD est obligatoire.', 'error');
+    return;
+  }
+
+  const firstName = document.getElementById('regFirstName').value.trim();
+  const lastName = document.getElementById('regLastName').value.trim();
+  const phone = document.getElementById('regPhone').value.trim();
+
+  if (!firstName || !lastName || !phone) {
+    showToast('Veuillez remplir tous les champs obligatoires.', 'error');
+    return;
+  }
+
+  const newPlayer = {
+    id: `player_${Date.now()}`,
+    firstName, lastName, phone,
+    email: document.getElementById('regEmail').value.trim(),
+    avatar: null, role: 'player',
+    status: 'pending',
+    level: null,
+    levelValidatedAt: null,
+    levelValidatedBy: null,
+    preferredSide: document.getElementById('regSide').value,
+    playStyle: document.getElementById('regStyle').value,
+    reliabilityScore: 50,
+    totalMatchesPlayed: 0,
+    skills: {},
+    levelHistory: [],
+    consentSignedAt: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+  };
+
+  DB.players.push(newPlayer);
+  saveDB(DB);
+  showToast(`✓ ${firstName} ${lastName} inscrit(e) · En attente d'évaluation coach.`, 'success');
+  closeAllModals();
+  renderAdminPlayers();
+  renderAdminAlerts();
+  renderAdminKPIs();
+}
+
+// ============================================================================
+// BOOKING FORM (player)
+// ============================================================================
+
+function submitBooking(e) {
+  e.preventDefault();
+  const courtNum = document.getElementById('bookCourtSelect').value;
+  const courtId = `court_${courtNum}`;
+  const court = DB.courts.find(c => c.id === courtId);
+  const time = document.getElementById('bookTimeSelect').value;
+  const date = document.getElementById('bookDate').value;
+  const type = document.getElementById('bookTypeSelect').value;
+  const duration = DB.appConfig.slotDurationMinutes;
+
+  if (!date) { showToast('Veuillez sélectionner une date.', 'error'); return; }
+
+  const existing = DB.bookings.find(b => b.courtId === courtId && b.date === date && b.startTime === time && b.status === 'confirmed');
+  if (existing) { showToast('Ce créneau est déjà réservé. Choisissez un autre créneau ou terrain.', 'error'); return; }
+
+  const user = DB.players.find(p => p.id === DB.currentUser.id);
+  const newBooking = {
+    id: `bk_${Date.now()}`,
+    courtId, courtName: court?.name || `Terrain ${courtNum}`,
+    date, startTime: time, endTime: addMinutes(time, duration),
+    type, status: 'confirmed',
+    players: [{ userId: DB.currentUser.id, name: `${user?.firstName} ${user?.lastName}`, level: user?.level, isOrganizer: true }],
+    waitlist: [],
+    pricePerPlayer: DB.appConfig.pricePeak,
+    createdAt: new Date().toISOString(),
+  };
+
+  if (type === 'open') {
+    newBooking.minLevel = Math.max(1, (user?.level || 3) - 1);
+    newBooking.maxLevel = Math.min(7, (user?.level || 5) + 1);
+    notifyCompatiblePlayersForMatch(newBooking);
+  }
+
+  DB.bookings.push(newBooking);
+  saveDB(DB);
+  showToast(`✓ Réservation confirmée · ${court?.name} · ${time}`, 'success');
+  closeAllModals();
+  renderHomeScreen();
+}
+
+function createMatch(e) {
+  e.preventDefault();
+  const courtNum = document.getElementById('createMatchCourtSelect').value;
+  const courtId = `court_${courtNum}`;
+  const court = DB.courts.find(c => c.id === courtId);
+  const time = document.getElementById('createMatchTime').value;
+  const date = document.getElementById('createMatchDate').value;
+  const duration = DB.appConfig.slotDurationMinutes;
+
+  if (!date) { showToast('Veuillez sélectionner une date.', 'error'); return; }
+  if (!evalMatchLevelMin || !evalMatchLevelMax) { showToast('Veuillez définir la fourchette de niveau.', 'error'); return; }
+
+  const user = DB.players.find(p => p.id === DB.currentUser.id);
+  if (user?.status !== 'active') { showToast('Votre niveau doit être validé par le coach.', 'error'); return; }
+
+  const newBooking = {
+    id: `bk_${Date.now()}`,
+    courtId, courtName: court?.name || `Terrain ${courtNum}`,
+    date, startTime: time, endTime: addMinutes(time, duration),
+    type: 'open', status: 'confirmed',
+    minLevel: evalMatchLevelMin,
+    maxLevel: evalMatchLevelMax,
+    players: [{ userId: DB.currentUser.id, name: `${user?.firstName} ${user?.lastName}`, level: user?.level, isOrganizer: true }],
+    waitlist: [],
+    pricePerPlayer: DB.appConfig.pricePeak,
+    createdAt: new Date().toISOString(),
+  };
+
+  notifyCompatiblePlayersForMatch(newBooking);
+  DB.bookings.push(newBooking);
+  saveDB(DB);
+  showToast('Match ouvert publié ! Les joueurs compatibles ont été notifiés. 🎾', 'success');
+  closeAllModals();
+  renderHomeScreen();
+  renderMatchesList();
+}
+
+let evalMatchLevelMin = 3, evalMatchLevelMax = 5;
+
+function initCreateMatchLevelSelectors() {
+  ['createMatchLevelMin', 'createMatchLevelMax'].forEach((containerId, idx) => {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = Array.from({ length: 7 }, (_, i) => i + 1).map(n => `
+      <div class="eval-level-btn ${n === (idx === 0 ? evalMatchLevelMin : evalMatchLevelMax) ? 'active' : ''}"
+        onclick="${idx === 0 ? `setMatchLevelMin(${n})` : `setMatchLevelMax(${n})`}"
+        title="${LEVEL_LABELS[n]}">${n}</div>`
+    ).join('');
+  });
+}
+
+function setMatchLevelMin(n) {
+  evalMatchLevelMin = n;
+  document.querySelectorAll('#createMatchLevelMin .eval-level-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.textContent) === n);
+  });
+  updateMatchPriceDisplay();
+}
+
+function setMatchLevelMax(n) {
+  evalMatchLevelMax = n;
+  document.querySelectorAll('#createMatchLevelMax .eval-level-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.textContent) === n);
+  });
+  updateMatchPriceDisplay();
+}
+
+function updateMatchPriceDisplay() {
+  const el = document.getElementById('createMatchPriceDisplay');
+  if (el) el.textContent = `${DB.appConfig.pricePeak} DT`;
+}
+
+// ============================================================================
+// ADMIN PLAYER ACTIONS
+// ============================================================================
+
+function activatePlayer(playerId) {
+  const player = DB.players.find(p => p.id === playerId);
+  if (!player) return;
+  if (!player.level) {
+    showToast('Ce joueur doit d\'abord être évalué par le coach avant d\'être activé.', 'error');
+    return;
+  }
+  player.status = 'active';
+  saveDB(DB);
+  showToast(`${player.firstName} ${player.lastName} est maintenant actif.`, 'success');
+  renderAdminPlayers();
+}
+
+function suspendPlayer(playerId) {
+  const player = DB.players.find(p => p.id === playerId);
+  if (!player) return;
+  player.status = 'suspended';
+  saveDB(DB);
+  showToast(`${player.firstName} ${player.lastName} a été suspendu.`, 'info');
+  renderAdminPlayers();
+}
+
+// ============================================================================
+// ADMIN TAB SWITCHING
+// ============================================================================
+
+function switchAdminTab(tabName) {
+  document.querySelectorAll('.admin-tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.adminTab === tabName);
+  });
+  document.querySelectorAll('.admin-tab-content').forEach(content => {
+    content.classList.toggle('active', content.id === `adminContent${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
+  });
+}
+
+// ============================================================================
+// MODAL SYSTEM
+// ============================================================================
+
+function openModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closeAllModals() {
+  document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+  document.body.style.overflow = '';
+}
+
+// ============================================================================
+// TOAST SYSTEM
+// ============================================================================
+
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  const icons = { gold:'✦', success:'✓', error:'✗', info:'ℹ' };
+  toast.innerHTML = `<span>${icons[type] || '•'}</span><span>${message}</span>`;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.style.animation = 'none';
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(-8px)';
+    toast.style.transition = 'all 0.25s ease';
+    setTimeout(() => toast.remove(), 300);
+  }, 3500);
+}
+
+// ============================================================================
+// UTILITY FORMATTERS
+// ============================================================================
+
+function formatDate(dateStr) {
+  if (!dateStr) return '—';
+  try {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  } catch (e) { return dateStr; }
+}
+
+function timeAgo(isoStr) {
+  const diff = (Date.now() - new Date(isoStr).getTime()) / 1000;
+  if (diff < 60) return 'À l\'instant';
+  if (diff < 3600) return `Il y a ${Math.floor(diff / 60)} min`;
+  if (diff < 86400) return `Il y a ${Math.floor(diff / 3600)}h`;
+  return `Il y a ${Math.floor(diff / 86400)} jour${Math.floor(diff / 86400) > 1 ? 's' : ''}`;
+}
+
+// ============================================================================
+// EVENT LISTENERS INITIALIZATION
+// ============================================================================
+
+document.addEventListener('DOMContentLoaded', async () => {
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // FIREBASE : Seed (1ère utilisation) + Sync + Listeners temps-réel
+  // ──────────────────────────────────────────────────────────────────────────
+
+  // 1. Seed Firestore si base vide (premier lancement)
+  try {
+    const seeded = await fbSeedIfEmpty(SEED_DATA);
+    if (seeded) console.log('🌱 Seed Firestore effectué avec succès');
+  } catch (e) {
+    console.warn('⚠️ Seed Firestore ignoré (hors-ligne ou déjà existant) :', e.message);
+  }
+
+  // 2. Sync initiale depuis Firestore (met à jour le cache local)
+  await syncFromFirestore();
+
+  // 3. Listeners temps-réel (Firestore → UI)
+  try { startRealtimeListeners(); } catch (e) {}
+
+  // 4. Observer l'état Auth Firebase
+  fbOnAuthChange(user => {
+    if (user) {
+      // Utilisateur connecté → accès dashboard gérant
+      DB.currentUser = { ...DB.currentUser, firebaseUid: user.uid, email: user.email };
+      console.log('🔐 Connecté :', user.email);
+    } else {
+      // Pas connecté → mode démo player
+      console.log('👤 Mode démo joueur (non authentifié)');
+    }
+  });
+
+  // ── View mode tab buttons ──
+  document.querySelectorAll('.view-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchViewMode(btn.dataset.mode));
+  });
+
+  // ── Bottom nav ──
+  document.querySelectorAll('.nav-item-btn[data-screen]').forEach(btn => {
+    btn.addEventListener('click', () => navigateToScreen(btn.dataset.screen));
+  });
+
+  // ── Back buttons ──
   document.querySelectorAll('.back-to-home-btn').forEach(btn => {
     btn.addEventListener('click', () => navigateToScreen('screen-home'));
   });
 
-  // Match screen tabs (Disponibles vs Mes matches)
-  const tabAvail = document.getElementById('tabMatchesAvailable');
-  const tabMy = document.getElementById('tabMatchesMy');
-  if (tabAvail && tabMy) {
-    tabAvail.addEventListener('click', () => {
-      tabAvail.classList.add('active');
-      tabMy.classList.remove('active');
-      AppState.activeMatchTab = 'tab-available';
-      renderMatchesFeed();
-    });
-    tabMy.addEventListener('click', () => {
-      tabMy.classList.add('active');
-      tabAvail.classList.remove('active');
-      AppState.activeMatchTab = 'tab-my';
-      renderMatchesFeed();
-    });
-  }
-
-  // Launch match button
-  document.getElementById('btnLaunchMatchCta')?.addEventListener('click', () => openModal('modal-create-match'));
-
-  // Club Search Filter
-  document.getElementById('clubSearchInput')?.addEventListener('input', (e) => {
-    renderClubsList(e.target.value);
-  });
-
-  // Wallet Recharge Triggers
-  const triggerRecharge = () => openModal('modal-recharge-points');
-  document.getElementById('topLivePointsPill')?.addEventListener('click', triggerRecharge);
-  document.getElementById('homePointsBadge')?.addEventListener('click', triggerRecharge);
-  document.getElementById('profilePointsBadge')?.addEventListener('click', triggerRecharge);
-  document.getElementById('settingsRechargePoints')?.addEventListener('click', triggerRecharge);
-
-  // Transfer Triggers
-  const triggerTransfer = () => openModal('modal-transfer-points');
-  document.getElementById('homeQuickTransferBtn')?.addEventListener('click', triggerTransfer);
-  document.getElementById('settingsTransferPoints')?.addEventListener('click', triggerTransfer);
-
-  // Reset Demo Button
-  document.getElementById('btnResetDemoData')?.addEventListener('click', resetDemoData);
-
-  // Modal Closers
-  document.querySelectorAll('.modal-close-btn, .modal-cancel-btn').forEach(btn => {
+  // ── Modal close buttons ──
+  document.querySelectorAll('.modal-close-btn').forEach(btn => {
     btn.addEventListener('click', closeAllModals);
   });
-
-  // Click outside modal card to close
   document.querySelectorAll('.modal-overlay').forEach(overlay => {
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) closeAllModals();
     });
   });
 
-  // Recharge Pack Selection (Amount)
-  document.querySelectorAll('.pack-recharge-grid .pack-card').forEach(card => {
-    card.addEventListener('click', () => {
-      document.querySelectorAll('.pack-recharge-grid .pack-card').forEach(c => c.classList.remove('selected'));
-      card.classList.add('selected');
-    });
-  });
-
-  // Payment Method Selection (Flouci, D17, CB)
-  document.querySelectorAll('.payment-method-card').forEach(card => {
-    card.addEventListener('click', () => {
-      document.querySelectorAll('.payment-method-card').forEach(c => c.classList.remove('selected'));
-      card.classList.add('selected');
-      const r = card.querySelector('input[type="radio"]');
-      if (r) r.checked = true;
-    });
-  });
-
-  // Book Court Type Change (Individual share vs full court)
-  document.getElementById('bookTypeSelect')?.addEventListener('change', (e) => {
-    const isPrivate = e.target.value === 'Privée';
-    const shareEl = document.getElementById('bookingShareDue');
-    const noteEl = document.getElementById('bookingShareNote');
-    const btnEl = document.getElementById('btnSubmitBookCourt');
-    if (isPrivate) {
-      if (shareEl) shareEl.textContent = '100.0 Points (100 DT)';
-      if (noteEl) noteEl.textContent = '🔒 Vous réservez le court complet pour vous et vos amis (terrain privatisé).';
-      if (btnEl) btnEl.textContent = 'Régler le court complet (100 Pts)';
-    } else {
-      if (shareEl) shareEl.textContent = '25.0 Points (25 DT)';
-      if (noteEl) noteEl.textContent = '✓ Les 3 autres joueurs régleront chacun 25 DT directement sur HayaPala en rejoignant la partie.';
-      if (btnEl) btnEl.textContent = 'Valider et payer ma part (25 Pts)';
-    }
-  });
-
-  // Confirm Recharge
-  document.getElementById('btnConfirmRecharge')?.addEventListener('click', executeRecharge);
-
-  // Confirm Transfer
-  document.getElementById('btnConfirmTransfer')?.addEventListener('click', executeTransfer);
-
-  // Form: Create Match
-  document.getElementById('formCreateMatch')?.addEventListener('submit', executeCreateMatch);
-
-  // Form: Book Court
-  document.getElementById('formConfirmBooking')?.addEventListener('submit', executeBookCourt);
-
-  // Duo & Official Teams Modal Open
-  document.getElementById('btnOpenOfficialTeams')?.addEventListener('click', openOfficialTeamsModal);
-
-  // Tab switching in Duo Modal
-  document.getElementById('tabDuoRanking')?.addEventListener('click', () => {
-    document.getElementById('tabDuoRanking').classList.add('active');
-    document.getElementById('tabDuoCreate').classList.remove('active');
-    document.getElementById('duoRankingListContainer').style.display = 'block';
-    document.getElementById('duoFormContainer').style.display = 'none';
-  });
-
-  document.getElementById('tabDuoCreate')?.addEventListener('click', () => {
-    document.getElementById('tabDuoCreate').classList.add('active');
-    document.getElementById('tabDuoRanking').classList.remove('active');
-    document.getElementById('duoRankingListContainer').style.display = 'none';
-    document.getElementById('duoFormContainer').style.display = 'block';
-    renderCommunityPlayersDirectory();
-    updateDuoProjection();
-  });
-
-  // Partner Search Query Input
-  document.getElementById('partnerSearchQuery')?.addEventListener('input', (e) => {
-    renderCommunityPlayersDirectory(e.target.value);
-  });
-
-  // Change Partner Button
-  document.getElementById('btnChangePartner')?.addEventListener('click', () => {
-    AppState.selectedPartnerForDuo = null;
-    document.getElementById('selectedPartnerCard').style.display = 'none';
-    document.getElementById('registeredPlayersDirectory').style.display = 'flex';
-    document.getElementById('selectedPartnerId').value = '';
-    renderCommunityPlayersDirectory();
-    updateDuoProjection();
-  });
-
-  // Form Create Duo
-  document.getElementById('formCreateDuo')?.addEventListener('submit', executeCreateDuo);
-
-  // Admin Login Form
-  document.getElementById('loginFormAdmin')?.addEventListener('submit', (e) => {
-    e.preventDefault();
-    showToast("Connexion réussie à HayaPala Club Pro !", "success");
-    switchViewMode('backoffice-dashboard');
-  });
-
-  // Toggle Password Visibility on Login
-  const togglePass = document.getElementById('togglePassword');
-  if (togglePass) {
-    togglePass.addEventListener('click', () => {
-      const pass = document.getElementById('adminPassword');
-      const icon = togglePass.querySelector('span');
-      if (pass.type === 'password') {
-        pass.type = 'text';
-        icon.textContent = '🙈';
-      } else {
-        pass.type = 'password';
-        icon.textContent = '👁️';
-      }
-    });
-  }
-
-  // Club selector dropdown in Back-Office
-  document.getElementById('adminClubSelect')?.addEventListener('change', (e) => {
-    AppState.currentAdminClubId = e.target.value;
-    renderAdminAllViews();
-  });
-
-  // Admin Sub-Navigation Tabs (Planning, Courts, Tournois, Membres, Finances, Settings)
+  // ── Admin tab buttons ──
   document.querySelectorAll('.admin-tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const tab = btn.dataset.adminTab;
-      switchAdminTab(tab);
+    btn.addEventListener('click', () => switchAdminTab(btn.dataset.adminTab));
+  });
+
+  // ── Match filter chips ──
+  document.querySelectorAll('.matches-filter-bar .filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.matches-filter-bar .filter-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      activeLevelFilter = chip.dataset.level;
+      renderMatchesList();
     });
   });
 
-  // Admin Direct Booking Button
-  document.getElementById('btnAdminDirectBooking')?.addEventListener('click', openAdminDirectBookingModal);
-  document.getElementById('formAdminDirectBooking')?.addEventListener('submit', executeAdminDirectBooking);
-
-  // Admin Add Court Button
-  document.getElementById('btnAdminAddCourt')?.addEventListener('click', () => openModal('modal-admin-add-court'));
-  document.getElementById('formAdminAddCourt')?.addEventListener('submit', executeAdminAddCourt);
-
-  // Admin Create Tournament Button
-  document.getElementById('btnAdminCreateTournament')?.addEventListener('click', () => openModal('modal-admin-create-tournament'));
-  document.getElementById('formAdminCreateTournament')?.addEventListener('submit', executeAdminCreateTournament);
-
-  // Admin Player Search Input
-  document.getElementById('adminPlayerSearchInput')?.addEventListener('input', (e) => {
-    renderAdminPlayers(e.target.value);
+  // ── Match tabs (Disponibles / Mes matchs) ──
+  document.getElementById('tabMatchesAvailable')?.addEventListener('click', () => {
+    document.getElementById('tabMatchesAvailable').classList.add('active');
+    document.getElementById('tabMatchesMy').classList.remove('active');
+    renderMatchesList(false);
+  });
+  document.getElementById('tabMatchesMy')?.addEventListener('click', () => {
+    document.getElementById('tabMatchesMy').classList.add('active');
+    document.getElementById('tabMatchesAvailable').classList.remove('active');
+    renderMatchesList(true);
   });
 
-  // Admin Adjust Points Form
-  document.getElementById('formAdminAdjustPoints')?.addEventListener('submit', executeAdminAdjustPoints);
+  // ── Admin LOGIN (Firebase Auth) ──
+  document.getElementById('btnLoginSubmit')?.addEventListener('click', async () => {
+    const email    = document.getElementById('loginUsernameField').value.trim();
+    const password = document.getElementById('loginPasswordField').value;
 
-  // Admin Manage Booking Modal Buttons
-  document.getElementById('btnAdminConfirmBooking')?.addEventListener('click', executeAdminConfirmBooking);
-  document.getElementById('btnAdminDeleteBooking')?.addEventListener('click', executeAdminDeleteBooking);
-
-  // Admin Create Club Button
-  document.getElementById('btnAdminOpenCreateClub')?.addEventListener('click', () => openModal('modal-admin-create-club'));
-  document.getElementById('formAdminCreateClub')?.addEventListener('submit', executeAdminCreateClub);
-
-  // Admin Register Member Button
-  document.getElementById('btnAdminOpenRegisterPlayer')?.addEventListener('click', () => openModal('modal-admin-create-player'));
-  document.getElementById('formAdminCreatePlayer')?.addEventListener('submit', executeAdminCreatePlayer);
-
-  // Admin Club Settings Form
-  document.getElementById('adminClubSettingsForm')?.addEventListener('submit', executeAdminSaveSettings);
-}
-
-// Switch between Player App, Back-Office Dashboard, and Back-Office Login
-function switchViewMode(mode) {
-  // Normalize mode name
-  if (mode === 'mobile-app') mode = 'player-app';
-  AppState.activeViewMode = mode;
-
-  document.querySelectorAll('.view-tab-btn').forEach(btn => {
-    const btnMode = btn.dataset.mode === 'mobile-app' ? 'player-app' : btn.dataset.mode;
-    btn.classList.toggle('active', btnMode === mode);
-  });
-
-  const playerContainer = document.getElementById('playerAppContainer') || document.getElementById('mobileAppContainer');
-  const backofficeDashboard = document.getElementById('backofficeDashboard');
-  const backofficeLogin = document.getElementById('backofficeLogin');
-
-  if (mode === 'player-app') {
-    if (playerContainer) playerContainer.style.display = 'flex';
-    if (backofficeDashboard) backofficeDashboard.style.display = 'none';
-    if (backofficeLogin) backofficeLogin.style.display = 'none';
-    window.location.hash = '#app';
-  } else if (mode === 'backoffice-dashboard') {
-    if (playerContainer) playerContainer.style.display = 'none';
-    if (backofficeDashboard) backofficeDashboard.style.display = 'flex';
-    if (backofficeLogin) backofficeLogin.style.display = 'none';
-    window.location.hash = '#admin';
-    renderAdminAllViews();
-  } else if (mode === 'backoffice-login') {
-    if (playerContainer) playerContainer.style.display = 'none';
-    if (backofficeDashboard) backofficeDashboard.style.display = 'none';
-    if (backofficeLogin) backofficeLogin.style.display = 'flex';
-    window.location.hash = '#login';
-  }
-}
-
-// Switch Admin Subnav Tab
-function switchAdminTab(tabName) {
-  AppState.activeAdminTab = tabName;
-  document.querySelectorAll('.admin-tab-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.adminTab === tabName);
-  });
-
-  const tabContentMap = {
-    'planning': 'adminContentPlanning',
-    'courts': 'adminContentCourts',
-    'tournaments': 'adminContentTournaments',
-    'players': 'adminContentPlayers',
-    'matches': 'adminContentMatches',
-    'finances': 'adminContentFinances',
-    'settings': 'adminContentSettings'
-  };
-
-  document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.remove('active'));
-  const target = document.getElementById(tabContentMap[tabName]);
-  if (target) target.classList.add('active');
-
-  // Trigger content-specific fetch/render
-  if (tabName === 'planning') renderAdminSchedule(AppState.currentAdminClubId);
-  if (tabName === 'courts') renderAdminCourts(AppState.currentAdminClubId);
-  if (tabName === 'tournaments') renderAdminTournaments();
-  if (tabName === 'players') renderAdminPlayers();
-  if (tabName === 'matches') renderAdminMatches();
-  if (tabName === 'finances') renderAdminFinances();
-  if (tabName === 'settings') renderAdminSettings(AppState.currentAdminClubId);
-}
-
-// Navigate Mobile / Player App Screen
-function navigateToScreen(screenId) {
-  AppState.activeScreen = screenId;
-  document.querySelectorAll('.app-screen').forEach(scr => scr.classList.remove('active'));
-  const target = document.getElementById(screenId);
-  if (target) target.classList.add('active');
-
-  document.querySelectorAll('.nav-item-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.screen === screenId);
-  });
-
-  if (screenId === 'screen-join-match') renderMatchesFeed();
-  if (screenId === 'screen-book-court') renderClubsList();
-  if (screenId === 'screen-profile') renderProfileData();
-}
-
-// Render All Views
-function renderAllViews() {
-  updateHeaderPoints();
-  renderMatchesFeed();
-  renderClubsList();
-  renderProfileData();
-  renderAdminAllViews();
-}
-
-// Render all Admin Sub-Views
-function renderAdminAllViews() {
-  const clubSelect = document.getElementById('adminClubSelect');
-  const clubs = AppState.clubs || [];
-
-  if (clubSelect) {
-    if (clubs.length === 0) {
-      clubSelect.innerHTML = `<option value="">-- Aucun Club Configuré --</option>`;
-      AppState.currentAdminClubId = null;
-    } else {
-      if (!AppState.currentAdminClubId || !clubs.some(c => c.id === AppState.currentAdminClubId)) {
-        AppState.currentAdminClubId = clubs[0].id;
-      }
-      clubSelect.innerHTML = clubs.map(c => `
-        <option value="${c.id}" ${c.id === AppState.currentAdminClubId ? 'selected' : ''}>${c.name} (${c.address})</option>
-      `).join('');
+    // Mode démo : admin / admin → accès direct sans Firebase Auth
+    if ((email === 'admin' || email === 'admin@hayapala.tn') && password === 'admin') {
+      switchViewMode('backoffice-dashboard');
+      showToast('Bienvenue Admin 👋', 'gold');
+      fbTrack('login', { method: 'demo' });
+      return;
     }
-  }
 
-  const clubId = AppState.currentAdminClubId;
-  fetchAndRenderAdminStats(clubId);
-  renderAdminSchedule(clubId);
-  renderAdminCourts(clubId);
-  renderAdminTournaments();
-  renderAdminPlayers();
-  renderAdminMatches();
-  renderAdminFinances();
-  if (clubId) renderAdminSettings(clubId);
-}
-
-// Execute Admin Create Club
-async function executeAdminCreateClub(e) {
-  e.preventDefault();
-  const name = document.getElementById('adminNewClubName').value;
-  const address = document.getElementById('adminNewClubAddress').value;
-  const phone = document.getElementById('adminNewClubPhone').value;
-  const pricePoints = Number(document.getElementById('adminNewClubPrice').value) || 25;
-
-  try {
-    const res = await fetch('/api/admin/clubs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, address, phone, pricePoints })
-    });
-    const result = await res.json();
-    if (result.success) {
-      closeAllModals();
-      showToast(result.message, "success");
-      document.getElementById('formAdminCreateClub').reset();
-      await loadStateFromServer();
-      AppState.currentAdminClubId = result.club.id;
-      renderAllViews();
-    } else {
-      showToast(result.message, "error");
-    }
-  } catch (err) {
-    showToast("Erreur lors de la création du club.", "error");
-  }
-}
-
-// Execute Admin Register Player
-async function executeAdminCreatePlayer(e) {
-  e.preventDefault();
-  const name = document.getElementById('adminNewPlayerName').value;
-  const phone = document.getElementById('adminNewPlayerPhone').value;
-  const city = document.getElementById('adminNewPlayerCity').value;
-  const level = Number(document.getElementById('adminNewPlayerLevel').value) || 5.00;
-  const points = Number(document.getElementById('adminNewPlayerPoints').value) || 0;
-
-  try {
-    const res = await fetch('/api/admin/players', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, phone, city, level, points })
-    });
-    const result = await res.json();
-    if (result.success) {
-      closeAllModals();
-      showToast(result.message, "success");
-      document.getElementById('formAdminCreatePlayer').reset();
-      await loadStateFromServer();
-      renderAdminPlayers();
-      fetchAndRenderAdminStats(AppState.currentAdminClubId);
-    } else {
-      showToast(result.message, "error");
-    }
-  } catch (err) {
-    showToast("Erreur lors de l'inscription du joueur.", "error");
-  }
-}
-
-// --------------------------------------------------------------------------
-// PLAYER APP: MATCHES FEED (Screen 2)
-// --------------------------------------------------------------------------
-function renderMatchesFeed() {
-  const container = document.getElementById('matchesListContainer');
-  if (!container) return;
-
-  container.innerHTML = '';
-  let list = AppState.matches || [];
-
-  if (AppState.activeMatchTab === 'tab-my') {
-    list = list.filter(m => 
-      (m.team1 && m.team1.some(p => p && p.name === AppState.user?.name)) ||
-      (m.team2 && m.team2.some(p => p && p.name === AppState.user?.name))
-    );
-  }
-
-  if (list.length === 0) {
-    container.innerHTML = `
-      <div style="text-align: center; padding: 40px 16px; color: var(--text-secondary);">
-        <p style="font-size: 32px; margin-bottom: 8px;">🎾</p>
-        <p style="font-weight: 700; color: var(--text-white);">Aucun match dans cette section.</p>
-        <p style="font-size: 12px; margin-top: 4px;">Cliquez sur <strong>+ Lancer un match</strong> pour créer une partie !</p>
-      </div>
-    `;
-    return;
-  }
-
-  list.forEach(match => {
-    const card = document.createElement('div');
-    card.className = 'match-open-card';
-
-    // Team 1 Slots
-    let team1Html = (match.team1 || [null, null]).map((p, idx) => {
-      if (p) {
-        return `
-          <div class="player-slot-card">
-            <div class="slot-avatar">${p.avatar || '👤'}</div>
-            <div class="slot-name">${p.name}</div>
-            <div class="slot-level">⭐ ${Number(p.level).toFixed(2)}</div>
-          </div>
-        `;
-      } else {
-        return `
-          <div class="player-slot-card empty-slot" onclick="handleJoinSlot('${match.id}', 1, ${idx + 1})">
-            <div class="slot-avatar empty-avatar">+</div>
-            <div class="slot-name" style="color: var(--hayapala-volt); font-weight: 700;">Rejoindre</div>
-            <div class="slot-level">Libre</div>
-          </div>
-        `;
-      }
-    }).join('');
-
-    // Team 2 Slots
-    let team2Html = (match.team2 || [null, null]).map((p, idx) => {
-      if (p) {
-        return `
-          <div class="player-slot-card">
-            <div class="slot-avatar">${p.avatar || '👤'}</div>
-            <div class="slot-name">${p.name}</div>
-            <div class="slot-level">⭐ ${Number(p.level).toFixed(2)}</div>
-          </div>
-        `;
-      } else {
-        return `
-          <div class="player-slot-card empty-slot" onclick="handleJoinSlot('${match.id}', 2, ${idx + 1})">
-            <div class="slot-avatar empty-avatar">+</div>
-            <div class="slot-name" style="color: var(--hayapala-volt); font-weight: 700;">Rejoindre</div>
-            <div class="slot-level">Libre</div>
-          </div>
-        `;
-      }
-    }).join('');
-
-    card.innerHTML = `
-      <div class="match-card-top">
-        <div class="club-name-row">
-          <span>🎾</span>
-          <span>${match.clubName}</span>
-        </div>
-        <div class="match-time-distance">${match.distance || '2.5 km'}</div>
-      </div>
-      <div class="match-date-row">${match.date} • ${match.time} • Niveau ${match.levelRange}</div>
-
-      <div class="matchup-2v2-grid">
-        <div class="team-box-wrap">${team1Html}</div>
-        <div class="vs-badge-icon">VS</div>
-        <div class="team-box-wrap">${team2Html}</div>
-      </div>
-
-      <div class="match-card-footer">
-        <div class="match-info-meta">
-          <span class="match-public-tag">${match.type}</span>
-          <span class="court-reserved-tag">Court réservé au club</span>
-        </div>
-        <div class="match-points-cost-badge">
-          <span>⚡</span> ${match.pointsCost} Points / joueur
-        </div>
-      </div>
-    `;
-
-    container.appendChild(card);
-  });
-}
-
-// Join slot in match
-window.handleJoinSlot = async function(matchId, team, position) {
-  try {
-    const res = await fetch('/api/matches/join', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ matchId, team, position })
-    });
-    const result = await res.json();
-    if (result.success) {
-      showToast(result.message, "success");
-      await loadStateFromServer();
-      renderAllViews();
-    } else {
-      showToast(result.message, "error");
-      if (result.message.includes('Points insuffisants')) {
-        openModal('modal-recharge-points');
-      }
-    }
-  } catch (err) {
-    showToast("Erreur lors de la tentative pour rejoindre le match.", "error");
-  }
-};
-
-// --------------------------------------------------------------------------
-// PLAYER APP: CLUBS DIRECTORY & COURT BOOKING (Screen 3)
-// --------------------------------------------------------------------------
-function renderClubsList(searchQuery = '') {
-  const container = document.getElementById('clubsListContainer');
-  if (!container) return;
-
-  container.innerHTML = '';
-  const q = searchQuery.toLowerCase().trim();
-  let list = AppState.clubs || [];
-
-  if (q) {
-    list = list.filter(c => 
-      c.name.toLowerCase().includes(q) || 
-      c.address.toLowerCase().includes(q) ||
-      (c.sport && c.sport.toLowerCase().includes(q))
-    );
-  }
-
-  if (list.length === 0) {
-    container.innerHTML = `
-      <div style="text-align: center; padding: 48px 16px; color: var(--text-secondary);">
-        <p style="font-size: 38px; margin-bottom: 10px;">🎾</p>
-        <p style="font-weight: 800; color: var(--text-white); font-size: 16px;">Aucun club de padel disponible pour le moment.</p>
-        <p style="font-size: 13px; margin: 8px auto 20px; max-width: 320px;">
-          Vous pouvez créer votre club, configurer vos terrains et ouvrir des créneaux dans l'espace Club Pro !
-        </p>
-        <button class="btn-new-admin-booking" onclick="switchViewMode('backoffice-dashboard')" style="margin: 0 auto;">
-          <span>⚡</span> Créer un Club dans l'Espace Club Pro
-        </button>
-      </div>
-    `;
-    return;
-  }
-
-  list.forEach(club => {
-    const card = document.createElement('div');
-    card.className = 'club-card';
-
-    const courtsBadges = (club.courts || []).map(crt => `
-      <span class="court-pill-badge">${crt.name} (${crt.type})</span>
-    `).join('');
-
-    card.innerHTML = `
-      <div class="club-card-top">
-        <div class="club-logo-box" style="background: ${club.logoColor || '#111'}; color: ${club.logoTextColor || '#FFF'};">
-          ${club.logoBadge || 'PADEL'}
-        </div>
-        <div class="club-info-col">
-          <div class="club-name-title">${club.name}</div>
-          <div class="club-address-text">📍 ${club.address} • <strong style="color: var(--hayapala-cyan);">${club.distance || '2.0 km'}</strong></div>
-          <div class="club-schedule-text">🕒 ${club.schedule || 'Ouvert 7j/7'}</div>
-        </div>
-      </div>
-
-      <div class="club-courts-pills-row">${courtsBadges}</div>
-
-      <div class="club-card-footer">
-        <div class="club-price-tag">
-          <span style="font-size: 11px; color: var(--text-secondary);">Tarif créneau 90 min</span>
-          <div style="font-size: 16px; font-weight: 900; color: var(--hayapala-volt);">
-            ${club.pricePoints} DT / joueur <span style="font-size: 11px; opacity:0.8;">(${club.pricePoints * 4} DT complet)</span>
-          </div>
-        </div>
-        <button class="btn-book-court-action" onclick="openBookingModalForClub('${club.id}')">
-          Réserver une piste &gt;
-        </button>
-      </div>
-    `;
-
-    container.appendChild(card);
-  });
-}
-
-// Open Booking Modal for Club
-window.openBookingModalForClub = function(clubId) {
-  const club = (AppState.clubs || []).find(c => c.id === clubId) || AppState.clubs[0];
-  if (!club) return;
-
-  AppState.selectedClubForBooking = club;
-  document.getElementById('modalBookClubName').textContent = club.name;
-  document.getElementById('modalBookClubAddress').textContent = club.address;
-  document.getElementById('modalBookPointsRate').textContent = `${club.pricePoints} Points (DT) / joueur`;
-
-  const courtSelect = document.getElementById('bookCourtSelect');
-  if (courtSelect) {
-    courtSelect.innerHTML = (club.courts || []).map(crt => `
-      <option value="${crt.id}">${crt.name} (${crt.type} - ${crt.surface})</option>
-    `).join('');
-  }
-
-  // Set default pricing text
-  const shareEl = document.getElementById('bookingShareDue');
-  if (shareEl) shareEl.textContent = `${club.pricePoints}.0 Points (${club.pricePoints} DT)`;
-
-  openModal('modal-book-court');
-};
-
-// --------------------------------------------------------------------------
-// PLAYER APP: MON PROFIL (Screen 4)
-// --------------------------------------------------------------------------
-function renderProfileData() {
-  if (!AppState.user) return;
-  const u = AppState.user;
-
-  const lvl = document.getElementById('profileLevelNumber');
-  if (lvl) lvl.textContent = Number(u.level).toFixed(2);
-
-  const rel = document.getElementById('profileReliabilityNumber');
-  if (rel) rel.textContent = `${Number(u.levelReliability).toFixed(1)}%`;
-
-  const matches = document.getElementById('profileMatchesCount');
-  if (matches) matches.textContent = `${u.matchesPlayed} Matches officiels`;
-
-  // Render match history
-  const container = document.getElementById('profileHistoryContainer');
-  if (!container) return;
-
-  container.innerHTML = '';
-  const history = AppState.userMatchHistory || [];
-
-  if (history.length === 0) {
-    container.innerHTML = `<div style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 12px;">Aucun match récent enregistré.</div>`;
-    return;
-  }
-
-  history.forEach(item => {
-    const card = document.createElement('div');
-    card.className = 'history-item-card';
-
-    const isWin = item.result === 'G';
-    const badgeClass = isWin ? 'win-badge' : 'loss-badge';
-    const badgeText = isWin ? 'Gagné' : 'Perdu';
-
-    card.innerHTML = `
-      <div class="history-item-left">
-        <div class="history-result-badge ${badgeClass}">${badgeText}</div>
-        <div>
-          <div class="history-match-title">${item.clubName} • Niveau ${item.level}</div>
-          <div class="history-score-text">${item.team2} (${item.team2Score}) vs ${item.team1} (${item.team1Score})</div>
-        </div>
-      </div>
-      <div class="history-date">${item.date}</div>
-    `;
-
-    container.appendChild(card);
-  });
-}
-
-// --------------------------------------------------------------------------
-// ADMIN BACK-OFFICE: DASHBOARD & MANAGEMENT MODULES
-// --------------------------------------------------------------------------
-
-// Fetch & Render Admin KPI Stats
-async function fetchAndRenderAdminStats(clubId) {
-  try {
-    const res = await fetch(`/api/admin/stats?clubId=${clubId}`);
-    if (res.ok) {
-      const data = await res.json();
-      const stats = data.stats;
-      
-      const elBkg = document.getElementById('kpiBookingsValue');
-      if (elBkg) elBkg.textContent = `${stats.totalBookings} Créneaux`;
-
-      const elOcc = document.getElementById('kpiOccupancyValue');
-      if (elOcc) elOcc.textContent = `${stats.occupancyRate}%`;
-
-      const elHrs = document.getElementById('kpiHoursValue');
-      if (elHrs) elHrs.textContent = `${stats.totalHours.toFixed(1)} Heures`;
-
-      const elRev = document.getElementById('kpiRevenueValue');
-      if (elRev) elRev.textContent = `${stats.totalRevenueDT} DT`;
-
-      const elPlr = document.getElementById('kpiPlayersValue');
-      if (elPlr) elPlr.textContent = `${stats.playersCount} Joueurs`;
-
-      const elTrn = document.getElementById('kpiTournamentsValue');
-      if (elTrn) elTrn.textContent = `${stats.activeTournaments} Ouverts`;
-    }
-  } catch (e) {
-    console.warn("Could not fetch admin stats", e);
-  }
-}
-
-// Render Admin Timetable Schedule (Tab 1)
-function renderAdminSchedule(clubId) {
-  const theadRow = document.getElementById('adminTimetableHeadRow');
-  const tbody = document.getElementById('adminTimetableBody');
-  if (!theadRow || !tbody) return;
-
-  const club = (AppState.clubs || []).find(c => c.id === clubId) || AppState.clubs[0];
-  if (!club || (AppState.clubs || []).length === 0) {
-    theadRow.innerHTML = `<th>Statut</th><th>Gestion</th>`;
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="2" style="text-align: center; padding: 48px 16px; color: var(--text-secondary);">
-          <p style="font-size: 38px; margin-bottom: 12px;">🎾</p>
-          <p style="font-weight: 800; color: var(--text-white); font-size: 16px;">Aucun club créé pour le moment.</p>
-          <p style="font-size: 13px; margin: 8px auto 20px; max-width: 360px;">
-            Cliquez sur le bouton ci-dessous pour créer votre premier club et configurer vos terrains !
-          </p>
-          <button class="btn-new-admin-booking" onclick="openModal('modal-admin-create-club')" style="margin: 0 auto;">
-            <span>+</span> Créer mon Premier Club
-          </button>
-        </td>
-      </tr>
-    `;
-    return;
-  }
-
-  if ((club.courts || []).length === 0) {
-    theadRow.innerHTML = `<th>Club</th><th>Terrains</th>`;
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="2" style="text-align: center; padding: 40px 16px; color: var(--text-secondary);">
-          <p style="font-size: 32px; margin-bottom: 8px;">🎾</p>
-          <p style="font-weight: 800; color: var(--text-white); font-size: 15px;">Le club "${club.name}" n'a pas encore de terrain.</p>
-          <p style="font-size: 12px; margin: 6px auto 16px;">Ajoutez au moins une piste de padel pour afficher la matrice du planning horaire.</p>
-          <button class="btn-new-admin-booking" onclick="openModal('modal-admin-add-court')" style="margin: 0 auto;">
-            <span>+</span> Ajouter un Terrain à ce Club
-          </button>
-        </td>
-      </tr>
-    `;
-    return;
-  }
-
-  // Header row
-  let theadHtml = `<th>Heures</th>`;
-  (club.courts || []).forEach(court => {
-    theadHtml += `<th>${court.name}<br /><span style="font-size: 10px; font-weight: 500; opacity: 0.8;">${court.type} • ${court.surface}</span></th>`;
-  });
-  theadRow.innerHTML = theadHtml;
-
-  // Timetable slots
-  const slots = [
-    "08:30 - 10:00",
-    "10:00 - 11:30",
-    "11:30 - 13:00",
-    "14:00 - 15:30",
-    "15:30 - 17:00",
-    "17:00 - 18:30",
-    "18:30 - 20:00",
-    "20:00 - 21:30",
-    "21:30 - 23:00"
-  ];
-
-  tbody.innerHTML = '';
-
-  slots.forEach(time => {
-    let trHtml = `<tr><td class="time-col">${time}</td>`;
-
-    (club.courts || []).forEach(court => {
-      const booking = (AppState.clubBookings || []).find(b => 
-        b.clubId === club.id &&
-        b.courtId === court.id &&
-        b.time === time
-      );
-
-      if (booking) {
-        const slotsPaid = booking.slotsPaid || (booking.status === 'confirmed' ? 4 : 1);
-        const slotsTotal = booking.slotsTotal || 4;
-        const isConfirmed = slotsPaid >= slotsTotal || booking.status === 'confirmed';
-        const collectedDT = slotsPaid * (booking.pricePerPlayer || 25);
-        const progressPct = Math.round((slotsPaid / slotsTotal) * 100);
-
-        trHtml += `
-          <td class="slot-cell" onclick="openManageBookingModal('${booking.id}')">
-            <div class="booking-badge-block ${isConfirmed ? 'confirmed' : 'open-match'}">
-              <div style="flex: 1; min-width: 0;">
-                <div style="display:flex; justify-content:space-between; align-items:center; gap: 4px;">
-                  <strong style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${booking.clientName}</strong>
-                  <span class="slot-counter-pill ${isConfirmed ? 'pill-confirmed' : 'pill-open'}">${slotsPaid}/${slotsTotal}</span>
-                </div>
-                <div style="font-size: 10px; opacity: 0.9; margin-top: 2px;">
-                  ${booking.type} • <strong>${collectedDT} DT</strong>
-                </div>
-                <div class="booking-progress-mini">
-                  <div class="booking-progress-fill ${isConfirmed ? 'fill-confirmed' : ''}" style="width: ${progressPct}%"></div>
-                </div>
-              </div>
-            </div>
-          </td>
-        `;
-      } else {
-        trHtml += `
-          <td class="slot-cell" onclick="handleAdminSlotClick('${club.id}', '${court.id}', '${time}')">
-            <span style="color: #64748B; font-size: 11px;">+ Libre</span>
-          </td>
-        `;
-      }
-    });
-
-    trHtml += `</tr>`;
-    tbody.innerHTML += trHtml;
-  });
-}
-
-// Click on empty slot in Admin -> opens direct booking modal
-window.handleAdminSlotClick = function(clubId, courtId, time) {
-  openAdminDirectBookingModal(courtId, time);
-};
-
-// Open Admin Direct Booking Modal
-function openAdminDirectBookingModal(preselectedCourtId = null, preselectedTime = null) {
-  const clubId = AppState.currentAdminClubId || 'club_connection';
-  const club = (AppState.clubs || []).find(c => c.id === clubId) || AppState.clubs[0];
-
-  const courtSelect = document.getElementById('adminDirectCourtSelect');
-  if (courtSelect && club) {
-    courtSelect.innerHTML = (club.courts || []).map(crt => `
-      <option value="${crt.id}" ${crt.id === preselectedCourtId ? 'selected' : ''}>${crt.name} (${crt.type})</option>
-    `).join('');
-  }
-
-  const timeSelect = document.getElementById('adminDirectTimeSelect');
-  if (timeSelect && preselectedTime) {
-    timeSelect.value = preselectedTime;
-  }
-
-  openModal('modal-admin-direct-booking');
-}
-
-// Execute Admin Direct Booking
-async function executeAdminDirectBooking(e) {
-  e.preventDefault();
-  const clubId = AppState.currentAdminClubId || 'club_connection';
-  const courtId = document.getElementById('adminDirectCourtSelect').value;
-  const time = document.getElementById('adminDirectTimeSelect').value;
-  const clientName = document.getElementById('adminDirectClientName').value;
-  const phone = document.getElementById('adminDirectClientPhone').value;
-  const type = document.getElementById('adminDirectTypeSelect').value;
-  const paymentMethod = document.getElementById('adminDirectPaySelect').value;
-
-  try {
-    const res = await fetch('/api/admin/bookings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        clubId,
-        courtId,
-        time,
-        clientName,
-        phone,
-        type,
-        paymentMethod
-      })
-    });
-    const result = await res.json();
-    if (result.success) {
-      closeAllModals();
-      showToast(result.message, "success");
-      await loadStateFromServer();
-      renderAdminAllViews();
-    } else {
-      showToast(result.message, "error");
-    }
-  } catch (err) {
-    showToast("Erreur lors de l'enregistrement de la réservation.", "error");
-  }
-}
-
-// Open Manage Booking Modal
-window.openManageBookingModal = function(bookingId) {
-  const booking = (AppState.clubBookings || []).find(b => b.id === bookingId);
-  if (!booking) return;
-
-  document.getElementById('manageBookingId').value = booking.id;
-  document.getElementById('manageBookingCourtName').textContent = booking.courtName;
-  document.getElementById('manageBookingTimeSlot').textContent = `${booking.date || "Aujourd'hui"} • ${booking.time}`;
-  document.getElementById('manageBookingClient').textContent = booking.clientName;
-  document.getElementById('manageBookingPhone').textContent = booking.phone || "-";
-  document.getElementById('manageBookingType').textContent = booking.type;
-  document.getElementById('manageBookingPaid').textContent = `${booking.slotsPaid || 1} / ${booking.slotsTotal || 4} parts réglées`;
-
-  const statusPill = document.getElementById('manageBookingStatusPill');
-  if (statusPill) {
-    statusPill.textContent = booking.status === 'confirmed' ? 'Statut : Validé & Réglé' : 'Statut : Partie Ouverte';
-  }
-
-  openModal('modal-admin-manage-booking');
-};
-
-// Execute Admin Confirm Booking
-async function executeAdminConfirmBooking() {
-  const bookingId = document.getElementById('manageBookingId').value;
-  try {
-    const res = await fetch(`/api/admin/bookings/${bookingId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'confirmed', slotsPaid: 4 })
-    });
-    const result = await res.json();
-    if (result.success) {
-      closeAllModals();
-      showToast("Réservation marquée comme confirmée !", "success");
-      await loadStateFromServer();
-      renderAdminAllViews();
-    }
-  } catch (err) {
-    showToast("Erreur lors de la mise à jour.", "error");
-  }
-}
-
-// Execute Admin Delete Booking
-async function executeAdminDeleteBooking() {
-  const bookingId = document.getElementById('manageBookingId').value;
-  if (!confirm("Voulez-vous vraiment annuler cette réservation et libérer le terrain ?")) return;
-
-  try {
-    const res = await fetch(`/api/admin/bookings/${bookingId}`, { method: 'DELETE' });
-    const result = await res.json();
-    if (result.success) {
-      closeAllModals();
-      showToast("Créneau libéré avec succès.", "info");
-      await loadStateFromServer();
-      renderAdminAllViews();
-    }
-  } catch (err) {
-    showToast("Erreur lors de l'annulation.", "error");
-  }
-}
-
-// --------------------------------------------------------------------------
-// ADMIN: COURTS MANAGEMENT (Tab 2)
-// --------------------------------------------------------------------------
-async function renderAdminCourts(clubId) {
-  const container = document.getElementById('adminCourtsListContainer');
-  if (!container) return;
-
-  if (!clubId || !AppState.clubs || AppState.clubs.length === 0) {
-    container.innerHTML = `
-      <div class="empty-state-notice" style="text-align: center; padding: 48px 20px; background: rgba(255, 255, 255, 0.02); border-radius: 20px; border: 1px dashed rgba(255, 255, 255, 0.1);">
-        <div style="font-size: 38px; margin-bottom: 12px;">🏢</div>
-        <div style="font-size: 17px; font-weight: 800; color: var(--text-white); margin-bottom: 8px;">Aucun Club Enregistré</div>
-        <div style="font-size: 13px; color: var(--text-secondary); max-width: 420px; margin: 0 auto 20px auto; line-height: 1.5;">
-          Pour pouvoir configurer et gérer vos terrains de padel, vous devez d'abord créer la fiche de votre club.
-        </div>
-        <button class="btn-primary-action" onclick="openModal('modal-admin-create-club')" style="max-width: 260px; margin: 0 auto;">
-          + Créer mon Premier Club
-        </button>
-      </div>
-    `;
-    return;
-  }
-
-  try {
-    const res = await fetch(`/api/admin/courts?clubId=${clubId}`);
-    if (res.ok) {
-      const data = await res.json();
-      const courts = data.courts || [];
-      container.innerHTML = '';
-
-      if (courts.length === 0) {
-        container.innerHTML = `
-          <div class="empty-state-notice" style="text-align: center; padding: 48px 20px; background: rgba(255, 255, 255, 0.02); border-radius: 20px; border: 1px dashed rgba(255, 255, 255, 0.1); width: 100%;">
-            <div style="font-size: 38px; margin-bottom: 12px;">🎾</div>
-            <div style="font-size: 17px; font-weight: 800; color: var(--text-white); margin-bottom: 8px;">Aucun Terrain pour ce Club</div>
-            <div style="font-size: 13px; color: var(--text-secondary); max-width: 420px; margin: 0 auto 20px auto; line-height: 1.5;">
-              Ajoutez votre première piste de padel (Indoor ou Outdoor) pour activer le planning et les réservations.
-            </div>
-            <button class="btn-primary-action" onclick="openModal('modal-admin-add-court')" style="max-width: 260px; margin: 0 auto;">
-              + Ajouter un Nouveau Terrain
-            </button>
-          </div>
-        `;
-        return;
-      }
-
-      courts.forEach(crt => {
-        const card = document.createElement('div');
-        card.className = 'court-admin-card';
-
-        const isActive = crt.status === 'active';
-        const statusClass = isActive ? 'status-active' : 'status-maintenance';
-        const statusLabel = isActive ? '🟢 En service' : '🟡 Maintenance';
-
-        card.innerHTML = `
-          <div class="court-admin-top">
-            <div>
-              <div class="court-admin-name">${crt.name}</div>
-              <div class="court-admin-badges">
-                <span class="court-badge-pill ${statusClass}">${statusLabel}</span>
-                <span class="court-badge-pill">${crt.type}</span>
-                <span class="court-badge-pill surface">${crt.surface}</span>
-              </div>
-            </div>
-            <div style="font-size: 16px; font-weight: 900; color: var(--hayapala-volt);">
-              ${crt.price} DT
-            </div>
-          </div>
-
-          <div class="court-admin-actions">
-            <button class="btn-court-toggle" onclick="toggleCourtStatus('${crt.id}', '${crt.status}')">
-              ${isActive ? 'Passer en Maintenance' : 'Remettre en Service'}
-            </button>
-            <button class="btn-court-delete" onclick="deleteCourt('${crt.id}')">
-              Supprimer
-            </button>
-          </div>
-        `;
-
-        container.appendChild(card);
-      });
-    }
-  } catch (e) {
-    console.warn("Could not load admin courts", e);
-  }
-}
-
-// Toggle court status
-window.toggleCourtStatus = async function(courtId, currentStatus) {
-  const newStatus = currentStatus === 'active' ? 'maintenance' : 'active';
-  try {
-    const res = await fetch(`/api/admin/courts/${courtId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: newStatus })
-    });
-    const result = await res.json();
-    if (result.success) {
-      showToast(result.message, "success");
-      await loadStateFromServer();
-      renderAdminCourts(AppState.currentAdminClubId);
-    }
-  } catch (e) {
-    showToast("Erreur lors de la modification de l'état du terrain.", "error");
-  }
-};
-
-// Delete court
-window.deleteCourt = async function(courtId) {
-  if (!confirm("Supprimer définitivement ce terrain de la configuration du club ?")) return;
-  try {
-    const res = await fetch(`/api/admin/courts/${courtId}`, { method: 'DELETE' });
-    const result = await res.json();
-    if (result.success) {
-      showToast(result.message, "info");
-      await loadStateFromServer();
-      renderAdminCourts(AppState.currentAdminClubId);
-    }
-  } catch (e) {
-    showToast("Erreur lors de la suppression.", "error");
-  }
-};
-
-// Execute Admin Add Court
-async function executeAdminAddCourt(e) {
-  e.preventDefault();
-  
-  if (!AppState.clubs || AppState.clubs.length === 0) {
-    closeAllModals();
-    showToast("Veuillez d'abord créer un club de padel !", "warning");
-    openModal('modal-admin-create-club');
-    return;
-  }
-
-  const name = document.getElementById('adminAddCourtName').value;
-  const type = document.getElementById('adminAddCourtType').value;
-  const surface = document.getElementById('adminAddCourtSurface').value;
-  const price = document.getElementById('adminAddCourtPrice').value;
-  const clubId = AppState.currentAdminClubId || AppState.clubs[0].id;
-
-  try {
-    const res = await fetch('/api/admin/courts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, type, surface, price, clubId })
-    });
-    const result = await res.json();
-    if (result.success) {
-      closeAllModals();
-      showToast(result.message, "success");
-      document.getElementById('formAdminAddCourt').reset();
-      await loadStateFromServer();
-      renderAdminCourts(clubId);
-      renderAdminSchedule(clubId);
-    }
-  } catch (err) {
-    showToast("Erreur lors de l'ajout du court.", "error");
-  }
-}
-
-// --------------------------------------------------------------------------
-// ADMIN: TOURNAMENTS MANAGEMENT (Tab 3)
-// --------------------------------------------------------------------------
-async function renderAdminTournaments() {
-  const container = document.getElementById('adminTournamentsListContainer');
-  if (!container) return;
-
-  try {
-    const res = await fetch('/api/admin/tournaments');
-    if (res.ok) {
-      const data = await res.json();
-      const tournaments = data.tournaments || [];
-      container.innerHTML = '';
-
-      tournaments.forEach(trn => {
-        const card = document.createElement('div');
-        card.className = 'tournament-admin-card';
-
-        const participantsCount = (trn.participants || []).length;
-
-        card.innerHTML = `
-          <div>
-            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-              <span class="brand-tag">${trn.format}</span>
-              <span class="court-badge-pill status-active">${trn.status === 'open' ? 'Inscriptions Ouvertes' : 'En cours'}</span>
-            </div>
-            <div style="font-size: 18px; font-weight: 900; color: var(--text-white); margin: 8px 0 4px;">${trn.title}</div>
-            <div style="font-size: 12px; color: var(--text-secondary);">📅 ${trn.date} • 📍 ${trn.clubName}</div>
-            <div style="display:flex; gap: 14px; margin-top: 12px; font-size: 13px;">
-              <div>Inscription : <strong style="color: var(--hayapala-volt);">${trn.entryFee} DT</strong></div>
-              <div>Dotation : <strong style="color: #34D399;">${trn.prizePool} DT</strong></div>
-              <div>Équipes : <strong>${participantsCount} / ${trn.maxTeams}</strong></div>
-            </div>
-          </div>
-
-          <div style="display:flex; gap: 8px; border-top: 1px solid var(--border-subtle); padding-top: 12px;">
-            <button class="btn-court-toggle" onclick="showToast('Inscriptions clôturées pour ce tournoi.', 'info')">
-              Clôturer les Inscriptions
-            </button>
-          </div>
-        `;
-
-        container.appendChild(card);
-      });
-    }
-  } catch (e) {
-    console.warn("Could not load admin tournaments", e);
-  }
-}
-
-// Execute Admin Create Tournament
-async function executeAdminCreateTournament(e) {
-  e.preventDefault();
-  const title = document.getElementById('adminTournTitle').value;
-  const format = document.getElementById('adminTournFormat').value;
-  const date = document.getElementById('adminTournDate').value;
-  const maxTeams = document.getElementById('adminTournMaxTeams').value;
-  const entryFee = document.getElementById('adminTournFee').value;
-  const prizePool = document.getElementById('adminTournPrize').value;
-  const clubId = AppState.currentAdminClubId || 'club_connection';
-
-  try {
-    const res = await fetch('/api/admin/tournaments', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, format, date, maxTeams, entryFee, prizePool, clubId })
-    });
-    const result = await res.json();
-    if (result.success) {
-      closeAllModals();
-      showToast(result.message, "success");
-      document.getElementById('formAdminCreateTournament').reset();
-      await loadStateFromServer();
-      renderAdminTournaments();
-    }
-  } catch (err) {
-    showToast("Erreur lors de la création du tournoi.", "error");
-  }
-}
-
-// --------------------------------------------------------------------------
-// ADMIN: MEMBERS & WALLET CREDITING (Tab 4)
-// --------------------------------------------------------------------------
-async function renderAdminPlayers(searchQuery = '') {
-  const tbody = document.getElementById('adminPlayersTableBody');
-  if (!tbody) return;
-
-  try {
-    const res = await fetch('/api/admin/players');
-    if (res.ok) {
-      const data = await res.json();
-      let players = data.players || [];
-      const q = searchQuery.toLowerCase().trim();
-
-      if (q) {
-        players = players.filter(p => 
-          p.name.toLowerCase().includes(q) || 
-          (p.city && p.city.toLowerCase().includes(q)) ||
-          (p.phone && p.phone.includes(q))
-        );
-      }
-
-      tbody.innerHTML = '';
-      players.forEach(p => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>
-            <div style="display:flex; align-items:center; gap: 8px;">
-              <span style="font-size: 20px;">${p.avatar || '👨'}</span>
-              <div>
-                <strong>${p.name}</strong>
-                <div style="font-size: 11px; color: var(--text-secondary);">${p.club || 'Padel'} • ${p.city || 'Tunis'}</div>
-              </div>
-            </div>
-          </td>
-          <td>${p.phone || '+216 -- --- ---'}</td>
-          <td><strong style="color: var(--hayapala-volt);">⭐ ${Number(p.level).toFixed(2)}</strong></td>
-          <td>${Number(p.reliability || 50).toFixed(0)}%</td>
-          <td>${p.matches || 0}</td>
-          <td><strong style="color: var(--hayapala-cyan);">${Number(p.points || 0).toFixed(2)} pts</strong></td>
-          <td>
-            <button class="btn-admin-table-action" onclick="openAdjustPointsModal('${p.id}', '${p.name}')">⚡ Créditer Solde</button>
-            <button class="btn-admin-table-action" style="border-color: var(--hayapala-cyan); color: var(--hayapala-cyan);" onclick="promptAdjustLevel('${p.id}', ${p.level})">⭐ ELO</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-  } catch (e) {
-    console.warn("Could not load admin players", e);
-  }
-}
-
-// Open Adjust Points Modal
-window.openAdjustPointsModal = function(playerId, playerName) {
-  document.getElementById('adminAdjustPlayerId').value = playerId;
-  document.getElementById('adminAdjustPlayerName').textContent = playerName;
-  openModal('modal-admin-adjust-points');
-};
-
-// Execute Adjust Points
-async function executeAdminAdjustPoints(e) {
-  e.preventDefault();
-  const playerId = document.getElementById('adminAdjustPlayerId').value;
-  const amount = Number(document.getElementById('adminAdjustAmount').value);
-  const reason = document.getElementById('adminAdjustReason').value;
-
-  try {
-    const res = await fetch('/api/admin/players/adjust-points', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ playerId, amount, reason })
-    });
-    const result = await res.json();
-    if (result.success) {
-      closeAllModals();
-      showToast(result.message, "success");
-      await loadStateFromServer();
-      renderAdminPlayers();
-      fetchAndRenderAdminStats(AppState.currentAdminClubId);
-    } else {
-      showToast(result.message, "error");
-    }
-  } catch (err) {
-    showToast("Erreur lors de l'ajustement de solde.", "error");
-  }
-}
-
-// Prompt Adjust Level ELO
-window.promptAdjustLevel = async function(playerId, currentLevel) {
-  const newLevelStr = prompt(`Modifier le niveau certifié officiel (Actuel: ${currentLevel}) :`, currentLevel);
-  if (!newLevelStr) return;
-  const level = Number(newLevelStr);
-  if (isNaN(level) || level < 1 || level > 8) {
-    alert("Le niveau doit être compris entre 1.00 et 8.00.");
-    return;
-  }
-
-  try {
-    const res = await fetch('/api/admin/players/adjust-level', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ playerId, level })
-    });
-    const result = await res.json();
-    if (result.success) {
-      showToast(result.message, "success");
-      await loadStateFromServer();
-      renderAdminPlayers();
-      renderProfileData();
-    }
-  } catch (e) {
-    showToast("Erreur lors de la mise à jour du niveau.", "error");
-  }
-};
-
-// --------------------------------------------------------------------------
-// ADMIN: MATCHES SUPERVISION (Tab 5)
-// --------------------------------------------------------------------------
-function renderAdminMatches() {
-  const container = document.getElementById('adminMatchesListContainer');
-  if (!container) return;
-
-  container.innerHTML = '';
-  const matches = AppState.matches || [];
-
-  if (matches.length === 0) {
-    container.innerHTML = `<div style="color: var(--text-secondary); padding: 20px;">Aucune partie ouverte active.</div>`;
-    return;
-  }
-
-  matches.forEach(m => {
-    const card = document.createElement('div');
-    card.className = 'match-admin-card';
-
-    const pCount = (m.team1 || []).filter(Boolean).length + (m.team2 || []).filter(Boolean).length;
-
-    card.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span class="brand-tag">${m.clubName}</span>
-        <span class="court-badge-pill status-active">${pCount} / 4 Joueurs</span>
-      </div>
-      <div style="font-size: 15px; font-weight: 800; color: var(--text-white);">${m.date} • ${m.time}</div>
-      <div style="font-size: 12px; color: var(--text-secondary);">Niveau requis : <strong>${m.levelRange}</strong> • Coût part : <strong>${m.pointsCost} DT</strong></div>
-      <div style="display:flex; gap: 8px; border-top: 1px solid var(--border-subtle); padding-top: 10px;">
-        <button class="btn-court-toggle" onclick="showToast('Partie validée et clôturée par l\\'arbitre.', 'success')">Valider Score</button>
-        <button class="btn-court-delete" onclick="showToast('Partie annulée.', 'info')">Annuler Match</button>
-      </div>
-    `;
-
-    container.appendChild(card);
-  });
-}
-
-// --------------------------------------------------------------------------
-// ADMIN: FINANCES & AUDIT TRAIL (Tab 6)
-// --------------------------------------------------------------------------
-async function renderAdminFinances() {
-  const tbody = document.getElementById('adminTransactionsTableBody');
-  if (!tbody) return;
-
-  try {
-    const res = await fetch('/api/admin/transactions');
-    if (res.ok) {
-      const data = await res.json();
-      const txs = data.transactions || [];
-      tbody.innerHTML = '';
-
-      if (txs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-secondary);">Aucune transaction pour le moment.</td></tr>`;
-        return;
-      }
-
-      txs.forEach(tx => {
-        const tr = document.createElement('tr');
-        const isCredit = tx.type.includes('recharge') || tx.type.includes('credit');
-        const color = isCredit ? '#10B981' : '#F59E0B';
-
-        tr.innerHTML = `
-          <td>${new Date(tx.createdAt || Date.now()).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
-          <td><strong>${tx.userName || 'Client'}</strong></td>
-          <td><span class="court-badge-pill">${tx.type}</span></td>
-          <td><strong style="color: ${color};">${tx.amount} DT</strong></td>
-          <td>${tx.paymentMethod || 'Mobile Pay'}</td>
-          <td style="font-size: 11px; color: var(--text-secondary);">${tx.description || '-'}</td>
-          <td><span class="court-badge-pill status-active">✓ Validé</span></td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-  } catch (e) {
-    console.warn("Could not load admin finances", e);
-  }
-}
-
-// --------------------------------------------------------------------------
-// ADMIN: CLUB SETTINGS (Tab 7)
-// --------------------------------------------------------------------------
-async function renderAdminSettings(clubId) {
-  try {
-    const res = await fetch(`/api/admin/settings?clubId=${clubId}`);
-    if (res.ok) {
-      const data = await res.json();
-      const s = data.settings;
-      if (s) {
-        const nameEl = document.getElementById('settingClubName');
-        if (nameEl) nameEl.value = s.name || '';
-
-        const addrEl = document.getElementById('settingClubAddress');
-        if (addrEl) addrEl.value = s.address || '';
-
-        const phoneEl = document.getElementById('settingClubPhone');
-        if (phoneEl) phoneEl.value = s.phone || '';
-
-        const emailEl = document.getElementById('settingClubEmail');
-        if (emailEl) emailEl.value = s.email || '';
-
-        const openEl = document.getElementById('settingClubOpen');
-        if (openEl) openEl.value = s.openTime || '06:30';
-
-        const closeEl = document.getElementById('settingClubClose');
-        if (closeEl) closeEl.value = s.closeTime || '00:30';
-
-        const priceEl = document.getElementById('settingClubPrice');
-        if (priceEl) priceEl.value = s.pricePerPlayer || 25;
-      }
-    }
-  } catch (e) {
-    console.warn("Could not load club settings", e);
-  }
-}
-
-// Save Club Settings Form
-async function executeAdminSaveSettings(e) {
-  e.preventDefault();
-  const clubId = AppState.currentAdminClubId || 'club_connection';
-  const name = document.getElementById('settingClubName').value;
-  const address = document.getElementById('settingClubAddress').value;
-  const phone = document.getElementById('settingClubPhone').value;
-  const email = document.getElementById('settingClubEmail').value;
-  const openTime = document.getElementById('settingClubOpen').value;
-  const closeTime = document.getElementById('settingClubClose').value;
-  const pricePerPlayer = Number(document.getElementById('settingClubPrice').value);
-
-  try {
-    const res = await fetch('/api/admin/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clubId, name, address, phone, email, openTime, closeTime, pricePerPlayer })
-    });
-    const result = await res.json();
-    if (result.success) {
-      showToast(result.message, "success");
-      await loadStateFromServer();
-    }
-  } catch (err) {
-    showToast("Erreur lors de l'enregistrement des paramètres.", "error");
-  }
-}
-
-// --------------------------------------------------------------------------
-// COMMON ACTIONS & MODALS
-// --------------------------------------------------------------------------
-
-// Join Featured Tournament
-window.joinFeaturedTournament = async function() {
-  try {
-    const res = await fetch('/api/tournaments/join', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tournamentId: 'tourn_masters_2026' })
-    });
-    const result = await res.json();
-    if (result.success) {
-      showToast(result.message, "success");
-    }
-  } catch (e) {
-    showToast("Erreur lors de l'inscription.", "error");
-  }
-};
-
-// Execute Book Court Submission
-async function executeBookCourt(e) {
-  e.preventDefault();
-  const courtId = document.getElementById('bookCourtSelect').value;
-  const time = document.getElementById('bookTimeSelect').value;
-  const type = document.getElementById('bookTypeSelect').value;
-  const clientName = document.getElementById('bookClientName').value || AppState.user.name;
-  const phone = document.getElementById('bookClientPhone').value || AppState.user.phone;
-
-  try {
-    const res = await fetch('/api/courts/book', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        clubId: AppState.selectedClubForBooking.id,
-        courtId,
-        time,
-        type,
-        clientName,
-        phone,
-        bookedBy: 'user'
-      })
-    });
-    const result = await res.json();
-    if (result.success) {
-      closeAllModals();
-      showToast(result.message, "success");
-      await loadStateFromServer();
-      renderAllViews();
-    } else {
-      showToast(result.message, "error");
-      if (result.message.includes('Points insuffisants')) {
-        openModal('modal-recharge-points');
-      }
-    }
-  } catch (err) {
-    showToast("Erreur lors de la réservation du terrain.", "error");
-  }
-}
-
-// Execute Create Match
-async function executeCreateMatch(e) {
-  e.preventDefault();
-  const clubId = document.getElementById('createMatchClubSelect').value;
-  const time = document.getElementById('createMatchTime').value;
-  const levelRange = document.getElementById('createMatchLevelRange').value;
-  const pointsCost = document.getElementById('createMatchPointsCost').value;
-
-  try {
-    const res = await fetch('/api/matches/create', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clubId, time, levelRange, pointsCost })
-    });
-    const result = await res.json();
-    if (result.success) {
-      closeAllModals();
-      showToast(result.message, "success");
-      await loadStateFromServer();
-      navigateToScreen('screen-join-match');
-      renderMatchesFeed();
-    }
-  } catch (err) {
-    showToast("Erreur lors de la création du match.", "error");
-  }
-}
-
-// Execute Points Recharge
-async function executeRecharge() {
-  const selectedPack = document.querySelector('.pack-card.selected');
-  const amount = Number(selectedPack ? selectedPack.dataset.points : 50);
-  const selectedMethod = document.querySelector('.payment-method-card.selected')?.dataset.method || 'flouci';
-
-  try {
-    const res = await fetch('/api/user/wallet/recharge', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount, paymentMethod: selectedMethod })
-    });
-    const result = await res.json();
-    if (result.success) {
-      closeAllModals();
-      AppState.user.points = result.points;
-      updateHeaderPoints();
-      showToast(result.message, "success");
-      fetchAndRenderAdminStats(AppState.currentAdminClubId);
-    }
-  } catch (err) {
-    showToast("Erreur lors de la recharge de points.", "error");
-  }
-}
-
-// Execute Points Transfer
-async function executeTransfer() {
-  const amount = Number(document.getElementById('transferAmountInput').value) || 10;
-  const recipient = document.getElementById('transferRecipientInput').value || "+216 98 000 000";
-
-  try {
-    const res = await fetch('/api/user/wallet/transfer', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount, recipient })
-    });
-    const result = await res.json();
-    if (result.success) {
-      closeAllModals();
-      AppState.user.points = result.points;
-      updateHeaderPoints();
-      showToast(result.message, "success");
-    } else {
-      showToast(result.message, "error");
-    }
-  } catch (err) {
-    showToast("Erreur lors du transfert de points.", "error");
-  }
-}
-
-// Reset Demo Data
-async function resetDemoData() {
-  if (confirm("Réinitialiser toutes les données de test à leur état officiel d'origine ?")) {
+    // Tentative Firebase Auth (email/password)
     try {
-      const res = await fetch('/api/admin/reset-demo', { method: 'POST' });
-      const result = await res.json();
-      showToast(result.message, "info");
-      await loadStateFromServer();
-      renderAllViews();
+      await fbSignIn(email, password);
+      switchViewMode('backoffice-dashboard');
+      showToast('Connexion réussie ✓', 'success');
+      fbTrack('login', { method: 'firebase_email' });
     } catch (err) {
-      showToast("Erreur lors de la réinitialisation.", "error");
+      showToast('Identifiants incorrects. Essayez admin / admin pour la démo.', 'error');
+      console.error('Auth error:', err.code, err.message);
     }
-  }
-}
-
-// Modal Helpers
-window.openModal = function(modalId) {
-  const modal = document.getElementById(modalId);
-  if (modal) {
-    modal.classList.add('active');
-  } else {
-    console.warn("Modal not found:", modalId);
-  }
-};
-
-window.closeAllModals = function() {
-  document.querySelectorAll('.modal-overlay').forEach(modal => {
-    modal.classList.remove('active');
   });
-};
 
-// Toast Notice Helper
-function showToast(message, type = 'info') {
-  const toast = document.getElementById('globalToastNotice');
-  if (!toast) return;
-
-  const icon = type === 'success' ? '✅' : (type === 'error' ? '⚠️' : 'ℹ️');
-  toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
-  toast.className = 'toast-notice show';
-
-  setTimeout(() => {
-    toast.className = 'toast-notice';
-  }, 3400);
-}
-
-// --------------------------------------------------------------------------
-// PAIRES OFFICIELLES & DÉFIS DUO (ELO RANKING)
-// --------------------------------------------------------------------------
-window.openOfficialTeamsModal = async function() {
-  await fetchAndRenderTeams();
-  openModal('modal-official-teams');
-};
-
-async function fetchAndRenderTeams() {
-  try {
-    const res = await fetch('/api/teams');
-    if (res.ok) {
-      const data = await res.json();
-      AppState.officialTeams = data.teams;
-    }
-  } catch (e) {
-    console.warn("Could not fetch teams", e);
-  }
-
-  const container = document.getElementById('officialTeamsListWrapper');
-  if (!container) return;
-
-  const teams = AppState.officialTeams || [];
-  const userTeam = teams.find(t => t.isUserTeam) || teams[2];
-  const userHero = document.getElementById('userDuoHeroCard');
-
-  if (userHero && userTeam) {
-    const userRank = teams.findIndex(t => t.id === userTeam.id) + 1;
-    userHero.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-        <div>
-          <span class="user-duo-rank-pill">#${userRank} au Classement National</span>
-          <div class="user-duo-name">${userTeam.name}</div>
-          <div class="user-duo-players">${userTeam.player1?.avatar || '🎾'} ${userTeam.player1?.name} (${Number(userTeam.player1?.level).toFixed(2)}) & ${userTeam.player2?.avatar || '👨'} ${userTeam.player2?.name} (${Number(userTeam.player2?.level).toFixed(2)})</div>
-        </div>
-        <div class="user-duo-elo-badge">
-          <div style="font-size: 10px; opacity:0.8;">ELO DUO</div>
-          <div style="font-size: 20px; font-weight:900; color:var(--hayapala-volt);">${userTeam.eloRating}</div>
-        </div>
-      </div>
-      <div class="user-duo-stats-row">
-        <div><span>Victoires :</span> <strong>${userTeam.wins}V - ${userTeam.losses}D</strong></div>
-        <div><span>Taux :</span> <strong style="color:#10B981;">${userTeam.winRate}%</strong></div>
-        <div><span>Série :</span> <strong style="color:var(--hayapala-volt);">${userTeam.streak}</strong></div>
-      </div>
-    `;
-  }
-
-  let html = '<div class="duo-leaderboard-list">';
-  teams.forEach((team, idx) => {
-    const rank = idx + 1;
-    const isUser = team.isUserTeam;
-    html += `
-      <div class="duo-item-card ${isUser ? 'is-user' : ''}">
-        <div class="duo-rank-num">#${rank}</div>
-        <div class="duo-item-details">
-          <div class="duo-item-top">
-            <span class="duo-team-name-text">${team.name}</span>
-            <span class="duo-badge-tag">${team.badge}</span>
-          </div>
-          <div class="duo-players-names">${team.player1?.name} & ${team.player2?.name} (${team.homeClub})</div>
-        </div>
-        <div class="duo-elo-stats">
-          <div class="duo-elo-val">${team.eloRating} ELO</div>
-          <div class="duo-winrate-val">${team.winRate}% victoires</div>
-        </div>
-        ${!isUser ? `<button class="btn-challenge-duo" onclick="challengeDuoTeam('${team.id}')">⚔️ Défier</button>` : `<span style="font-size:10px; color:var(--hayapala-volt); font-weight:800; padding:4px 6px;">VOUS</span>`}
-      </div>
-    `;
-  });
-  html += '</div>';
-  container.innerHTML = html;
-}
-
-window.challengeDuoTeam = async function(teamId) {
-  try {
-    const res = await fetch('/api/teams/challenge', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ teamId })
+  // ── Admin LOGOUT ──
+  document.querySelectorAll('[onclick*="backoffice-login"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      try { await fbSignOut(); } catch (e) {}
+      switchViewMode('backoffice-login');
     });
-    const result = await res.json();
-    if (result.success) {
-      showToast(result.message, "success");
-    } else {
-      showToast(result.message, "error");
-    }
-  } catch (err) {
-    showToast("Erreur lors de l'envoi du défi.", "error");
-  }
-};
-
-window.renderCommunityPlayersDirectory = function(query = '') {
-  const container = document.getElementById('registeredPlayersDirectory');
-  if (!container) return;
-
-  const q = query.toLowerCase().trim();
-  let players = AppState.communityPlayers || [];
-  if (q) {
-    players = players.filter(p => p.name.toLowerCase().includes(q) || (p.club && p.club.toLowerCase().includes(q)) || (p.city && p.city.toLowerCase().includes(q)));
-  }
-
-  if (players.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding: 12px; font-size:12px; color:var(--text-secondary);">Aucun joueur trouvé pour "${query}".</div>`;
-    return;
-  }
-
-  let html = '';
-  players.forEach(p => {
-    html += `
-      <div class="directory-player-row" onclick="selectDuoPartner('${p.id}')">
-        <div class="directory-player-left">
-          <span class="directory-player-avatar">${p.avatar || '👤'}</span>
-          <div>
-            <div class="directory-player-name">${p.name}</div>
-            <div class="directory-player-meta">${p.club || 'Padel'} • ${p.matches || 0} matches (${p.reliability || 50}% fiabilité)</div>
-          </div>
-        </div>
-        <div class="directory-player-level">⭐ ${Number(p.level).toFixed(2)}</div>
-      </div>
-    `;
   });
-  container.innerHTML = html;
-};
 
-window.selectDuoPartner = function(playerId) {
-  const partner = (AppState.communityPlayers || []).find(p => p.id === playerId);
-  if (!partner) return;
+  // ── Évaluation coach — bouton Valider ──
+  document.getElementById('btnSubmitEvaluation')?.addEventListener('click', async () => {
+    const playerId = document.getElementById('btnSubmitEvaluation').dataset.playerId;
+    if (!playerId) return;
 
-  AppState.selectedPartnerForDuo = partner;
+    const level   = parseInt(document.getElementById('evalLevelSelector')?.querySelector('.eval-level-btn.active')?.textContent) || null;
+    const comment = document.getElementById('evalCoachComment')?.value?.trim() || '';
 
-  document.getElementById('selectedPartnerId').value = partner.id;
-  document.getElementById('selectedPartnerAvatar').textContent = partner.avatar || '👨';
-  document.getElementById('selectedPartnerName').textContent = partner.name;
-  document.getElementById('selectedPartnerLevel').textContent = `⭐ ${Number(partner.level).toFixed(2)}`;
-  document.getElementById('selectedPartnerClub').textContent = partner.club || 'Padel Club';
+    if (!level) { showToast('Sélectionnez un niveau officiel.', 'error'); return; }
 
-  document.getElementById('selectedPartnerCard').style.display = 'flex';
-  document.getElementById('registeredPlayersDirectory').style.display = 'none';
-
-  const teamNameInput = document.getElementById('duoTeamNameInput');
-  if (!teamNameInput.value) {
-    teamNameInput.value = `Team Moslem & ${partner.name.split(' ')[0]}`;
-  }
-
-  updateDuoProjection();
-};
-
-window.updateDuoProjection = function() {
-  const userLevel = AppState.user ? Number(AppState.user.level) : 5.49;
-  const partner = AppState.selectedPartnerForDuo;
-  const partnerLevel = partner ? Number(partner.level) : 5.00;
-  const partnerName = partner ? partner.name : "Ahmed Horrigue";
-
-  const teamLevel = Number(((userLevel + partnerLevel) / 2).toFixed(2));
-  const elo = Math.round(1000 + teamLevel * 100);
-
-  const projPartnerEl = document.getElementById('duoProjPartner');
-  const projLevelEl = document.getElementById('duoProjLevel');
-  const projEloEl = document.getElementById('duoProjElo');
-
-  if (projPartnerEl) projPartnerEl.textContent = `${partnerName} (⭐ ${partnerLevel.toFixed(2)})`;
-  if (projLevelEl) projLevelEl.textContent = teamLevel.toFixed(2);
-  if (projEloEl) projEloEl.textContent = `${elo} ELO`;
-};
-
-async function executeCreateDuo(e) {
-  e.preventDefault();
-  const partner = AppState.selectedPartnerForDuo;
-  const partnerId = partner?.id || document.getElementById('selectedPartnerId').value || 'usr_ahmed';
-  const partnerName = partner?.name || "Ahmed Horrigue";
-  const teamName = document.getElementById('duoTeamNameInput').value;
-  const homeClub = document.getElementById('duoHomeClubSelect').value;
-
-  try {
-    const res = await fetch('/api/teams/create', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ partnerId, partnerName, teamName, homeClub })
+    const skills = {};
+    document.querySelectorAll('#skillsEvalGrid .skill-eval-row').forEach(row => {
+      const key  = row.dataset.skill;
+      const val  = parseInt(row.querySelector('.eval-dot.active')?.dataset.val) || 5;
+      skills[key] = val;
     });
-    const result = await res.json();
-    if (result.success) {
-      showToast(result.message, "success");
-      document.getElementById('formCreateDuo').reset();
-      AppState.selectedPartnerForDuo = null;
-      document.getElementById('selectedPartnerCard').style.display = 'none';
-      document.getElementById('registeredPlayersDirectory').style.display = 'flex';
-      document.getElementById('tabDuoRanking').click();
-      await fetchAndRenderTeams();
-    } else {
-      showToast(result.message, "error");
-    }
-  } catch (err) {
-    showToast("Erreur lors de la création de la paire.", "error");
-  }
-}
 
-// --------------------------------------------------------------------------
-// RATING SIMULATOR (Glicko-2 / Elo)
-// --------------------------------------------------------------------------
-document.getElementById('btnOpenRatingSimulator')?.addEventListener('click', () => {
-  if (AppState.user) {
-    document.getElementById('simPlayerCurrentLevel').textContent = AppState.user.level.toFixed(2);
-    document.getElementById('simPlayerCurrentRel').textContent = `${AppState.user.levelReliability.toFixed(2)}%`;
-  }
-  openModal('modal-rating-simulator');
-  updateSimulatorPreview();
+    // Sauvegarder en local d'abord (réactivité immédiate)
+    const player = DB.players.find(p => p.id === playerId);
+    if (player) {
+      const prev = player.level;
+      player.level              = level;
+      player.status             = 'active';
+      player.skills             = skills;
+      player.levelValidatedAt   = new Date().toISOString();
+      player.levelValidatedBy   = 'coach_ali';
+      player.levelHistory       = [...(player.levelHistory || []), {
+        previousLevel: prev, newLevel: level,
+        changedAt: new Date().toISOString(), changedBy: 'coach_ali', coachComment: comment,
+      }];
+      saveDB(DB);
+    }
+
+    // Persister en Firestore en arrière-plan
+    try {
+      await fbUpdatePlayerLevel(playerId, { level, coachComment: comment, coachId: DB.currentUser?.id || 'coach_ali' });
+      await fbSavePlayer({ ...player, skills });
+      showToast(`Niveau ${level}/7 validé pour ${player?.firstName} ✓`, 'success');
+      fbTrack('player_evaluated', { playerId, level });
+    } catch (e) {
+      showToast(`Niveau ${level}/7 sauvegardé (Firestore hors-ligne).`, 'gold');
+    }
+
+    closeAllModals();
+    renderAdminPlayers();
+  });
+
+  // ── Inscription nouveau membre (Firestore) ──
+  document.getElementById('btnConfirmRegisterPlayer')?.addEventListener('click', async () => {
+    const name  = document.getElementById('regPlayerName')?.value?.trim();
+    const phone = document.getElementById('regPlayerPhone')?.value?.trim();
+    const email = document.getElementById('regPlayerEmail')?.value?.trim();
+    const side  = document.getElementById('regPlayerSide')?.value || 'right';
+    const style = document.getElementById('regPlayerStyle')?.value || 'offensive';
+
+    if (!name || !phone) { showToast('Nom et téléphone obligatoires.', 'error'); return; }
+
+    const [firstName, ...lastParts] = name.split(' ');
+    const lastName  = lastParts.join(' ') || '';
+    const newPlayer = {
+      id:              `player_${Date.now()}`,
+      firstName, lastName, phone, email,
+      avatar:          null,
+      role:            'player',
+      status:          'pending',
+      level:           null,
+      preferredSide:   side,
+      playStyle:       style,
+      reliabilityScore: 50,
+      totalMatchesPlayed: 0,
+      skills:          {},
+      levelHistory:    [],
+      consentSignedAt: new Date().toISOString(),
+      createdAt:       new Date().toISOString(),
+    };
+
+    DB.players.push(newPlayer);
+    saveDB(DB);
+
+    try {
+      await fbSavePlayer(newPlayer);
+      showToast(`${name} inscrit(e) ✓ — En attente d'évaluation coach.`, 'success');
+      fbTrack('player_registered', { playerId: newPlayer.id });
+    } catch (e) {
+      showToast(`${name} inscrit(e) (Firestore hors-ligne).`, 'gold');
+    }
+
+    closeAllModals();
+    renderAdminPlayers();
+  });
+
+  // ── Réservation terrain (Firestore) ──
+  document.getElementById('btnConfirmBooking')?.addEventListener('click', async () => {
+    const courtNum = parseInt(document.getElementById('bookCourtSelect')?.value) || 1;
+    const date     = document.getElementById('bookDateInput')?.value || getTodayStr();
+    const time     = document.getElementById('bookStartTime')?.value || '10:00';
+    const duration = parseInt(document.getElementById('bookDuration')?.value) || 90;
+    const type     = document.getElementById('bookType')?.value || 'private';
+    const courtId  = `court_${courtNum}`;
+    const court    = DB.courts.find(c => c.id === courtId);
+    const user     = DB.players.find(p => p.id === DB.currentUser.id);
+
+    const newBooking = {
+      id:            `bk_${Date.now()}`,
+      courtId,
+      courtName:     court?.name || `Terrain ${courtNum}`,
+      date, startTime: time,
+      endTime:       addMinutes(time, duration),
+      type, status:  'confirmed',
+      players:       [{ userId: DB.currentUser.id, name: `${user?.firstName} ${user?.lastName}`, level: user?.level, isOrganizer: true }],
+      waitlist:      [],
+      pricePerPlayer: DB.appConfig.pricePeak,
+      createdAt:     new Date().toISOString(),
+    };
+
+    DB.bookings.push(newBooking);
+    saveDB(DB);
+
+    try {
+      const id = await fbAddBooking(newBooking);
+      newBooking.id = id;
+      showToast('Réservation confirmée ✓ Paiement sur place.', 'success');
+      fbTrack('booking_created', { courtId, type });
+    } catch (e) {
+      showToast('Réservation enregistrée (Firestore hors-ligne).', 'gold');
+    }
+
+    closeAllModals();
+    renderCourtsPlanningGrid();
+    renderHomeScreen();
+  });
+
+  // ── Créer un match ouvert (Firestore) ──
+  document.getElementById('btnConfirmCreateMatch')?.addEventListener('click', async () => {
+    const courtNum = parseInt(document.getElementById('createMatchCourt')?.value) || 1;
+    const datetime = document.getElementById('createMatchDateTime')?.value;
+    const levelRange = document.getElementById('createMatchLevel')?.value || '4-6';
+    const note     = document.getElementById('createMatchNote')?.value?.trim() || '';
+    const [minL, maxL] = levelRange.split('-').map(Number);
+    const courtId  = `court_${courtNum}`;
+    const court    = DB.courts.find(c => c.id === courtId);
+    const user     = DB.players.find(p => p.id === DB.currentUser.id);
+
+    if (!datetime) { showToast('Sélectionnez une date et heure.', 'error'); return; }
+    const [date, time] = datetime.split('T');
+
+    const newMatch = {
+      id:            `bk_${Date.now()}`,
+      courtId,
+      courtName:     court?.name || `Terrain ${courtNum}`,
+      date, startTime: time?.slice(0, 5) || '18:00',
+      endTime:       addMinutes(time?.slice(0, 5) || '18:00', 90),
+      type:          'open', status: 'open',
+      minLevel:      minL || 3, maxLevel: maxL || 5,
+      players:       [{ userId: DB.currentUser.id, name: `${user?.firstName} ${user?.lastName}`, level: user?.level, isOrganizer: true }],
+      waitlist:      [],
+      pricePerPlayer: DB.appConfig.pricePeak,
+      notes:         note,
+      createdAt:     new Date().toISOString(),
+    };
+
+    DB.bookings.push(newMatch);
+    saveDB(DB);
+
+    try {
+      await fbCreateOpenMatch(newMatch);
+      showToast('Match ouvert publié ! 🎾 Joueurs compatibles notifiés.', 'success');
+      fbTrack('open_match_created', { courtId, minLevel: minL, maxLevel: maxL });
+    } catch (e) {
+      showToast('Match créé (Firestore hors-ligne).', 'gold');
+    }
+
+    closeAllModals();
+    renderMatchesList();
+    renderHomeOpenMatches();
+  });
+
+  // ── Toggle show/hide admin password ──
+  document.getElementById('toggleAdminPassword')?.addEventListener('click', () => {
+    const inp = document.getElementById('adminPassword');
+    if (inp) inp.type = inp.type === 'password' ? 'text' : 'password';
+  });
+
+  // ── Mark all notifs read ──
+  document.getElementById('btnMarkAllRead')?.addEventListener('click', async () => {
+    const unread = DB.notifications.filter(n => !n.isRead && n.userId === DB.currentUser.id);
+    unread.forEach(n => { n.isRead = true; });
+    saveDB(DB);
+    renderNotifications();
+    document.getElementById('notifDot').style.display = 'none';
+    // Sync Firestore
+    for (const n of unread) {
+      try { await fbMarkNotifRead(n.id); } catch (e) {}
+    }
+  });
+
+  // ── Admin player search ──
+  document.getElementById('adminPlayerSearchInput')?.addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('#adminPlayersTableBody tr').forEach(row => {
+      row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  });
+
+  // ── Admin player filter chips ──
+  document.querySelectorAll('[data-player-filter]').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('[data-player-filter]').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      const filter = chip.dataset.playerFilter;
+      document.querySelectorAll('#adminPlayersTableBody tr').forEach(row => {
+        if (filter === 'all') { row.style.display = ''; return; }
+        row.style.display = row.textContent.toLowerCase().includes(
+          filter === 'active' ? 'actif' : filter === 'pending' ? 'attente' : 'suspendu'
+        ) ? '' : 'none';
+      });
+    });
+  });
+
+  // ── Club settings save (Firestore) ──
+  document.getElementById('adminClubSettingsForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    DB.appConfig.clubName             = document.getElementById('settingClubName').value;
+    DB.appConfig.pricePeak            = parseInt(document.getElementById('settingPricePeak').value) || 25;
+    DB.appConfig.priceOffPeak         = parseInt(document.getElementById('settingPriceOffPeak').value) || 18;
+    DB.appConfig.matchmakingTolerance = parseInt(document.getElementById('settingLevelTolerance').value);
+    DB.appConfig.alertBeforeMatchHours = parseInt(document.getElementById('settingAlertHours').value);
+    saveDB(DB);
+    try { await fbSaveConfig(DB.appConfig); } catch (e) {}
+    showToast('Paramètres enregistrés.', 'success');
+  });
+
+  // ── Reset demo ──
+  document.getElementById('btnResetDemoData')?.addEventListener('click', resetDemoData);
+
+  // ── Set default date for booking inputs ──
+  const today = getTodayStr();
+  const todayDatetime = `${today}T18:00`;
+  ['bookDateInput'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = today;
+  });
+  const dtEl = document.getElementById('createMatchDateTime');
+  if (dtEl) dtEl.value = todayDatetime;
+  const adminDtEl = document.getElementById('adminSlotDateTime');
+  if (adminDtEl) adminDtEl.value = todayDatetime;
+
+  // ── Init create match level selectors ──
+  initCreateMatchLevelSelectors();
+
+  // ── Load club settings into form ──
+  document.getElementById('settingClubName')?.setAttribute('value', DB.appConfig.clubName || 'HayaPala');
+  document.getElementById('settingClubPhone')?.setAttribute('value', DB.appConfig.phone || '');
+  document.getElementById('settingClubEmail')?.setAttribute('value', DB.appConfig.email || '');
+
+  // ── Initial UI render ──
+  renderHomeScreen();
+
+  // ── Notifications dot ──
+  const unread = (DB.notifications || []).filter(n => !n.isRead && n.userId === DB.currentUser?.id);
+  const dotEl  = document.getElementById('notifDot');
+  if (dotEl) dotEl.style.display = unread.length > 0 ? '' : 'none';
+
+  // ── Live alerts check (toutes les 5 min) ──
+  setInterval(() => {
+    const alerts = checkMatchAlerts();
+    const kpiEl  = document.getElementById('kpiAlertsValue');
+    if (kpiEl) kpiEl.textContent = alerts.length;
+  }, 5 * 60 * 1000);
+
+  console.log('%c🎾 HayaPala v1.1 — Firebase Firestore + Auth · circlepadel', 'color:#C8A96E; font-weight:bold; font-size:15px');
+  console.log('%c🔥 Firestore sync + real-time listeners actifs', 'color:#F39C12');
 });
 
-['simTeamLevelSelect', 'simOpponentLevelSelect', 'simScoreSelect'].forEach(id => {
-  document.getElementById(id)?.addEventListener('change', updateSimulatorPreview);
-});
 
-async function updateSimulatorPreview() {
-  const teamLevel = Number(document.getElementById('simTeamLevelSelect')?.value || 5.25);
-  const oppLevel = Number(document.getElementById('simOpponentLevelSelect')?.value || 6.20);
-  const scoreVal = document.getElementById('simScoreSelect')?.value || "2-1";
-  const [setsWon, setsLost] = scoreVal.split('-').map(Number);
-
-  try {
-    const res = await fetch('/api/rating/simulate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        playerLevel: AppState.user.level,
-        playerReliability: AppState.user.levelReliability,
-        partnerLevel: Number((teamLevel * 2 - AppState.user.level).toFixed(2)),
-        opponent1Level: oppLevel,
-        opponent2Level: oppLevel,
-        setsWon,
-        setsLost
-      })
-    });
-    const data = await res.json();
-    if (data.success) {
-      const sim = data.simulation;
-      document.getElementById('simExpectedWinRate').textContent = `${sim.expectedWinRate}%`;
-      const deltaSign = sim.delta >= 0 ? '+' : '';
-      const color = sim.delta >= 0 ? '#27AE60' : '#D32F2F';
-      const levelEl = document.getElementById('simNewLevelResult');
-      levelEl.textContent = `${sim.newLevel.toFixed(2)} (${deltaSign}${sim.delta.toFixed(2)})`;
-      levelEl.style.color = color;
-      document.getElementById('simNewRelResult').textContent = `${sim.newReliability.toFixed(2)}% (+${(sim.newReliability - AppState.user.levelReliability).toFixed(1)}%)`;
-    }
-  } catch (err) {
-    console.error("Simulation error", err);
+// ── Admin timetable nav (calendar ‹/›) ─────────────────────────────────────
+document.addEventListener('click', (e) => {
+  if (e.target.id === 'btnPrevDay') {
+    const d = new Date((window._adminCurrentDate || getTodayStr()) + 'T00:00:00');
+    d.setDate(d.getDate() - 1);
+    window._adminCurrentDate = d.toISOString().split('T')[0];
+    const el = document.getElementById('adminCurrentDate');
+    if (el) el.textContent = formatDate(window._adminCurrentDate);
+    renderAdminTimetable();
   }
-}
-
-document.getElementById('btnApplySimulatedResult')?.addEventListener('click', async () => {
-  const teamLevel = Number(document.getElementById('simTeamLevelSelect')?.value || 5.25);
-  const oppLevel = Number(document.getElementById('simOpponentLevelSelect')?.value || 6.20);
-  const scoreVal = document.getElementById('simScoreSelect')?.value || "2-1";
-  const [setsWon, setsLost] = scoreVal.split('-').map(Number);
-
-  try {
-    const res = await fetch('/api/rating/record-result', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        setsWon,
-        setsLost,
-        clubName: "Padel Connection",
-        partnerName: "Ahmed Horrigue",
-        partnerLevel: Number((teamLevel * 2 - AppState.user.level).toFixed(2)),
-        opp1Name: "Karim Arfaoui",
-        opp1Level: oppLevel,
-        opp2Name: "Dhouib Med Amine",
-        opp2Level: oppLevel
-      })
-    });
-    const result = await res.json();
-    if (result.success) {
-      closeAllModals();
-      await loadStateFromServer();
-      renderAllViews();
-      showToast(result.message, "success");
-    }
-  } catch (err) {
-    showToast("Erreur lors de l'enregistrement du match.", "error");
+  if (e.target.id === 'btnNextDay') {
+    const d = new Date((window._adminCurrentDate || getTodayStr()) + 'T00:00:00');
+    d.setDate(d.getDate() + 1);
+    window._adminCurrentDate = d.toISOString().split('T')[0];
+    const el = document.getElementById('adminCurrentDate');
+    if (el) el.textContent = formatDate(window._adminCurrentDate);
+    renderAdminTimetable();
+  }
+  if (e.target.id === 'btnTodayAdmin') {
+    window._adminCurrentDate = getTodayStr();
+    const el = document.getElementById('adminCurrentDate');
+    if (el) el.textContent = formatDate(window._adminCurrentDate);
+    renderAdminTimetable();
+  }
+  if (e.target.id === 'btnAdminOpenRegisterPlayer') {
+    openModal('modal-register-player');
+  }
+  if (e.target.id === 'btnAdminDirectBooking') {
+    openModal('modal-admin-create-slot');
   }
 });
