@@ -12,6 +12,7 @@ import {
   signOut,
   onAuthStateChanged,
   createUserWithEmailAndPassword,
+  updateProfile,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {
   getFirestore,
@@ -71,6 +72,15 @@ async function fbCreateUser(email, password) {
 /** Callback quand l'état d'auth change */
 function fbOnAuthChange(callback) {
   return onAuthStateChanged(auth, callback);
+}
+
+/** Mettre à jour le profil (nom, etc.) de l'utilisateur courant */
+async function fbUpdateUserProfile(displayName, photoURL) {
+  if (!auth.currentUser) return;
+  const updates = {};
+  if (displayName) updates.displayName = displayName;
+  if (photoURL) updates.photoURL = photoURL;
+  return updateProfile(auth.currentUser, updates);
 }
 
 // ── Firestore helpers — Players ───────────────────────────────────────────────
@@ -294,7 +304,7 @@ function fbTrack(eventName, params = {}) {
 export {
   app, auth, db, analytics,
   // Auth
-  fbSignIn, fbSignOut, fbCreateUser, fbOnAuthChange,
+  fbSignIn, fbSignOut, fbCreateUser, fbOnAuthChange, fbUpdateUserProfile,
   // Players
   fbGetPlayers, fbGetPlayer, fbSavePlayer, fbUpdatePlayerLevel, fbListenPlayers,
   // Courts

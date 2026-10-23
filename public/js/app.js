@@ -6,7 +6,7 @@
 
 // ── Firebase imports (CDN ESM) ─────────────────────────────────────────────
 import {
-  fbSignIn, fbSignOut, fbOnAuthChange,
+  fbSignIn, fbSignOut, fbOnAuthChange, fbCreateUser, fbUpdateUserProfile,
   fbGetPlayers, fbGetPlayer, fbSavePlayer, fbUpdatePlayerLevel, fbListenPlayers,
   fbGetCourts, fbSaveCourt,
   fbGetBookings, fbAddBooking, fbUpdateBooking, fbCancelBooking, fbListenBookings,
@@ -573,10 +573,18 @@ function renderCourtPlanningScreen() {
 
 function renderPlanningDateBar() {
   const bar = document.getElementById('planningDateBar');
+  if (!bar) return;
+
+  const displayEl = document.getElementById('playerCurrentDateDisplay');
+  if (displayEl) {
+    displayEl.textContent = formatDate(planningSelectedDate || getTodayStr());
+  }
+
   const days = [];
   const now = new Date();
   const dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
   const monthNames = ['jan', 'fév', 'mar', 'avr', 'mai', 'jun', 'jul', 'aoû', 'sep', 'oct', 'nov', 'déc'];
+  const todayStr = getTodayStr();
 
   for (let i = 0; i < 7; i++) {
     const d = new Date(now);
@@ -584,7 +592,7 @@ function renderPlanningDateBar() {
     const dateStr = d.toISOString().split('T')[0];
     days.push({
       dateStr,
-      dayName: i === 0 ? 'Auj.' : dayNames[d.getDay()],
+      dayName: dateStr === todayStr ? 'Auj.' : dayNames[d.getDay()],
       dayNum: d.getDate(),
       monthName: monthNames[d.getMonth()],
     });
@@ -592,6 +600,7 @@ function renderPlanningDateBar() {
 
   bar.innerHTML = days.map(d => `
     <button class="date-chip ${d.dateStr === planningSelectedDate ? 'active' : ''}"
+      data-date="${d.dateStr}"
       onclick="selectPlanningDate('${d.dateStr}')">
       <span class="day-name">${d.dayName}</span>
       <span class="day-num">${d.dayNum}</span>
@@ -608,18 +617,19 @@ function selectPlanningDate(dateStr) {
 
 function renderCourtsGrid() {
   const grid = document.getElementById('courtsPlanningGrid');
-  const duration = DB.appConfig.slotDurationMinutes;
+  if (!grid) return;
+  const duration = DB.appConfig?.slotDurationMinutes || 90;
 
-  grid.innerHTML = DB.courts.filter(c => c.isActive).map(court => {
+  grid.innerHTML = (DB.courts || []).filter(c => c.isActive).map(court => {
     const slots = SLOT_TIMES.map(time => {
       const endTime = addMinutes(time, duration);
-      const booking = DB.bookings.find(b =>
+      const booking = (DB.bookings || []).find(b =>
         b.courtId === court.id && b.date === planningSelectedDate && b.startTime === time && b.status === 'confirmed'
       );
 
       let slotClass = '', badgeClass = 'available', badgeText = 'Libre', dotHtml = '';
       if (booking) {
-        const spots = DB.appConfig.maxPlayersPerMatch - (booking.players || []).length;
+        const spots = (DB.appConfig?.maxPlayersPerMatch || 4) - (booking.players || []).length;
         if (booking.type === 'private') { slotClass = 'booked'; badgeClass = 'private'; badgeText = 'Privée'; }
         else if (booking.type === 'open') { slotClass = 'open-match'; badgeClass = 'open'; badgeText = `Ouvert · ${spots} libre${spots > 1 ? 's' : ''}`; }
         else if (booking.type === 'course') { slotClass = 'booked'; badgeClass = 'course'; badgeText = 'Cours'; }
@@ -638,7 +648,7 @@ function renderCourtsGrid() {
         : `openBookingFromSlot('${court.id}', '${time}')`;
 
       return `
-        <div class="slot-item ${slotClass}" onclick="${clickHandler}">
+        <div class="slot-item ${slotClass}" onclick="${clickHandler}" style="cursor:pointer">
           <span class="slot-time">${time} – ${endTime}</span>
           <span class="slot-type-badge ${badgeClass}">${badgeText}</span>
           <div class="slot-players-mini">${dotHtml}</div>
@@ -659,11 +669,16 @@ function renderCourtsGrid() {
   }).join('');
 }
 
+const renderCourtsPlanningGrid = renderCourtsGrid;
+
 function openBookingFromSlot(courtId, time) {
-  const court = DB.courts.find(c => c.id === courtId);
-  document.getElementById('bookCourtSelect').value = courtId.replace('court_', '');
-  document.getElementById('bookTimeSelect').value = time;
-  document.getElementById('bookDate').value = planningSelectedDate;
+  const courtNum = courtId.replace('court_', '');
+  const sel = document.getElementById('bookCourtSelect');
+  if (sel) sel.value = courtNum;
+  const timeEl = document.getElementById('bookStartTime');
+  if (timeEl) timeEl.value = time;
+  const dateEl = document.getElementById('bookDateInput');
+  if (dateEl) dateEl.value = planningSelectedDate || getTodayStr();
   openModal('modal-book-court');
 }
 
@@ -677,23 +692,52 @@ const STYLE_LABELS = { offensive:'Offensif', defensive:'Défensif', 'all-around'
 const SKILL_LABELS = { bandeja:'Bandeja', vibora:'Víbora', salida_cristal:'Sortie de vitre', volee:'Volée', placement:'Placement', regularite:'Régularité', mental:'Mental' };
 
 function renderProfileScreen() {
-  const user = DB.players.find(p => p.id === DB.currentUser.id);
-  if (!user) return;
+  const user = (DB.players || []).find(p => p.id === DB.currentUser?.id) || DB.currentUser || {
+    id: 'guest', firstName: 'Invité', lastName: '', role: 'player', level: null, preferredSide: 'right', playStyle: 'all-around'
+  };
 
-  document.getElementById('profileName').textContent = `${user.firstName} ${user.lastName}`;
-  document.getElementById('profilePhone').textContent = user.phone || '—';
-  document.getElementById('profileLevelBig').textContent = user.level || '?';
-  document.getElementById('profileLevelTitle').textContent = LEVEL_LABELS[user.level] || 'En attente';
-  document.getElementById('profileLevelCoach').textContent = user.levelValidatedAt
+  const nameEl = document.getElementById('profileName');
+  if (nameEl) nameEl.textContent = `${user.firstName || 'Invité'} ${user.lastName || ''}`.trim();
+  const phoneEl = document.getElementById('profilePhone');
+  if (phoneEl) phoneEl.textContent = user.phone || user.email || 'Non connecté';
+  const levelEl = document.getElementById('profileLevelBig');
+  if (levelEl) levelEl.textContent = user.level || '?';
+  const titleEl = document.getElementById('profileLevelTitle');
+  if (titleEl) titleEl.textContent = LEVEL_LABELS[user.level] || 'En attente d\'évaluation';
+  const coachEl = document.getElementById('profileLevelCoach');
+  if (coachEl) coachEl.textContent = user.levelValidatedAt
     ? `Validé le ${formatDate(user.levelValidatedAt.split('T')[0])}`
-    : 'Pas encore validé';
-  document.getElementById('statMatchesPlayed').textContent = user.totalMatchesPlayed || 0;
-  document.getElementById('statReliability').textContent = user.reliabilityScore ? `${user.reliabilityScore}%` : '—';
-  document.getElementById('statSide').textContent = user.preferredSide === 'right' ? 'D' : user.preferredSide === 'left' ? 'G' : '±';
-  document.getElementById('statStyle').textContent = user.playStyle === 'offensive' ? 'OFF' : user.playStyle === 'defensive' ? 'DEF' : 'EQ';
-  document.getElementById('profileSideBadge').textContent = `🖐 ${SIDE_LABELS[user.preferredSide] || '—'}`;
-  document.getElementById('profileStyleBadge').textContent = `⚡ ${STYLE_LABELS[user.playStyle] || '—'}`;
-  document.getElementById('profileStatusBadge').textContent = user.status === 'active' ? '✔ Actif' : '⏳ En attente';
+    : 'Évaluation coach requise';
+  const matchesEl = document.getElementById('statMatchesPlayed');
+  if (matchesEl) matchesEl.textContent = user.totalMatchesPlayed || 0;
+  const relEl = document.getElementById('statReliability');
+  if (relEl) relEl.textContent = user.reliabilityScore ? `${user.reliabilityScore}%` : '—';
+  const sideEl = document.getElementById('statSide');
+  if (sideEl) sideEl.textContent = user.preferredSide === 'right' ? 'D' : user.preferredSide === 'left' ? 'G' : '±';
+  const styleEl = document.getElementById('statStyle');
+  if (styleEl) styleEl.textContent = user.playStyle === 'offensive' ? 'OFF' : user.playStyle === 'defensive' ? 'DEF' : 'EQ';
+  const sideB = document.getElementById('profileSideBadge');
+  if (sideB) sideB.textContent = `🖐 ${SIDE_LABELS[user.preferredSide] || 'Droitier'}`;
+  const styleB = document.getElementById('profileStyleBadge');
+  if (styleB) styleB.textContent = `⚡ ${STYLE_LABELS[user.playStyle] || 'Polyvalent'}`;
+  const statusB = document.getElementById('profileStatusBadge');
+  if (statusB) statusB.textContent = user.status === 'active' ? '✔ Actif' : '⏳ En attente';
+
+  // Bouton Connexion / Déconnexion dans profil
+  const authBtn = document.getElementById('btnProfileAuthAction');
+  if (authBtn) {
+    if (user.email && user.id !== 'guest') {
+      authBtn.textContent = `🚪 Déconnexion (${user.firstName})`;
+      authBtn.style.background = 'rgba(231,76,60,0.18)';
+      authBtn.style.color = 'var(--red)';
+      authBtn.style.border = '1px solid rgba(231,76,60,0.4)';
+    } else {
+      authBtn.textContent = '🔐 Se connecter / Créer un compte';
+      authBtn.style.background = 'var(--gold)';
+      authBtn.style.color = '#000';
+      authBtn.style.border = 'none';
+    }
+  }
 
   // Radar SVG
   renderRadarChart(user.skills);
@@ -706,6 +750,155 @@ function renderProfileScreen() {
 
   // Match history (from bookings)
   renderProfileHistory(user);
+}
+
+function updateAuthUI() {
+  const user = (DB.players || []).find(p => p.id === DB.currentUser?.id) || DB.currentUser;
+  if (!user) return;
+
+  const homeUserName = document.getElementById('homeUserName');
+  if (homeUserName) homeUserName.textContent = user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 'Invité';
+
+  const homeInitials = document.getElementById('homeUserInitials');
+  if (homeInitials) {
+    const f = user.firstName?.[0] || 'C';
+    const l = user.lastName?.[0] || 'P';
+    homeInitials.textContent = (f + l).toUpperCase();
+  }
+
+  const profileAvatarBig = document.getElementById('profileAvatarBig');
+  if (profileAvatarBig) {
+    const f = user.firstName?.[0] || 'C';
+    const l = user.lastName?.[0] || 'P';
+    profileAvatarBig.textContent = (f + l).toUpperCase();
+  }
+
+  renderProfileScreen();
+}
+
+async function handlePlayerLogin(email, password) {
+  if (!email || !password) {
+    showToast('Veuillez saisir votre email et mot de passe.', 'error');
+    return;
+  }
+  try {
+    const cred = await fbSignIn(email, password);
+    const u = cred.user;
+    let player = (DB.players || []).find(p => p.id === u.uid || p.email === u.email);
+    if (!player) {
+      player = await fbGetPlayer(u.uid);
+      if (player) DB.players.push(player);
+    }
+    if (!player) {
+      const parts = (u.displayName || email.split('@')[0]).split(' ');
+      player = {
+        id: u.uid,
+        firstName: parts[0] || 'Joueur',
+        lastName: parts.slice(1).join(' ') || '',
+        email: u.email,
+        phone: '',
+        role: 'player',
+        status: 'active',
+        level: 3,
+        preferredSide: 'right',
+        playStyle: 'all-around',
+        reliabilityScore: 80,
+        totalMatchesPlayed: 0,
+        skills: {},
+        levelHistory: [],
+        createdAt: new Date().toISOString(),
+      };
+      DB.players.push(player);
+      await fbSavePlayer(player);
+    }
+    DB.currentUser = player;
+    saveDB(DB);
+    updateAuthUI();
+    closeAllModals();
+    showToast(`Bienvenue ${player.firstName} 🎾`, 'success');
+  } catch (err) {
+    console.error('Login error:', err);
+    let msg = 'Identifiants incorrects.';
+    if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') msg = 'Aucun compte trouvé avec ces identifiants.';
+    else if (err.code === 'auth/wrong-password') msg = 'Mot de passe incorrect.';
+    else if (err.code === 'auth/invalid-email') msg = 'Adresse email invalide.';
+    showToast(msg, 'error');
+  }
+}
+
+async function handlePlayerRegister({ firstName, lastName, phone, email, password, preferredSide, playStyle }) {
+  if (!firstName || !email || !password) {
+    showToast('Prénom, email et mot de passe obligatoires.', 'error');
+    return;
+  }
+  if (password.length < 6) {
+    showToast('Le mot de passe doit comporter au moins 6 caractères.', 'error');
+    return;
+  }
+  try {
+    const cred = await fbCreateUser(email, password);
+    const u = cred.user;
+    const fullName = `${firstName} ${lastName || ''}`.trim();
+    try { await fbUpdateUserProfile(fullName); } catch (e) {}
+
+    const newPlayer = {
+      id: u.uid,
+      firstName,
+      lastName: lastName || '',
+      phone: phone || '',
+      email: u.email,
+      role: 'player',
+      status: 'active',
+      level: 3,
+      preferredSide: preferredSide || 'right',
+      playStyle: playStyle || 'all-around',
+      reliabilityScore: 100,
+      totalMatchesPlayed: 0,
+      skills: {},
+      levelHistory: [{ date: getTodayStr(), level: 3, note: 'Inscription initiale' }],
+      createdAt: new Date().toISOString(),
+    };
+
+    DB.players.push(newPlayer);
+    DB.currentUser = newPlayer;
+    saveDB(DB);
+    await fbSavePlayer(newPlayer);
+    updateAuthUI();
+    closeAllModals();
+    showToast(`Compte créé avec succès ! Bienvenue ${firstName} 🎾`, 'success');
+  } catch (err) {
+    console.error('Registration error:', err);
+    let msg = 'Erreur lors de la création du compte.';
+    if (err.code === 'auth/email-already-in-use') msg = 'Cet email est déjà associé à un compte existant.';
+    else if (err.code === 'auth/invalid-email') msg = 'Adresse email invalide.';
+    else if (err.code === 'auth/weak-password') msg = 'Mot de passe trop court (min 6 caractères).';
+    showToast(msg, 'error');
+  }
+}
+
+async function handlePlayerLogout() {
+  try {
+    await fbSignOut();
+  } catch (e) {}
+  DB.currentUser = { id: 'guest', firstName: 'Invité', lastName: '', role: 'player', email: '' };
+  saveDB(DB);
+  updateAuthUI();
+  showToast('Déconnexion réussie.', 'info');
+}
+
+function switchAuthTab(tab) {
+  const isLogin = tab === 'login';
+  const tabLogin = document.getElementById('tabAuthLogin');
+  const tabReg = document.getElementById('tabAuthRegister');
+  const formLogin = document.getElementById('authLoginForm');
+  const formReg = document.getElementById('authRegisterForm');
+  const title = document.getElementById('authModalTitle');
+
+  if (tabLogin) tabLogin.classList.toggle('active', isLogin);
+  if (tabReg) tabReg.classList.toggle('active', !isLogin);
+  if (formLogin) formLogin.style.display = isLogin ? 'block' : 'none';
+  if (formReg) formReg.style.display = isLogin ? 'none' : 'block';
+  if (title) title.textContent = isLogin ? '🎾 Connexion CirclePadel' : '🎾 Inscription CirclePadel';
 }
 
 function renderRadarChart(skills) {
@@ -1357,6 +1550,9 @@ function openPlayerEvalModal(playerId) {
   document.getElementById('evalPlayerCurrentLevel').textContent = player.level ? `Niveau ${player.level}` : 'Non évalué';
   document.getElementById('evalPlayerMatches').textContent = `${player.totalMatchesPlayed || 0} matchs`;
 
+  const submitBtn = document.getElementById('btnSubmitEvaluation');
+  if (submitBtn) submitBtn.dataset.playerId = playerId;
+
   // Skill dots (1–10)
   Object.keys(SKILL_LABELS).forEach(skill => {
     const container = document.querySelector(`[data-skill="${skill}"]`);
@@ -1378,7 +1574,7 @@ function openPlayerEvalModal(playerId) {
   // Comment
   document.getElementById('evalCoachComment').value = '';
 
-  openModal('modal-player-eval');
+  openModal('modal-evaluate-player');
 }
 
 function setSkillValue(skill, val) {
@@ -1442,6 +1638,10 @@ function saveEvaluation(e) {
   }
 
   saveDB(DB);
+  try {
+    fbUpdatePlayerLevel(player.id, { level: evalLevelValue, coachComment: comment });
+    fbSavePlayer(player);
+  } catch (err) {}
   showToast(`✓ Évaluation enregistrée · Niveau ${evalLevelValue}/7 validé pour ${player.firstName}`, 'success');
   closeAllModals();
   renderAdminPlayers();
@@ -1454,26 +1654,33 @@ function saveEvaluation(e) {
 // ============================================================================
 
 function openAdminSlotModal(courtId, time, date) {
-  document.getElementById('adminSlotCourt').value = courtId.replace('court_', '');
-  document.getElementById('adminSlotTime').value = time;
-  document.getElementById('adminSlotDate').value = date;
+  const courtEl = document.getElementById('adminSlotCourt');
+  if (courtEl) courtEl.value = courtId ? courtId.replace('court_', '') : '1';
+  const timeEl = document.getElementById('adminSlotTime');
+  if (timeEl) timeEl.value = time || '17:00';
+  const dateEl = document.getElementById('adminSlotDate');
+  if (dateEl) dateEl.value = date || adminCurrentDate || getTodayStr();
+  const notesEl = document.getElementById('adminSlotNotes');
+  if (notesEl) notesEl.value = '';
   openModal('modal-admin-create-slot');
 }
 
-function createAdminSlot(e) {
-  e.preventDefault();
-  const type = document.getElementById('adminSlotType').value;
-  const courtNum = document.getElementById('adminSlotCourt').value;
+async function createAdminSlot(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  const courtNum = parseInt(document.getElementById('adminSlotCourt')?.value) || 1;
   const courtId = `court_${courtNum}`;
   const court = DB.courts.find(c => c.id === courtId);
-  const time = document.getElementById('adminSlotTime').value;
-  const date = document.getElementById('adminSlotDate').value;
-  const notes = document.getElementById('adminSlotNotes').value;
-  const duration = DB.appConfig.slotDurationMinutes;
+  const type = document.getElementById('adminSlotType')?.value || 'private';
+  const time = document.getElementById('adminSlotTime')?.value || '17:00';
+  const date = document.getElementById('adminSlotDate')?.value || adminCurrentDate || getTodayStr();
+  const notes = document.getElementById('adminSlotNotes')?.value?.trim() || '';
+  const levelVal = document.getElementById('adminSlotLevel')?.value || '4-6';
+  const [minL, maxL] = levelVal.split('-').map(Number);
+  const duration = DB.appConfig?.slotDurationMinutes || 90;
 
   if (!date) { showToast('Veuillez sélectionner une date.', 'error'); return; }
 
-  const existing = DB.bookings.find(b => b.courtId === courtId && b.date === date && b.startTime === time && b.status === 'confirmed');
+  const existing = (DB.bookings || []).find(b => b.courtId === courtId && b.date === date && b.startTime === time && b.status === 'confirmed');
   if (existing) { showToast('Ce créneau est déjà occupé.', 'error'); return; }
 
   const newBooking = {
@@ -1481,26 +1688,36 @@ function createAdminSlot(e) {
     courtId, courtName: court ? court.name : `Terrain ${courtNum}`,
     date, startTime: time, endTime: addMinutes(time, duration),
     type, status: 'confirmed',
-    players: [],
+    players: notes ? [{ userId: 'manual', name: notes, isOrganizer: true }] : [],
     waitlist: [],
     notes,
-    pricePerPlayer: DB.appConfig.pricePeak,
+    minLevel: type === 'open' ? (minL || 3) : undefined,
+    maxLevel: type === 'open' ? (maxL || 6) : undefined,
+    pricePerPlayer: DB.appConfig?.pricePeak || 25,
     createdAt: new Date().toISOString(),
   };
 
   if (type === 'open') {
-    newBooking.minLevel = parseInt(document.getElementById('adminSlotLevelMin').value) || 3;
-    newBooking.maxLevel = parseInt(document.getElementById('adminSlotLevelMax').value) || 5;
-    // Notify compatible players
     notifyCompatiblePlayersForMatch(newBooking);
   }
 
   DB.bookings.push(newBooking);
   saveDB(DB);
-  showToast(`Créneau créé · ${court?.name} · ${time}`, 'success');
+
+  try {
+    const fsId = await fbAddBooking(newBooking);
+    newBooking.id = fsId;
+    showToast(`Créneau ${time} créé pour ${court?.name || courtNum} ✓`, 'success');
+  } catch (err) {
+    showToast(`Créneau ${time} créé (sauvegarde locale).`, 'gold');
+  }
+
   closeAllModals();
-  renderAdminDashboard();
+  renderAdminTimetable();
+  renderCourtsGrid();
+  renderAdminKPIs();
 }
+
 
 function notifyCompatiblePlayersForMatch(booking) {
   const tolerance = DB.appConfig.matchmakingTolerance;
@@ -1904,182 +2121,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // ── Évaluation coach — bouton Valider ──
-  document.getElementById('btnSubmitEvaluation')?.addEventListener('click', async () => {
-    const playerId = document.getElementById('btnSubmitEvaluation').dataset.playerId;
-    if (!playerId) return;
 
-    const level   = parseInt(document.getElementById('evalLevelSelector')?.querySelector('.eval-level-btn.active')?.textContent) || null;
-    const comment = document.getElementById('evalCoachComment')?.value?.trim() || '';
-
-    if (!level) { showToast('Sélectionnez un niveau officiel.', 'error'); return; }
-
-    const skills = {};
-    document.querySelectorAll('#skillsEvalGrid .skill-eval-row').forEach(row => {
-      const key  = row.dataset.skill;
-      const val  = parseInt(row.querySelector('.eval-dot.active')?.dataset.val) || 5;
-      skills[key] = val;
-    });
-
-    // Sauvegarder en local d'abord (réactivité immédiate)
-    const player = DB.players.find(p => p.id === playerId);
-    if (player) {
-      const prev = player.level;
-      player.level              = level;
-      player.status             = 'active';
-      player.skills             = skills;
-      player.levelValidatedAt   = new Date().toISOString();
-      player.levelValidatedBy   = 'coach_ali';
-      player.levelHistory       = [...(player.levelHistory || []), {
-        previousLevel: prev, newLevel: level,
-        changedAt: new Date().toISOString(), changedBy: 'coach_ali', coachComment: comment,
-      }];
-      saveDB(DB);
-    }
-
-    // Persister en Firestore en arrière-plan
-    try {
-      await fbUpdatePlayerLevel(playerId, { level, coachComment: comment, coachId: DB.currentUser?.id || 'coach_ali' });
-      await fbSavePlayer({ ...player, skills });
-      showToast(`Niveau ${level}/7 validé pour ${player?.firstName} ✓`, 'success');
-      fbTrack('player_evaluated', { playerId, level });
-    } catch (e) {
-      showToast(`Niveau ${level}/7 sauvegardé (Firestore hors-ligne).`, 'gold');
-    }
-
-    closeAllModals();
-    renderAdminPlayers();
-  });
-
-  // ── Inscription nouveau membre (Firestore) ──
-  document.getElementById('btnConfirmRegisterPlayer')?.addEventListener('click', async () => {
-    const name  = document.getElementById('regPlayerName')?.value?.trim();
-    const phone = document.getElementById('regPlayerPhone')?.value?.trim();
-    const email = document.getElementById('regPlayerEmail')?.value?.trim();
-    const side  = document.getElementById('regPlayerSide')?.value || 'right';
-    const style = document.getElementById('regPlayerStyle')?.value || 'offensive';
-
-    if (!name || !phone) { showToast('Nom et téléphone obligatoires.', 'error'); return; }
-
-    const [firstName, ...lastParts] = name.split(' ');
-    const lastName  = lastParts.join(' ') || '';
-    const newPlayer = {
-      id:              `player_${Date.now()}`,
-      firstName, lastName, phone, email,
-      avatar:          null,
-      role:            'player',
-      status:          'pending',
-      level:           null,
-      preferredSide:   side,
-      playStyle:       style,
-      reliabilityScore: 50,
-      totalMatchesPlayed: 0,
-      skills:          {},
-      levelHistory:    [],
-      consentSignedAt: new Date().toISOString(),
-      createdAt:       new Date().toISOString(),
-    };
-
-    DB.players.push(newPlayer);
-    saveDB(DB);
-
-    try {
-      await fbSavePlayer(newPlayer);
-      showToast(`${name} inscrit(e) ✓ — En attente d'évaluation coach.`, 'success');
-      fbTrack('player_registered', { playerId: newPlayer.id });
-    } catch (e) {
-      showToast(`${name} inscrit(e) (Firestore hors-ligne).`, 'gold');
-    }
-
-    closeAllModals();
-    renderAdminPlayers();
-  });
-
-  // ── Réservation terrain (Firestore) ──
-  document.getElementById('btnConfirmBooking')?.addEventListener('click', async () => {
-    const courtNum = parseInt(document.getElementById('bookCourtSelect')?.value) || 1;
-    const date     = document.getElementById('bookDateInput')?.value || getTodayStr();
-    const time     = document.getElementById('bookStartTime')?.value || '10:00';
-    const duration = parseInt(document.getElementById('bookDuration')?.value) || 90;
-    const type     = document.getElementById('bookType')?.value || 'private';
-    const courtId  = `court_${courtNum}`;
-    const court    = DB.courts.find(c => c.id === courtId);
-    const user     = DB.players.find(p => p.id === DB.currentUser.id);
-
-    const newBooking = {
-      id:            `bk_${Date.now()}`,
-      courtId,
-      courtName:     court?.name || `Terrain ${courtNum}`,
-      date, startTime: time,
-      endTime:       addMinutes(time, duration),
-      type, status:  'confirmed',
-      players:       [{ userId: DB.currentUser.id, name: `${user?.firstName} ${user?.lastName}`, level: user?.level, isOrganizer: true }],
-      waitlist:      [],
-      pricePerPlayer: DB.appConfig.pricePeak,
-      createdAt:     new Date().toISOString(),
-    };
-
-    DB.bookings.push(newBooking);
-    saveDB(DB);
-
-    try {
-      const id = await fbAddBooking(newBooking);
-      newBooking.id = id;
-      showToast('Réservation confirmée ✓ Paiement sur place.', 'success');
-      fbTrack('booking_created', { courtId, type });
-    } catch (e) {
-      showToast('Réservation enregistrée (Firestore hors-ligne).', 'gold');
-    }
-
-    closeAllModals();
-    renderCourtsPlanningGrid();
-    renderHomeScreen();
-  });
-
-  // ── Créer un match ouvert (Firestore) ──
-  document.getElementById('btnConfirmCreateMatch')?.addEventListener('click', async () => {
-    const courtNum = parseInt(document.getElementById('createMatchCourt')?.value) || 1;
-    const datetime = document.getElementById('createMatchDateTime')?.value;
-    const levelRange = document.getElementById('createMatchLevel')?.value || '4-6';
-    const note     = document.getElementById('createMatchNote')?.value?.trim() || '';
-    const [minL, maxL] = levelRange.split('-').map(Number);
-    const courtId  = `court_${courtNum}`;
-    const court    = DB.courts.find(c => c.id === courtId);
-    const user     = DB.players.find(p => p.id === DB.currentUser.id);
-
-    if (!datetime) { showToast('Sélectionnez une date et heure.', 'error'); return; }
-    const [date, time] = datetime.split('T');
-
-    const newMatch = {
-      id:            `bk_${Date.now()}`,
-      courtId,
-      courtName:     court?.name || `Terrain ${courtNum}`,
-      date, startTime: time?.slice(0, 5) || '18:00',
-      endTime:       addMinutes(time?.slice(0, 5) || '18:00', 90),
-      type:          'open', status: 'open',
-      minLevel:      minL || 3, maxLevel: maxL || 5,
-      players:       [{ userId: DB.currentUser.id, name: `${user?.firstName} ${user?.lastName}`, level: user?.level, isOrganizer: true }],
-      waitlist:      [],
-      pricePerPlayer: DB.appConfig.pricePeak,
-      notes:         note,
-      createdAt:     new Date().toISOString(),
-    };
-
-    DB.bookings.push(newMatch);
-    saveDB(DB);
-
-    try {
-      await fbCreateOpenMatch(newMatch);
-      showToast('Match ouvert publié ! 🎾 Joueurs compatibles notifiés.', 'success');
-      fbTrack('open_match_created', { courtId, minLevel: minL, maxLevel: maxL });
-    } catch (e) {
-      showToast('Match créé (Firestore hors-ligne).', 'gold');
-    }
-
-    closeAllModals();
-    renderMatchesList();
-    renderHomeOpenMatches();
-  });
 
   // ── Toggle show/hide admin password ──
   document.getElementById('toggleAdminPassword')?.addEventListener('click', () => {
@@ -2175,7 +2217,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }, 5 * 60 * 1000);
 
   // ============================================================================
-  // EVENT DELEGATION — tous les boutons dynamiques (modales, planning, éval.)
+  // EVENT DELEGATION — tous les boutons dynamiques (modales, planning, auth, éval.)
   // Un seul handler capture TOUS les clics, évitant les problèmes d'éléments
   // non encore présents dans le DOM au moment du addEventListener.
   // ============================================================================
@@ -2184,7 +2226,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!btn) return;
     const id = btn.id;
 
-    // ── Confirmation réservation terrain ──
+    // ── Confirmation réservation terrain (Joueur) ──
     if (id === 'btnConfirmBooking') {
       const courtNum = parseInt(document.getElementById('bookCourtSelect')?.value) || 1;
       const date     = document.getElementById('bookDateInput')?.value || getTodayStr();
@@ -2192,69 +2234,78 @@ document.addEventListener('DOMContentLoaded', async () => {
       const duration = parseInt(document.getElementById('bookDuration')?.value) || 90;
       const type     = document.getElementById('bookType')?.value || 'private';
       const courtId  = `court_${courtNum}`;
-      const court    = DB.courts.find(c => c.id === courtId);
-      const user     = DB.players.find(p => p.id === DB.currentUser.id);
+      const court    = (DB.courts || []).find(c => c.id === courtId);
+      const user     = (DB.players || []).find(p => p.id === DB.currentUser?.id) || DB.currentUser;
       const newBooking = {
         id: `bk_${Date.now()}`, courtId,
         courtName: court?.name || `Terrain ${courtNum}`,
         date, startTime: time, endTime: addMinutes(time, duration),
         type, status: 'confirmed',
-        players: [{ userId: DB.currentUser.id, name: `${user?.firstName || 'Joueur'} ${user?.lastName || ''}`, level: user?.level, isOrganizer: true }],
-        waitlist: [], pricePerPlayer: DB.appConfig.pricePeak,
+        players: [{ userId: DB.currentUser?.id || 'guest', name: `${user?.firstName || 'Joueur'} ${user?.lastName || ''}`.trim(), level: user?.level || 3, isOrganizer: true }],
+        waitlist: [], pricePerPlayer: DB.appConfig?.pricePeak || 25,
         createdAt: new Date().toISOString(),
       };
       DB.bookings.push(newBooking); saveDB(DB);
       try {
-        const fsId = await fbAddBooking(newBooking); newBooking.id = fsId;
-        showToast('Réservation confirmée ✓', 'success');
+        const fsId = await fbAddBooking(newBooking);
+        newBooking.id = fsId;
+        showToast('Réservation confirmée ✓ Paiement sur place.', 'success');
         fbTrack('booking_created', { courtId, type });
       } catch (err) { showToast('Réservation enregistrée.', 'gold'); }
-      closeAllModals(); renderCourtsPlanningGrid(); renderHomeScreen();
+      closeAllModals(); renderCourtsGrid(); renderHomeScreen();
     }
 
-    // ── Création match ouvert ──
+    // ── Création match ouvert (Joueur) ──
     if (id === 'btnConfirmCreateMatch') {
       const courtNum = parseInt(document.getElementById('createMatchCourt')?.value) || 1;
       const datetime = document.getElementById('createMatchDateTime')?.value;
-      const levelRange = document.getElementById('createMatchLevel')?.value || '3-5';
+      const levelRange = document.getElementById('createMatchLevel')?.value || '4-6';
       const note = document.getElementById('createMatchNote')?.value?.trim() || '';
       if (!datetime) { showToast('Sélectionnez une date et heure.', 'error'); return; }
       const [minL, maxL] = levelRange.split('-').map(Number);
       const [date, time] = datetime.split('T');
       const courtId = `court_${courtNum}`;
-      const court = DB.courts.find(c => c.id === courtId);
-      const user = DB.players.find(p => p.id === DB.currentUser.id);
+      const court = (DB.courts || []).find(c => c.id === courtId);
+      const user = (DB.players || []).find(p => p.id === DB.currentUser?.id) || DB.currentUser;
       const newMatch = {
         id: `bk_${Date.now()}`, courtId,
         courtName: court?.name || `Terrain ${courtNum}`,
         date, startTime: time?.slice(0,5) || '18:00', endTime: addMinutes(time?.slice(0,5) || '18:00', 90),
         type: 'open', status: 'open',
-        minLevel: minL || 3, maxLevel: maxL || 5,
-        players: [{ userId: DB.currentUser.id, name: `${user?.firstName || 'Joueur'} ${user?.lastName || ''}`, level: user?.level, isOrganizer: true }],
-        waitlist: [], pricePerPlayer: DB.appConfig.pricePeak, notes: note,
+        minLevel: minL || 3, maxLevel: maxL || 6,
+        players: [{ userId: DB.currentUser?.id || 'guest', name: `${user?.firstName || 'Joueur'} ${user?.lastName || ''}`.trim(), level: user?.level || 3, isOrganizer: true }],
+        waitlist: [], pricePerPlayer: DB.appConfig?.pricePeak || 25, notes: note,
         createdAt: new Date().toISOString(),
       };
       DB.bookings.push(newMatch); saveDB(DB);
       try {
         await fbCreateOpenMatch(newMatch);
-        showToast('Match ouvert publié ! 🎾', 'success');
+        showToast('Match ouvert publié ! 🎾 Joueurs compatibles notifiés.', 'success');
         fbTrack('open_match_created', { courtId, minLevel: minL, maxLevel: maxL });
       } catch (err) { showToast('Match créé.', 'gold'); }
       closeAllModals(); renderMatchesList(); renderHomeOpenMatches();
     }
 
+    // ── Confirmation créneau / réservation (Gérant) ──
+    if (id === 'btnAdminConfirmCreateSlot') {
+      await createAdminSlot(e);
+    }
+
     // ── Validation évaluation coach ──
     if (id === 'btnSubmitEvaluation') {
-      const playerId = btn.dataset.playerId;
-      if (!playerId) return;
-      const level = parseInt(document.getElementById('evalLevelSelector')?.querySelector('.eval-level-btn.active')?.textContent) || null;
+      const playerId = btn.dataset.playerId || evalCurrentPlayerId;
+      if (!playerId) { showToast('Joueur introuvable.', 'error'); return; }
+      const activeLvlBtn = document.getElementById('evalLevelSelector')?.querySelector('.eval-level-btn.active');
+      const level = activeLvlBtn ? parseInt(activeLvlBtn.textContent) : evalLevelValue;
       const comment = document.getElementById('evalCoachComment')?.value?.trim() || '';
-      if (!level) { showToast('Sélectionnez un niveau officiel.', 'error'); return; }
-      const skills = {};
+      if (!level) { showToast('Sélectionnez un niveau officiel (1–7).', 'error'); return; }
+      const skills = { ...evalSkillValues };
       document.querySelectorAll('#skillsEvalGrid .skill-eval-row').forEach(row => {
-        skills[row.dataset.skill] = parseInt(row.querySelector('.eval-dot.active')?.dataset.val) || 5;
+        const k = row.dataset.skill;
+        const v = parseInt(row.querySelector('.eval-dot.active')?.dataset.val);
+        if (k && v) skills[k] = v;
       });
-      const player = DB.players.find(p => p.id === playerId);
+      const player = (DB.players || []).find(p => p.id === playerId);
       if (player) {
         const prev = player.level;
         player.level = level; player.status = 'active'; player.skills = skills;
@@ -2264,14 +2315,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       try {
         await fbUpdatePlayerLevel(playerId, { level, coachComment: comment, coachId: 'coach' });
-        await fbSavePlayer({ ...player, skills });
+        if (player) await fbSavePlayer({ ...player, skills });
         showToast(`Niveau ${level}/7 validé ✓`, 'success');
         fbTrack('player_evaluated', { playerId, level });
       } catch (err) { showToast(`Niveau ${level}/7 sauvegardé.`, 'gold'); }
       closeAllModals(); renderAdminPlayers();
     }
 
-    // ── Inscription membre ──
+    // ── Inscription membre gérant ──
     if (id === 'btnConfirmRegisterPlayer') {
       const name = document.getElementById('regPlayerName')?.value?.trim();
       const phone = document.getElementById('regPlayerPhone')?.value?.trim();
@@ -2297,31 +2348,84 @@ document.addEventListener('DOMContentLoaded', async () => {
       closeAllModals(); renderAdminPlayers();
     }
 
-    // ── Navigation jours planning gérant ──
+    // ── Navigation jours planning gérant (‹ / › / Aujourd'hui) ──
     if (id === 'btnPrevDay') {
-      const d = new Date((window._adminCurrentDate || getTodayStr()) + 'T00:00:00');
+      const d = new Date(adminCurrentDate + 'T00:00:00');
       d.setDate(d.getDate() - 1);
-      window._adminCurrentDate = d.toISOString().split('T')[0];
+      adminCurrentDate = d.toISOString().split('T')[0];
       const el = document.getElementById('adminCurrentDate');
-      if (el) el.textContent = formatDate(window._adminCurrentDate);
+      if (el) el.textContent = formatDate(adminCurrentDate);
       renderAdminTimetable();
     }
     if (id === 'btnNextDay') {
-      const d = new Date((window._adminCurrentDate || getTodayStr()) + 'T00:00:00');
+      const d = new Date(adminCurrentDate + 'T00:00:00');
       d.setDate(d.getDate() + 1);
-      window._adminCurrentDate = d.toISOString().split('T')[0];
+      adminCurrentDate = d.toISOString().split('T')[0];
       const el = document.getElementById('adminCurrentDate');
-      if (el) el.textContent = formatDate(window._adminCurrentDate);
+      if (el) el.textContent = formatDate(adminCurrentDate);
       renderAdminTimetable();
     }
     if (id === 'btnTodayAdmin') {
-      window._adminCurrentDate = getTodayStr();
+      adminCurrentDate = getTodayStr();
       const el = document.getElementById('adminCurrentDate');
-      if (el) el.textContent = formatDate(window._adminCurrentDate);
+      if (el) el.textContent = formatDate(adminCurrentDate);
       renderAdminTimetable();
     }
     if (id === 'btnAdminOpenRegisterPlayer') openModal('modal-register-player');
-    if (id === 'btnAdminDirectBooking') openModal('modal-admin-create-slot');
+    if (id === 'btnAdminDirectBooking') openAdminSlotModal(null, '17:00', adminCurrentDate);
+
+    // ── Navigation jours planning joueur (‹ / › / Aujourd'hui) ──
+    if (id === 'btnPlayerPrevDay') {
+      const d = new Date((planningSelectedDate || getTodayStr()) + 'T00:00:00');
+      d.setDate(d.getDate() - 1);
+      planningSelectedDate = d.toISOString().split('T')[0];
+      renderPlanningDateBar();
+      renderCourtsGrid();
+    }
+    if (id === 'btnPlayerNextDay') {
+      const d = new Date((planningSelectedDate || getTodayStr()) + 'T00:00:00');
+      d.setDate(d.getDate() + 1);
+      planningSelectedDate = d.toISOString().split('T')[0];
+      renderPlanningDateBar();
+      renderCourtsGrid();
+    }
+    if (id === 'btnPlayerToday') {
+      planningSelectedDate = getTodayStr();
+      renderPlanningDateBar();
+      renderCourtsGrid();
+    }
+
+    // ── Bouton Auth Profil (Se connecter / Se déconnecter) ──
+    if (id === 'btnProfileAuthAction') {
+      if (DB.currentUser?.email && DB.currentUser.id !== 'guest') {
+        await handlePlayerLogout();
+      } else {
+        openModal('modal-auth');
+      }
+    }
+
+    // ── Onglets Modale Auth (Connexion / Inscription) ──
+    if (id === 'tabAuthLogin') switchAuthTab('login');
+    if (id === 'tabAuthRegister') switchAuthTab('register');
+
+    // ── Soumission Formulaire Connexion Joueur ──
+    if (id === 'btnAuthSubmitLogin') {
+      const email = document.getElementById('authLoginEmail')?.value?.trim();
+      const password = document.getElementById('authLoginPassword')?.value;
+      await handlePlayerLogin(email, password);
+    }
+
+    // ── Soumission Formulaire Inscription Joueur ──
+    if (id === 'btnAuthSubmitRegister') {
+      const firstName = document.getElementById('authRegFirstName')?.value?.trim();
+      const lastName = document.getElementById('authRegLastName')?.value?.trim();
+      const phone = document.getElementById('authRegPhone')?.value?.trim();
+      const email = document.getElementById('authRegEmail')?.value?.trim();
+      const password = document.getElementById('authRegPassword')?.value;
+      const preferredSide = document.getElementById('authRegSide')?.value || 'right';
+      const playStyle = document.getElementById('authRegStyle')?.value || 'all-around';
+      await handlePlayerRegister({ firstName, lastName, phone, email, password, preferredSide, playStyle });
+    }
 
     // ── Mot de passe admin visible/masqué ──
     if (id === 'toggleAdminPassword') {
@@ -2331,7 +2435,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ── Mark all notifs read ──
     if (id === 'btnMarkAllRead') {
-      const unreadN = DB.notifications.filter(n => !n.isRead && n.userId === DB.currentUser.id);
+      const unreadN = (DB.notifications || []).filter(n => !n.isRead && n.userId === DB.currentUser?.id);
       unreadN.forEach(n => { n.isRead = true; });
       saveDB(DB); renderNotifications();
       const dotElN = document.getElementById('notifDot');
@@ -2343,8 +2447,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   console.log('%c🎾 CirclePadel v1.1 — Firebase Firestore + Auth · circlepadel', 'color:#C8A96E; font-weight:bold; font-size:15px');
   console.log('%c🔥 Firestore sync + real-time listeners actifs', 'color:#F39C12');
 });
-
-
 
 
 // ============================================================================
@@ -2364,6 +2466,7 @@ window.showToast               = showToast;
 window.resetDemoData           = resetDemoData;
 window.selectPlanningDate      = selectPlanningDate;
 window.openBookingFromSlot     = openBookingFromSlot;
+window.renderCourtsPlanningGrid = renderCourtsPlanningGrid;
 window.handleJoinMatch         = handleJoinMatch;
 window.cancelMyBooking         = cancelMyBooking;
 window.markNotifRead           = markNotifRead;
@@ -2384,6 +2487,11 @@ window.setMatchLevelMax        = setMatchLevelMax;
 window.removePlayerFromBooking = removePlayerFromBooking;
 window.adminCancelBooking      = adminCancelBooking;
 window.renderSlotDetail        = renderSlotDetail;
+window.handlePlayerLogin       = handlePlayerLogin;
+window.handlePlayerRegister    = handlePlayerRegister;
+window.handlePlayerLogout      = handlePlayerLogout;
+window.switchAuthTab           = switchAuthTab;
+window.updateAuthUI            = updateAuthUI;
 
 // ============================================================================
 // TOGGLE THÈME CLAIR / SOMBRE
