@@ -61,6 +61,148 @@ function calculatePadelRatingUpdate({ playerLevel, playerReliability, partnerLev
   };
 }
 
+const CP_DB_FILE = path.join(__dirname, 'data', 'circlepadel_db.json');
+
+function getInitialCirclePadelDB() {
+  const today = new Date().toISOString().split('T')[0];
+  return {
+    appConfig: {
+      clubName: 'CirclePadel Club',
+      phone: '+216 22 227 041',
+      email: 'contact@circlepadel.tn',
+      address: 'La Marsa, Tunis',
+      pricePeak: 25,
+      priceOffPeak: 18,
+      slotDurationMinutes: 90,
+      matchmakingTolerance: 1,
+      maxPlayersPerMatch: 4,
+      alertBeforeMatchHours: 6
+    },
+    currentUser: { id: 'guest', firstName: 'Joueur', lastName: '', role: 'player' },
+    courts: [
+      { id: 'court_1', name: 'Terrain 1', surface: 'Gazon synthétique bleu', isActive: true, amenities: ['Éclairage LED', 'Chauffage'] },
+      { id: 'court_2', name: 'Terrain 2', surface: 'Gazon synthétique bleu', isActive: true, amenities: ['Éclairage LED'] },
+      { id: 'court_3', name: 'Terrain 3', surface: 'Gazon synthétique vert', isActive: true, amenities: ['Éclairage LED', 'Chauffage'] },
+      { id: 'court_4', name: 'Terrain 4', surface: 'Moquette indoor', isActive: true, amenities: ['Éclairage LED', 'Climatisation'] },
+    ],
+    players: [
+      {
+        id: 'p_youssef',
+        firstName: 'Youssef',
+        lastName: 'Ben Salem',
+        email: 'youssef.bs@gmail.com',
+        phone: '+216 21 345 678',
+        role: 'player',
+        status: 'pending',
+        level: null,
+        preferredSide: 'right',
+        playStyle: 'all-around',
+        reliabilityScore: 85,
+        totalMatchesPlayed: 0,
+        skills: { bandeja: 5, vibora: 5, salida_cristal: 4, volee: 6, placement: 5, regularite: 5, mental: 6 },
+        levelHistory: [{ date: today, level: null, note: 'Inscription initiale — en attente évaluation coach' }],
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: 'p_amine',
+        firstName: 'Amine',
+        lastName: 'Trabelsi',
+        email: 'amine.trabelsi@gmail.com',
+        phone: '+216 98 765 432',
+        role: 'player',
+        status: 'pending',
+        level: null,
+        preferredSide: 'left',
+        playStyle: 'offensive',
+        reliabilityScore: 80,
+        totalMatchesPlayed: 0,
+        skills: { bandeja: 6, vibora: 6, salida_cristal: 5, volee: 7, placement: 6, regularite: 5, mental: 7 },
+        levelHistory: [{ date: today, level: null, note: 'Inscription initiale — en attente évaluation coach' }],
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: 'p_sarra',
+        firstName: 'Sarra',
+        lastName: 'Khemir',
+        email: 'sarra.khemir@gmail.com',
+        phone: '+216 55 123 456',
+        role: 'player',
+        status: 'pending',
+        level: null,
+        preferredSide: 'right',
+        playStyle: 'defensive',
+        reliabilityScore: 90,
+        totalMatchesPlayed: 0,
+        skills: { bandeja: 4, vibora: 4, salida_cristal: 5, volee: 5, placement: 6, regularite: 6, mental: 7 },
+        levelHistory: [{ date: today, level: null, note: 'Inscription initiale — en attente évaluation coach' }],
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: 'p_mehdi',
+        firstName: 'Mehdi',
+        lastName: 'Gharbi',
+        email: 'mehdi.gharbi@gmail.com',
+        phone: '+216 23 888 999',
+        role: 'player',
+        status: 'active',
+        level: 4,
+        preferredSide: 'left',
+        playStyle: 'offensive',
+        reliabilityScore: 92,
+        totalMatchesPlayed: 14,
+        skills: { bandeja: 7, vibora: 7, salida_cristal: 6, volee: 7, placement: 6, regularite: 7, mental: 7 },
+        levelHistory: [{ date: today, level: 4, note: 'Évaluation coach Ali validée' }],
+        levelValidatedAt: new Date().toISOString(),
+        levelValidatedBy: 'coach_ali',
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: 'p_karim',
+        firstName: 'Karim',
+        lastName: 'Jlassi',
+        email: 'karim.jlassi@gmail.com',
+        phone: '+216 94 111 222',
+        role: 'player',
+        status: 'active',
+        level: 3,
+        preferredSide: 'right',
+        playStyle: 'all-around',
+        reliabilityScore: 88,
+        totalMatchesPlayed: 8,
+        skills: { bandeja: 5, vibora: 5, salida_cristal: 5, volee: 5, placement: 5, regularite: 5, mental: 6 },
+        levelHistory: [{ date: today, level: 3, note: 'Évaluation coach Ali validée' }],
+        levelValidatedAt: new Date().toISOString(),
+        levelValidatedBy: 'coach_ali',
+        createdAt: new Date().toISOString()
+      }
+    ],
+    bookings: [
+      {
+        id: 'book_demo_1',
+        courtId: 'court_1',
+        courtName: 'Terrain 1',
+        date: today,
+        startTime: '18:30',
+        endTime: '20:00',
+        type: 'open',
+        status: 'confirmed',
+        minLevel: 3,
+        maxLevel: 5,
+        targetLevel: 4,
+        pricePerPlayer: 25,
+        createdBy: 'p_mehdi',
+        players: [
+          { id: 'p_mehdi', name: 'Mehdi Gharbi', level: 4, isOrganizer: true },
+          { id: 'p_karim', name: 'Karim Jlassi', level: 3 }
+        ]
+      }
+    ],
+    notifications: [],
+    transactions: [],
+    matchReviews: []
+  };
+}
+
 const server = http.createServer(async (req, res) => {
   const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = parsedUrl.pathname;
@@ -101,8 +243,52 @@ const server = http.createServer(async (req, res) => {
   };
 
   // ----------------------------------------------------------------
-  // REST API: PLAYER APPLICATION ROUTES
+  // REST API: CIRCLEPADEL SHARED PERSISTENCE ACROSS SESSIONS
   // ----------------------------------------------------------------
+
+  // GET /api/circlepadel/db - Shared persistent database
+  if (method === 'GET' && pathname === '/api/circlepadel/db') {
+    try {
+      if (!fs.existsSync(CP_DB_FILE)) {
+        const initialData = getInitialCirclePadelDB();
+        fs.writeFileSync(CP_DB_FILE, JSON.stringify(initialData, null, 2), 'utf-8');
+        return jsonResponse(initialData);
+      }
+      const raw = fs.readFileSync(CP_DB_FILE, 'utf-8');
+      const data = JSON.parse(raw);
+      if (!data.players || data.players.length === 0) {
+        data.players = getInitialCirclePadelDB().players;
+        fs.writeFileSync(CP_DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
+      }
+      return jsonResponse(data);
+    } catch (err) {
+      console.error('Error reading CP_DB_FILE:', err);
+      const fallback = getInitialCirclePadelDB();
+      return jsonResponse(fallback);
+    }
+  }
+
+  // POST /api/circlepadel/db - Update and persist shared database
+  if (method === 'POST' && pathname === '/api/circlepadel/db') {
+    try {
+      const body = await parseJsonBody();
+      if (body && typeof body === 'object') {
+        let currentData = {};
+        if (fs.existsSync(CP_DB_FILE)) {
+          try { currentData = JSON.parse(fs.readFileSync(CP_DB_FILE, 'utf-8')); } catch (e) {}
+        }
+        if ((!body.players || body.players.length === 0) && currentData.players && currentData.players.length > 0) {
+          body.players = currentData.players;
+        }
+        fs.writeFileSync(CP_DB_FILE, JSON.stringify(body, null, 2), 'utf-8');
+        return jsonResponse({ success: true, timestamp: Date.now() });
+      }
+      return jsonResponse({ success: false, error: 'Invalid payload' }, 400);
+    } catch (err) {
+      console.error('Error writing CP_DB_FILE:', err);
+      return jsonResponse({ success: false, error: err.message }, 500);
+    }
+  }
 
   // GET /api/state - Complete initial state from persistent database
   if (method === 'GET' && pathname === '/api/state') {

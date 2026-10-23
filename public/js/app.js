@@ -80,10 +80,55 @@ try {
   }
 } catch (e) { localStorage.removeItem(DB_KEY); }
 
-function saveDB(data) {
+let _syncDebounceTimer = null;
+
+function saveDB(data, pushToServer = true) {
   try {
     data._fromFirestore = true;
     localStorage.setItem(DB_KEY, JSON.stringify(data));
+  } catch (e) {}
+
+  if (pushToServer) {
+    clearTimeout(_syncDebounceTimer);
+    _syncDebounceTimer = setTimeout(async () => {
+      try {
+        await fetch('/api/circlepadel/db', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+      } catch (e) {}
+    }, 150);
+  }
+}
+
+async function syncFromBackend() {
+  try {
+    const res = await fetch('/api/circlepadel/db');
+    if (!res.ok) return;
+    const remote = await res.json();
+    if (remote && Array.isArray(remote.players)) {
+      DB.players = remote.players;
+      if (Array.isArray(remote.courts) && remote.courts.length) DB.courts = remote.courts;
+      if (Array.isArray(remote.bookings)) DB.bookings = remote.bookings;
+      if (remote.appConfig) DB.appConfig = { ...DEFAULT_CONFIG, ...remote.appConfig };
+      if (Array.isArray(remote.notifications)) DB.notifications = remote.notifications;
+
+      // Conserver le rôle de l'utilisateur connecté
+      if (DB.currentUser?.id && DB.currentUser.id !== 'guest') {
+        const found = DB.players.find(p => p.id === DB.currentUser.id || p.email === DB.currentUser.email);
+        if (found) {
+          const role = DB.currentUser.role;
+          DB.currentUser = { ...found, role: role || found.role || 'player' };
+        }
+      }
+
+      saveDB(DB, false);
+      renderAdminPlayers();
+      renderAdminKPIs();
+      renderHomeScreen();
+      renderMatchesList();
+    }
   } catch (e) {}
 }
 
@@ -1363,6 +1408,33 @@ function renderAdminPlayers() {
   const tbody = document.getElementById('adminPlayersTableBody');
   if (!tbody) return;
 
+  // Bannière d'attente d'évaluation coach
+  const pendingSection = document.getElementById('adminPendingEvalSection');
+  const pendingContainer = document.getElementById('adminPendingPlayersCards');
+  const pendingBadge = document.getElementById('adminPendingCountBadge');
+  const pendingPlayers = (DB.players || []).filter(p => p.status === 'pending' || !p.level);
+
+  if (pendingBadge) pendingBadge.textContent = pendingPlayers.length;
+  if (pendingSection) pendingSection.style.display = pendingPlayers.length > 0 ? 'block' : 'none';
+  if (pendingContainer) {
+    if (pendingPlayers.length === 0) {
+      pendingContainer.innerHTML = `<div style="color:var(--text-muted); font-size:13px; grid-column:1/-1">Tous les membres inscrits ont été évalués par le coach ✓</div>`;
+    } else {
+      pendingContainer.innerHTML = pendingPlayers.map(p => `
+        <div style="background:var(--bg-card); border:1px solid rgba(243,156,18,0.35); border-radius:var(--radius-md); padding:12px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px">
+          <div>
+            <div style="font-weight:700; color:var(--text-white); font-size:14px">${p.firstName} ${p.lastName || ''}</div>
+            <div style="font-size:11px; color:var(--text-secondary); margin-top:2px">📞 ${p.phone || p.email || '—'}</div>
+            <div style="font-size:11px; color:var(--amber); font-weight:600; margin-top:3px">⏳ Inscrit · En attente d'évaluation</div>
+          </div>
+          <button class="btn-table-action success" onclick="openPlayerEvalModal('${p.id}')" style="padding:7px 14px; font-weight:700">
+            📋 Évaluer
+          </button>
+        </div>
+      `).join('');
+    }
+  }
+
   if (!DB.players || DB.players.length === 0) {
     tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:32px; color:var(--text-muted)">Aucun joueur inscrit dans la base de données.</td></tr>`;
     return;
@@ -1509,51 +1581,57 @@ function renderAdminStats() {
   const activePlayers = DB.players.filter(p => p.status === 'active').length;
   const totalMatchesPlayed = weekBookings.filter(b => b.players.length === 4).length;
 
-  statsGrid.innerHTML = [
-    { label: 'Revenus totaux', value: `${totalRevenue} DT`, sub: 'Base de données actuelle' },
-    { label: 'Réservations totales', value: weekBookings.length, sub: 'Tous statuts confondus' },
-    { label: 'Membres actifs', value: activePlayers, sub: 'Niveaux validés par coach' },
-    { label: 'Matchs complets (4/4)', value: totalMatchesPlayed, sub: 'Terrain optimisé' },
-  ].map(s => `
-    <div class="stat-card">
-      <div class="stat-card-label">${s.label}</div>
-      <div class="stat-card-value">${s.value}</div>
-      <div class="stat-card-sub">${s.sub}</div>
-    </div>`
-  ).join('');
+  if (statsGrid) {
+    statsGrid.innerHTML = [
+      { label: 'Revenus totaux', value: `${totalRevenue} DT`, sub: 'Base de données actuelle' },
+      { label: 'Réservations totales', value: weekBookings.length, sub: 'Tous statuts confondus' },
+      { label: 'Membres actifs', value: activePlayers, sub: 'Niveaux validés par coach' },
+      { label: 'Matchs complets (4/4)', value: totalMatchesPlayed, sub: 'Terrain optimisé' },
+    ].map(s => `
+      <div class="stat-card">
+        <div class="stat-card-label">${s.label}</div>
+        <div class="stat-card-value">${s.value}</div>
+        <div class="stat-card-sub">${s.sub}</div>
+      </div>`
+    ).join('');
+  }
 
   // Occupancy chart (courts)
   const chart = document.getElementById('occupancyChart');
-  chart.innerHTML = DB.courts.map(court => {
-    const booked = DB.bookings.filter(b => b.courtId === court.id && b.status === 'confirmed').length;
-    const pct = Math.min(100, Math.round((booked / (SLOT_TIMES.length * 7)) * 100));
-    return `
-    <div class="occ-bar-wrap">
-      <div class="occ-bar" style="height:${pct}%; min-height:4px" title="${court.name}: ${pct}%"></div>
-      <div class="occ-bar-label">${court.name.replace('Terrain ', 'T')}<br>${pct}%</div>
-    </div>`;
-  }).join('');
+  if (chart) {
+    chart.innerHTML = DB.courts.map(court => {
+      const booked = DB.bookings.filter(b => b.courtId === court.id && b.status === 'confirmed').length;
+      const pct = Math.min(100, Math.round((booked / (SLOT_TIMES.length * 7)) * 100));
+      return `
+      <div class="occ-bar-wrap">
+        <div class="occ-bar" style="height:${pct}%; min-height:4px" title="${court.name}: ${pct}%"></div>
+        <div class="occ-bar-label">${court.name.replace('Terrain ', 'T')}<br>${pct}%</div>
+      </div>`;
+    }).join('');
+  }
 
   // Transactions table
   const tbody = document.getElementById('adminTransactionsTableBody');
-  const recentBookings = DB.bookings.filter(b => b.status === 'confirmed').slice(-10).reverse();
-  if (recentBookings.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:20px">Aucune transaction</td></tr>';
-    return;
+  if (tbody) {
+    const recentBookings = DB.bookings.filter(b => b.status === 'confirmed').slice(-10).reverse();
+    if (recentBookings.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:20px">Aucune transaction</td></tr>';
+    } else {
+      tbody.innerHTML = recentBookings.map(b => {
+        const organizer = (b.players || []).find(p => p.isOrganizer) || (b.players || [])[0];
+        const amount = (b.pricePerPlayer || 25) * (b.players || []).length;
+        return `
+        <tr>
+          <td style="color:var(--text-secondary)">${b.date}</td>
+          <td>${organizer ? organizer.name : '—'}</td>
+          <td><span class="slot-type-badge ${b.type}">${b.type === 'open' ? 'Match ouvert' : b.type === 'private' ? 'Privée' : b.type}</span></td>
+          <td>${b.courtName}</td>
+          <td style="font-weight:700; color:var(--gold)">${amount} DT</td>
+          <td><span class="info-badge green" style="padding:2px 8px; font-size:10px">Sur place</span></td>
+        </tr>`;
+      }).join('');
+    }
   }
-  tbody.innerHTML = recentBookings.map(b => {
-    const organizer = b.players.find(p => p.isOrganizer) || b.players[0];
-    const amount = b.pricePerPlayer * b.players.length;
-    return `
-    <tr>
-      <td style="color:var(--text-secondary)">${b.date}</td>
-      <td>${organizer ? organizer.name : '—'}</td>
-      <td><span class="slot-type-badge ${b.type}">${b.type === 'open' ? 'Match ouvert' : b.type === 'private' ? 'Privée' : b.type}</span></td>
-      <td>${b.courtName}</td>
-      <td style="font-weight:700; color:var(--gold)">${amount} DT</td>
-      <td><span class="info-badge green" style="padding:2px 8px; font-size:10px">Sur place</span></td>
-    </tr>`;
-  }).join('');
 }
 
 // ============================================================================
@@ -1563,11 +1641,14 @@ function renderAdminStats() {
 function renderSlotDetail(bookingId) {
   const b = DB.bookings.find(b => b.id === bookingId);
   if (!b) return;
-  const spots = DB.appConfig.maxPlayersPerMatch - b.players.length;
+  const spots = DB.appConfig.maxPlayersPerMatch - (b.players || []).length;
   const today = getTodayStr();
 
-  document.getElementById('slotDetailTitle').textContent = `${b.courtName} · ${b.startTime}`;
-  document.getElementById('slotDetailContent').innerHTML = `
+  const titleEl = document.getElementById('slotDetailTitle');
+  if (titleEl) titleEl.textContent = `${b.courtName} · ${b.startTime}`;
+  const contentEl = document.getElementById('slotDetailContent');
+  if (!contentEl) return;
+  contentEl.innerHTML = `
     <div style="display:flex; flex-direction:column; gap:12px">
       <div style="display:flex; gap:8px; flex-wrap:wrap">
         <span class="slot-type-badge ${b.type}" style="font-size:12px; padding:4px 12px">${b.type === 'open' ? 'Match ouvert' : b.type === 'private' ? 'Privée' : b.type === 'course' ? 'Cours' : 'Bloqué'}</span>
@@ -1714,6 +1795,8 @@ function openPlayerEvalModal(playerId) {
   if (submitBtn) submitBtn.dataset.playerId = playerId;
 
   openModal('modal-evaluate-player');
+  const modalSheet = document.querySelector('#modal-evaluate-player .modal-sheet') || document.querySelector('#modal-evaluate-player .modal-card');
+  if (modalSheet) modalSheet.scrollTop = 0;
 }
 
 function setSkillValue(skillKey, val) {
@@ -2642,8 +2725,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Synchronisation Firestore en tâche de fond (ne bloque pas les clics)
+  // Synchronisation backend partagée (cross-session & cross-device)
   (async () => {
+    try {
+      await syncFromBackend();
+      renderHomeScreen();
+      updateAuthUI();
+      renderAdminPlayers();
+      renderAdminKPIs();
+    } catch (e) {}
+
+    // Polling régulier pour synchronisation en direct entre onglets et sessions
+    setInterval(syncFromBackend, 5000);
+    window.addEventListener('focus', syncFromBackend);
+
+    // Synchronisation Firestore en tâche de fond si en ligne
     try {
       await initFirestoreIfEmpty();
     } catch (e) {
