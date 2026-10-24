@@ -966,6 +966,13 @@ function renderProfileScreen() {
     futAvatar.textContent = (f + l).toUpperCase();
   }
 
+  const futInitials = document.getElementById('futPlayerInitials');
+  if (futInitials) {
+    const f = user.firstName?.[0] || 'C';
+    const l = user.lastName?.[0] || 'P';
+    futInitials.textContent = (f + l).toUpperCase();
+  }
+
   const futVerified = document.getElementById('futCoachVerified');
   const futVerifiedText = document.getElementById('futCoachVerifiedText');
   if (futVerified && futVerifiedText) {
@@ -3098,6 +3105,33 @@ window.handlePlayerLogout      = handlePlayerLogout;
 window.switchAuthTab           = switchAuthTab;
 window.updateAuthUI            = updateAuthUI;
 window.openCourtsideDisplay    = openCourtsideDisplay;
+
+window.submitAuthLogin = async function() {
+  const email = document.getElementById('authLoginEmail')?.value?.trim();
+  const password = document.getElementById('authLoginPassword')?.value;
+  await handlePlayerLogin(email, password);
+};
+
+window.submitAuthRegister = async function() {
+  const firstName = document.getElementById('authRegFirstName')?.value?.trim();
+  const lastName = document.getElementById('authRegLastName')?.value?.trim();
+  const phone = document.getElementById('authRegPhone')?.value?.trim();
+  const email = document.getElementById('authRegEmail')?.value?.trim();
+  const password = document.getElementById('authRegPassword')?.value;
+  const preferredSide = document.getElementById('authRegSide')?.value || 'right';
+  const playStyle = document.getElementById('authRegStyle')?.value || 'all-around';
+  await handlePlayerRegister({ firstName, lastName, phone, email, password, preferredSide, playStyle });
+};
+
+// Brancher immédiatement les clics des onglets de connexion
+document.getElementById('tabAuthLogin')?.addEventListener('click', (e) => {
+  e.preventDefault();
+  switchAuthTab('login');
+});
+document.getElementById('tabAuthRegister')?.addEventListener('click', (e) => {
+  e.preventDefault();
+  switchAuthTab('register');
+});
 
 // Validation formulaires auth au clavier (touche Entrée)
 document.addEventListener('keydown', async (e) => {
