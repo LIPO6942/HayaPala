@@ -290,149 +290,81 @@
             <button class="filter-btn-icon" onclick="navigateToScreen('screen-settings')" title="Paramètres">⚙</button>
           </div>
 
-          <!-- FIFA ULTIMATE TEAM (FUT) PADEL CARD (AUTHENTIC SHIELD DESIGN) -->
+          <!-- FIFA ULTIMATE TEAM (FUT) PADEL CARD (CIRCLE PADEL GREEN EDITION) -->
           <div class="fut-card-container">
-            <div class="fut-card gold-edition" id="futPlayerCard">
-              <div class="fut-card-inner">
-                <!-- Arrière-plan dynamique : éclairs dorés, spots de stade, facettes carbone -->
-                <div class="fut-card-bg-fx">
-                  <div class="fut-lightning-glow"></div>
-                  <div class="fut-carbon-pattern"></div>
-                  <div class="fut-gold-shards-bg"></div>
+            <div class="fut-card green-edition" id="futPlayerCard">
+              <!-- Image de fond IA haute définition : Cercle Padel, verdure, tapis vert et joueur athlétique -->
+              <img src="./images/circlepadel_green_card.jpg" alt="CirclePadel FUT Card" class="fut-card-base-img" />
+
+              <!-- Overlay dynamique interactif avec les données réelles du joueur -->
+              <div class="fut-card-overlay-content">
+                <!-- Badge d'évaluation coach (flottant en haut) -->
+                <div class="fut-coach-badge-top" id="futCoachVerified">
+                  <span id="futCoachVerifiedText">✓ CERTIFIÉ COACH</span>
                 </div>
 
-                <!-- En-tête : OVR, Poste, Drapeau, Écusson Club + Silhouette Héroïque Joueur -->
-                <div class="fut-card-header">
-                  <div class="fut-badge-col">
-                    <div class="fut-rating" id="futCardRating">6.0</div>
-                    <div class="fut-pos" id="futCardPos">DRT</div>
-                    <div class="fut-badge-divider"></div>
-                    <div class="fut-flag" title="Tunisie">🇹🇳</div>
-                    <div class="fut-club-crest" title="CirclePadel Club">
-                      <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
-                        <path d="M12 2L3 6v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V6l-9-4z" fill="#D4AF37" stroke="#FFE082" stroke-width="1.2"/>
-                        <circle cx="12" cy="11" r="4.2" fill="#111" stroke="#FFD700" stroke-width="1"/>
-                        <path d="M10 11a2 2 0 1 0 4 0" stroke="#FFE082" stroke-width="0.9"/>
-                      </svg>
-                    </div>
-                  </div>
-
-                  <!-- Silhouette / Buste Athlétique Héroïque en Smash / Bandeja -->
-                  <div class="fut-player-figure-wrap">
-                    <div class="fut-stadium-spotlight"></div>
-                    <div class="fut-player-figure" id="futPlayerFigure">
-                      <svg class="fut-hero-svg" viewBox="0 0 200 210" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <defs>
-                          <linearGradient id="heroGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stop-color="#FFF8E1"/>
-                            <stop offset="25%" stop-color="#FFE082"/>
-                            <stop offset="60%" stop-color="#D4AF37"/>
-                            <stop offset="100%" stop-color="#6B4F10"/>
-                          </linearGradient>
-                          <radialGradient id="heroAuraGlow" cx="50%" cy="40%" r="55%">
-                            <stop offset="0%" stop-color="#FFE082" stop-opacity="0.8"/>
-                            <stop offset="45%" stop-color="#D4AF37" stop-opacity="0.3"/>
-                            <stop offset="100%" stop-color="transparent" stop-opacity="0"/>
-                          </radialGradient>
-                          <linearGradient id="jerseyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" stop-color="#2c3440"/>
-                            <stop offset="100%" stop-color="#12161f"/>
-                          </linearGradient>
-                        </defs>
-                        <!-- Halo d'énergie stadium -->
-                        <circle cx="120" cy="80" r="75" fill="url(#heroAuraGlow)"/>
-                        <!-- Raquette de Padel levée pour le smash -->
-                        <g transform="translate(142, 10) rotate(22)">
-                          <ellipse cx="18" cy="24" rx="17" ry="23" fill="#16181f" stroke="url(#heroGoldGrad)" stroke-width="3"/>
-                          <!-- Trous raquette -->
-                          <circle cx="13" cy="18" r="1.8" fill="#FFE082"/>
-                          <circle cx="18" cy="18" r="1.8" fill="#FFE082"/>
-                          <circle cx="23" cy="18" r="1.8" fill="#FFE082"/>
-                          <circle cx="13" cy="24" r="1.8" fill="#FFE082"/>
-                          <circle cx="18" cy="24" r="1.8" fill="#FFE082"/>
-                          <circle cx="23" cy="24" r="1.8" fill="#FFE082"/>
-                          <circle cx="18" cy="30" r="1.8" fill="#FFE082"/>
-                          <!-- Manche -->
-                          <rect x="16" y="47" width="4.5" height="18" rx="2" fill="url(#heroGoldGrad)"/>
-                        </g>
-                        <!-- Balle de Padel avec trajectoire néon -->
-                        <circle cx="186" cy="14" r="7.5" fill="#CCFF00" filter="drop-shadow(0 0 8px #CCFF00)"/>
-                        <path d="M181 18 Q186 14 191 18" stroke="#333" stroke-width="1.2" fill="none"/>
-                        <!-- Bras droit levé tenant la raquette -->
-                        <path d="M125 110 L146 72 L158 40 L168 44 L154 78 L133 118 Z" fill="url(#heroGoldGrad)"/>
-                        <!-- Tête & Profil de l'athlète -->
-                        <circle cx="106" cy="62" r="22" fill="url(#heroGoldGrad)" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.8))"/>
-                        <!-- Cou & Torse athlétique / Maillot officiel CirclePadel -->
-                        <path d="M96 82 L116 82 L138 115 L144 195 L68 195 L75 115 Z" fill="url(#jerseyGrad)" stroke="url(#heroGoldGrad)" stroke-width="1.5"/>
-                        <!-- Logo cercle sur le torse -->
-                        <circle cx="106" cy="130" r="16" fill="rgba(0,0,0,0.6)" stroke="#FFE082" stroke-width="1.2"/>
-                        <text x="106" y="136" text-anchor="middle" font-family="'Outfit', sans-serif" font-size="12" font-weight="900" fill="#FFE082" letter-spacing="1" id="futPlayerInitials">CP</text>
-                        <!-- Bras gauche d'équilibre -->
-                        <path d="M75 115 L50 148 L44 170 L55 170 L66 150 L84 125 Z" fill="url(#heroGoldGrad)"/>
-                      </svg>
-                    </div>
-
-                    <!-- Badge vérifié coach -->
-                    <div class="fut-coach-verified-ribbon" id="futCoachVerified">
-                      <span id="futCoachVerifiedText">✓ CERTIFIÉ COACH</span>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Ruban Nom du Joueur Style FIFA -->
-                <div class="fut-nameplate">
+                <!-- Ruban Nom du Joueur (calé exactement sur le bandeau bleu du visuel) -->
+                <div class="fut-name-zone">
                   <div class="fut-name" id="futPlayerName">TAREK BEN AMOR</div>
-                  <div class="fut-style-label" id="futPlayerStyle">⚡ OFFENSIF · DROITIER</div>
+                  <div class="fut-style-pill" id="futPlayerStyle">⚡ OFFENSIF · DROITIER</div>
                 </div>
 
-                <!-- Ligne de séparation dorée avec diamant -->
-                <div class="fut-shield-divider">
-                  <span></span><div class="fut-diamond"></div><span></span>
-                </div>
+                <!-- Panneau Émeraude & Or des Statistiques Officielles -->
+                <div class="fut-stats-plate">
+                  <!-- Ligne 1 : OVR, Position, Drapeau Tunisie & Fiabilité -->
+                  <div class="fut-stats-header-row">
+                    <div class="fut-stat-chip">
+                      <span class="fut-chip-val" id="futCardRating">6.0</span>
+                      <span class="fut-chip-lbl">NOTE/10</span>
+                    </div>
+                    <div class="fut-stat-chip">
+                      <span class="fut-chip-val" id="futCardPos">DRT</span>
+                      <span class="fut-chip-lbl">POSTE</span>
+                    </div>
+                    <div class="fut-stat-chip">
+                      <span class="fut-chip-val" style="font-size:16px; line-height:1">🇹🇳</span>
+                      <span class="fut-chip-lbl">TUNISIE</span>
+                    </div>
+                    <div class="fut-stat-chip">
+                      <span class="fut-chip-val" id="futCardReliability" style="color:#FFE082">50%</span>
+                      <span class="fut-chip-lbl">FIABILITÉ</span>
+                    </div>
+                  </div>
 
-                <!-- Grille des 6 Attributs Padel (Format authentique EA FC / FUT) -->
-                <div class="fut-stats-matrix">
-                  <div class="fut-stat-block">
-                    <div class="fut-stat-row">
-                      <span class="fut-stat-val" id="futStatReg">70</span>
-                      <span class="fut-stat-lbl">REG</span>
-                    </div>
-                    <div class="fut-stat-row">
-                      <span class="fut-stat-val" id="futStatPla">65</span>
-                      <span class="fut-stat-lbl">PLA</span>
-                    </div>
-                    <div class="fut-stat-row">
-                      <span class="fut-stat-val" id="futStatVit">60</span>
-                      <span class="fut-stat-lbl">VIT</span>
-                    </div>
-                  </div>
-                  <div class="fut-matrix-vsep"></div>
-                  <div class="fut-stat-block">
-                    <div class="fut-stat-row">
-                      <span class="fut-stat-val" id="futStatVol">65</span>
-                      <span class="fut-stat-lbl">VOL</span>
-                    </div>
-                    <div class="fut-stat-row">
-                      <span class="fut-stat-val" id="futStatBan">60</span>
-                      <span class="fut-stat-lbl">BAN</span>
-                    </div>
-                    <div class="fut-stat-row">
-                      <span class="fut-stat-val" id="futStatMen">70</span>
-                      <span class="fut-stat-lbl">MEN</span>
-                    </div>
-                  </div>
-                </div>
+                  <!-- Séparateur doré fin -->
+                  <div class="fut-plate-divider"></div>
 
-                <!-- Pied de Carte Bouclier : Fiabilité Pairs, Sceau FUT 26 & Niveau -->
-                <div class="fut-shield-footer">
-                  <div class="fut-chem-pill" title="Calibration compétitive éprouvée face aux pairs">
-                    <span>🎯 FIAB:</span> <strong id="futCardReliability">50%</strong>
+                  <!-- Ligne 2 : Les 6 Attributs Padel (Format authentique EA Sports FC / FIFA) -->
+                  <div class="fut-attributes-grid">
+                    <div class="fut-attr-item">
+                      <span class="fut-attr-num" id="futStatReg">70</span>
+                      <span class="fut-attr-code">REG</span>
+                    </div>
+                    <div class="fut-attr-item">
+                      <span class="fut-attr-num" id="futStatPla">65</span>
+                      <span class="fut-attr-code">PLA</span>
+                    </div>
+                    <div class="fut-attr-item">
+                      <span class="fut-attr-num" id="futStatVit">60</span>
+                      <span class="fut-attr-code">VIT</span>
+                    </div>
+                    <div class="fut-attr-item">
+                      <span class="fut-attr-num" id="futStatVol">65</span>
+                      <span class="fut-attr-code">VOL</span>
+                    </div>
+                    <div class="fut-attr-item">
+                      <span class="fut-attr-num" id="futStatBan">60</span>
+                      <span class="fut-attr-code">BAN</span>
+                    </div>
+                    <div class="fut-attr-item">
+                      <span class="fut-attr-num" id="futStatMen">70</span>
+                      <span class="fut-attr-code">MEN</span>
+                    </div>
                   </div>
-                  <div class="fut-seal-badge">
-                    <span>FUT 26</span>
-                  </div>
-                  <div class="fut-level-pill">
-                    NIV <strong id="futCardLevelNum">6</strong>/10
+
+                  <!-- Niveau Officiel validé au pied du panneau -->
+                  <div class="fut-plate-footer">
+                    <span>CIRCLEPADEL CLUB · NIV <strong id="futCardLevelNum">6</strong>/10</span>
                   </div>
                 </div>
               </div>
@@ -1471,6 +1403,36 @@
           <div class="ticker-item">🏅 NIVEAU OFFICIEL : <strong id="csTickerLevel">—</strong></div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ── Modale : Célébration Animation Connexion / Inscription Pro (Style EA Sports / Nike) ── -->
+  <div class="modal-overlay celebration-overlay" id="modal-auth-celebration" role="dialog" aria-modal="true" style="display:none">
+    <div class="celebration-card-wrap">
+      <!-- Anneau de lumière et étincelles dorées -->
+      <div class="celebration-icon-box">
+        <div class="celebration-ring"></div>
+        <div class="celebration-icon" id="celebrationIcon">🎾</div>
+      </div>
+
+      <!-- Titres & Messages personnalisés -->
+      <div class="celebration-badge" id="celebrationBadge">COMPTE ACTIVÉ AVEC SUCCÈS</div>
+      <h2 class="celebration-title" id="celebrationTitle">Bienvenue dans le Club !</h2>
+      <p class="celebration-subtitle" id="celebrationSubtitle">Votre carte officielle CirclePadel est débloquée et prête pour le terrain.</p>
+
+      <!-- Aperçu miniature avec lueur dorée -->
+      <div class="celebration-card-preview">
+        <div class="celebration-card-mini">
+          <img src="./images/circlepadel_green_card.jpg" alt="CirclePadel Card" class="celebration-mini-img" />
+          <div class="celebration-mini-glow"></div>
+        </div>
+      </div>
+
+      <!-- Barre de progression fluide avant redirection -->
+      <div class="celebration-progress-bar">
+        <div class="celebration-progress-fill" id="celebrationProgressFill"></div>
+      </div>
+      <div class="celebration-redirect-hint">Chargement de votre profil officiel en direct...</div>
     </div>
   </div>
 

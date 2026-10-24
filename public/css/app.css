@@ -3635,4 +3635,363 @@ button:active:not(:disabled), .btn-primary-action:active:not(:disabled) {
   color: var(--gold);
 }
 
+/* ==========================================================================
+   CIRCLEPADEL GREEN EDITION FIFA FUT CARD (VERDURE & TAPIS VERT PRESTIGE)
+   ========================================================================== */
+.fut-card.green-edition {
+  position: relative;
+  width: 330px;
+  height: 495px;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9), 0 0 35px rgba(46, 204, 113, 0.35);
+  border: 2px solid rgba(212, 175, 55, 0.7);
+  transition: transform 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28), box-shadow 0.4s ease;
+  user-select: none;
+  background: #06150e;
+}
+
+.fut-card.green-edition:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 28px 65px rgba(0, 0, 0, 0.95), 0 0 45px rgba(46, 204, 113, 0.55);
+}
+
+.fut-card-base-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.fut-card-overlay-content {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.fut-coach-badge-top {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: rgba(4, 20, 13, 0.92);
+  border: 1.5px solid #2ecc71;
+  border-radius: 12px;
+  padding: 3px 10px;
+  font-size: 8.5px;
+  font-weight: 800;
+  color: #2ecc71;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.85);
+  backdrop-filter: blur(6px);
+  z-index: 5;
+}
+
+.fut-name-zone {
+  position: absolute;
+  top: 61.2%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 84%;
+  text-align: center;
+  pointer-events: auto;
+  z-index: 4;
+}
+
+.fut-name-zone .fut-name {
+  font-family: 'Outfit', sans-serif;
+  font-size: 19px;
+  font-weight: 900;
+  letter-spacing: 2.2px;
+  color: #FFFFFF;
+  text-transform: uppercase;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.95), 0 0 14px rgba(255, 215, 0, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.1;
+}
+
+.fut-name-zone .fut-style-pill {
+  display: inline-block;
+  font-family: 'Outfit', sans-serif;
+  font-size: 8px;
+  font-weight: 800;
+  color: #FFD700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-top: 1px;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+}
+
+.fut-stats-plate {
+  position: absolute;
+  top: 71.2%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 88%;
+  background: rgba(3, 22, 14, 0.95);
+  border: 1.5px solid rgba(212, 175, 55, 0.6);
+  border-radius: 12px;
+  padding: 7px 10px 6px;
+  box-sizing: border-box;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85), inset 0 0 12px rgba(46, 204, 113, 0.15);
+  pointer-events: auto;
+  z-index: 4;
+}
+
+.fut-stats-header-row {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.fut-stat-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.fut-chip-val {
+  font-family: 'Outfit', sans-serif;
+  font-size: 14.5px;
+  font-weight: 900;
+  color: #FFFFFF;
+  text-shadow: 0 1px 5px rgba(0,0,0,0.9);
+}
+
+.fut-chip-lbl {
+  font-family: 'Outfit', sans-serif;
+  font-size: 7.5px;
+  font-weight: 800;
+  color: #FFD700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  margin-top: 1px;
+}
+
+.fut-plate-divider {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.65), transparent);
+  margin: 4px 0 5px 0;
+}
+
+.fut-attributes-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 2px;
+  text-align: center;
+}
+
+.fut-attr-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.fut-attr-num {
+  font-family: 'Outfit', sans-serif;
+  font-size: 13.5px;
+  font-weight: 900;
+  color: #FFFFFF;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+}
+
+.fut-attr-code {
+  font-family: 'Outfit', sans-serif;
+  font-size: 7.5px;
+  font-weight: 800;
+  color: #FFD700;
+  letter-spacing: 0.5px;
+}
+
+.fut-plate-footer {
+  text-align: center;
+  margin-top: 4px;
+  font-size: 7.5px;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.65);
+  text-transform: uppercase;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+}
+
+.fut-plate-footer strong {
+  color: #2ecc71;
+}
+
+.courtside-stage .fut-card.green-edition {
+  width: 360px;
+  height: 540px;
+  transform: scale(1.05);
+  filter: drop-shadow(0 35px 80px rgba(0, 0, 0, 0.98)) drop-shadow(0 0 60px rgba(46, 204, 113, 0.55));
+}
+
+/* ==========================================================================
+   AUTH CELEBRATION MODAL (EA Sports / Pro Animation)
+   ========================================================================== */
+.celebration-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 8, 6, 0.88);
+  backdrop-filter: blur(14px);
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: celebrationFadeIn 0.35s ease-out;
+}
+
+@keyframes celebrationFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.celebration-card-wrap {
+  width: 100%;
+  max-width: 420px;
+  background: linear-gradient(165deg, rgba(12, 32, 22, 0.95) 0%, rgba(5, 15, 10, 0.98) 100%);
+  border: 1.5px solid rgba(212, 175, 55, 0.55);
+  border-radius: 24px;
+  padding: 32px 24px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9), 0 0 40px rgba(46, 204, 113, 0.3);
+  position: relative;
+  overflow: hidden;
+  animation: celebrationPopUp 0.45s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+@keyframes celebrationPopUp {
+  from { transform: scale(0.85) translateY(20px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.celebration-icon-box {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.celebration-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  border-top-color: #FFD700;
+  border-right-color: #2ecc71;
+  animation: celebrationSpin 1.8s linear infinite;
+  box-shadow: 0 0 20px rgba(46, 204, 113, 0.6);
+}
+
+@keyframes celebrationSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.celebration-icon {
+  font-size: 38px;
+  animation: celebrationPulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes celebrationPulse {
+  0% { transform: scale(0.92); }
+  100% { transform: scale(1.08); filter: drop-shadow(0 0 14px rgba(255, 215, 0, 0.8)); }
+}
+
+.celebration-badge {
+  font-family: 'Outfit', sans-serif;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #FFD700;
+  background: rgba(212, 175, 55, 0.15);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  padding: 4px 14px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.celebration-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: #FFFFFF;
+  margin: 0 0 8px;
+  letter-spacing: -0.5px;
+}
+
+.celebration-subtitle {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.45;
+  margin: 0 0 20px;
+}
+
+.celebration-card-preview {
+  margin-bottom: 22px;
+}
+
+.celebration-card-mini {
+  position: relative;
+  width: 110px;
+  height: 165px;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.8), 0 0 20px rgba(46, 204, 113, 0.4);
+  border: 1.5px solid rgba(212, 175, 55, 0.7);
+  animation: floatMiniCard 3s ease-in-out infinite;
+}
+
+@keyframes floatMiniCard {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.celebration-mini-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.celebration-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.celebration-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #2ecc71, #FFD700);
+  box-shadow: 0 0 10px #2ecc71;
+  transition: width 2s cubic-bezier(0.1, 0.8, 0.3, 1);
+}
+
+.celebration-redirect-hint {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 500;
+}
+
+
 

@@ -126,6 +126,7 @@ async function syncFromBackend() {
       saveDB(DB, false);
       renderAdminPlayers();
       renderAdminKPIs();
+      renderAdminAlerts();
       renderHomeScreen();
       renderMatchesList();
     }
@@ -213,6 +214,7 @@ function startRealtimeListeners() {
       saveDB(DB);
       renderAdminPlayers();
       renderAdminKPIs();
+      renderAdminAlerts();
     } catch (e) {
       console.warn('Realtime players error:', e);
     }
@@ -1126,8 +1128,19 @@ async function handlePlayerLogin(email, password) {
     updateAuthRoleUI();
     renderHomeScreen();
     renderProfileScreen();
-    closeAllModals();
-    showToast(`Ravi de vous revoir, ${DB.currentUser.firstName} 🎾`, 'success');
+
+    // Célébration animée EA Sports Pro à la connexion
+    showCelebrationModal({
+      title: `Ravi de vous revoir, ${DB.currentUser.firstName} !`,
+      subtitle: `Connexion sécurisée établie. Votre carte officielle CirclePadel et vos stats sont synchronisées en direct.`,
+      badgeText: 'SESSION ATHLÈTE VALIDÉE',
+      icon: '🎾',
+      durationMs: 2000,
+      onComplete: () => {
+        navigateToScreen('screen-profile');
+        showToast(`Bon match chez CirclePadel 🎾`, 'success');
+      }
+    });
   } catch (err) {
     console.error('Login error:', err);
     showToast('Erreur lors de la connexion.', 'error');
@@ -1227,18 +1240,42 @@ async function handlePlayerRegister({ firstName, lastName, phone, email, passwor
   // Sauvegarde Firestore en tâche de fond
   fbSavePlayer(newPlayer).catch(e => console.warn('fbSavePlayer async error:', e));
 
-  // Mise à jour de l'UI
+  // Alerte instantanée pour le gérant : nouveau joueur à évaluer
+  const managerAlert = {
+    id: 'notif_eval_' + Date.now(),
+    userId: 'admin',
+    type: 'coach_eval_needed',
+    title: 'Nouveau joueur à évaluer',
+    message: `${cleanFirst} ${cleanLast} vient de créer son compte. Évaluation coach requise.`,
+    playerId: newPlayer.id,
+    read: false,
+    createdAt: new Date().toISOString()
+  };
+  DB.notifications = DB.notifications || [];
+  DB.notifications.unshift(managerAlert);
+
+  // Mise à jour immédiate de l'UI
   updateAuthUI();
   updateAuthRoleUI();
   renderHomeScreen();
   renderProfileScreen();
   if (typeof renderAdminPlayers === 'function') renderAdminPlayers();
+  if (typeof renderAdminKPIs === 'function') renderAdminKPIs();
+  if (typeof renderAdminAlerts === 'function') renderAdminAlerts();
   if (typeof renderCoachPendingPlayers === 'function') renderCoachPendingPlayers();
 
-  // Fermer la modale et afficher directement la carte joueur FIFA
-  closeAllModals();
-  navigateToScreen('screen-profile');
-  showToast(`Bienvenue ${cleanFirst} ! Votre carte joueur est prête 🎾`, 'success');
+  // Animation de célébration pro EA Sports / CirclePadel
+  showCelebrationModal({
+    title: `Bienvenue dans le Club, ${cleanFirst} !`,
+    subtitle: `Votre compte officiel est créé. Votre carte joueur CirclePadel est débloquée et envoyée au coach pour évaluation.`,
+    badgeText: 'NOUVEL ATHLÈTE ENREGISTRÉ',
+    icon: '🏆',
+    durationMs: 2400,
+    onComplete: () => {
+      navigateToScreen('screen-profile');
+      showToast(`Bienvenue ${cleanFirst} ! Votre carte joueur officielle est prête 🎾`, 'success');
+    }
+  });
 
   if (submitBtn) {
     submitBtn.disabled = false;
@@ -2500,6 +2537,50 @@ function closeAllModals() {
   document.body.style.overflow = '';
 }
 
+/**
+ * Affiche l'animation de célébration interactive (Style EA Sports FC / Nike)
+ * lors de la connexion ou de la création d'un compte
+ */
+function showCelebrationModal({ title, subtitle, badgeText, icon = '🎾', durationMs = 2100, onComplete }) {
+  const modal = document.getElementById('modal-auth-celebration');
+  if (!modal) {
+    if (onComplete) onComplete();
+    return;
+  }
+
+  const titleEl = document.getElementById('celebrationTitle');
+  const subEl = document.getElementById('celebrationSubtitle');
+  const badgeEl = document.getElementById('celebrationBadge');
+  const iconEl = document.getElementById('celebrationIcon');
+  const fillEl = document.getElementById('celebrationProgressFill');
+
+  if (titleEl && title) titleEl.textContent = title;
+  if (subEl && subtitle) subEl.textContent = subtitle;
+  if (badgeEl && badgeText) badgeEl.textContent = badgeText;
+  if (iconEl) iconEl.textContent = icon;
+
+  if (fillEl) {
+    fillEl.style.transition = 'none';
+    fillEl.style.width = '0%';
+    void fillEl.offsetWidth; // Déclencher le reflow
+    fillEl.style.transition = `width ${durationMs}ms cubic-bezier(0.1, 0.8, 0.3, 1)`;
+    fillEl.style.width = '100%';
+  }
+
+  // Fermer les autres modales en cours
+  closeAllModals();
+
+  // Afficher la modale de célébration
+  modal.style.display = 'flex';
+  modal.classList.add('active');
+
+  setTimeout(() => {
+    modal.classList.remove('active');
+    modal.style.display = 'none';
+    if (onComplete) onComplete();
+  }, durationMs);
+}
+
 // ============================================================================
 // TOAST SYSTEM
 // ============================================================================
@@ -3105,6 +3186,7 @@ window.handlePlayerLogout      = handlePlayerLogout;
 window.switchAuthTab           = switchAuthTab;
 window.updateAuthUI            = updateAuthUI;
 window.openCourtsideDisplay    = openCourtsideDisplay;
+window.showCelebrationModal    = showCelebrationModal;
 
 window.submitAuthLogin = async function() {
   const email = document.getElementById('authLoginEmail')?.value?.trim();
