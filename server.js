@@ -23,10 +23,13 @@ const MIME_TYPES = {
   '.woff2': 'font/woff2'
 };
 
-// PADEL RATING ENGINE (Glicko-2 / Elo Model for Tunisian & Global Padel)
-function calculatePadelRatingUpdate({ playerLevel, playerReliability, partnerLevel, opponent1Level, opponent2Level, setsWon, setsLost }) {
+// PADEL RATING ENGINE (Glicko-2 / Elo Model with Peer Confrontation Reliability)
+function calculatePadelRatingUpdate({ playerLevel, playerReliability = 50, partnerLevel = 5.0, opponent1Level = 5.0, opponent2Level = 5.0, setsWon = 2, setsLost = 1 }) {
   const teamAverage = (playerLevel + partnerLevel) / 2;
   const opponentAverage = (opponent1Level + opponent2Level) / 2;
+  const levelGap = Math.abs(opponentAverage - playerLevel);
+  // Une confrontation avec des joueurs de même niveau correspond à un écart <= 1.0 (tolérance Padel)
+  const isPeerConfrontation = levelGap <= 1.0;
 
   // Expected outcome: logistic probability curve based on level difference
   const exponent = (opponentAverage - teamAverage) / 0.85;
@@ -41,30 +44,45 @@ function calculatePadelRatingUpdate({ playerLevel, playerReliability, partnerLev
   }
 
   // Dynamic K-factor: lower reliability leads to larger adjustments
-  const reliabilityFraction = Math.max(0, Math.min(1, playerReliability / 100));
+  const currentRel = Math.max(10, Math.min(99, Number(playerReliability) || 50));
+  const reliabilityFraction = currentRel / 100;
   const kFactor = 0.42 - (0.34 * reliabilityFraction);
 
   // Delta level change
   let delta = kFactor * (actualOutcome - expectedTeamWinRate);
   delta = Math.max(-0.45, Math.min(0.45, delta));
 
-  const newLevel = Math.max(1.0, Math.min(8.0, Number((playerLevel + delta).toFixed(2))));
-  const newReliability = Math.min(99.0, Number((playerReliability + (100 - playerReliability) * 0.035).toFixed(2)));
+  const newLevel = Math.max(1.0, Math.min(10.0, Number((playerLevel + delta).toFixed(2))));
+
+  // Fiabilité : validée et calibrée lors des confrontations avec des joueurs de même niveau (±1.0)
+  let reliabilityGain = 0;
+  if (isPeerConfrontation) {
+    // Confrontation directe face à des pairs : fort étalonnage du niveau réel (+12% à +18%)
+    const proximity = 1.0 - (levelGap / 1.0) * 0.35; // 1.0 si même niveau, 0.65 si écart de 1.0
+    reliabilityGain = (100 - currentRel) * 0.22 * proximity;
+  } else {
+    // Écart de niveau trop grand : la confrontation n'étalonne pas le niveau réel du joueur
+    reliabilityGain = (100 - currentRel) * 0.02;
+  }
+
+  const newReliability = Math.min(99.0, Number((currentRel + reliabilityGain).toFixed(1)));
 
   return {
     newLevel,
     delta: Number(delta.toFixed(2)),
     newReliability,
+    isPeerConfrontation,
+    reliabilityGain: Number(reliabilityGain.toFixed(1)),
     expectedWinRate: Number((expectedTeamWinRate * 100).toFixed(1)),
     teamAverage: Number(teamAverage.toFixed(2)),
-    opponentAverage: Number(opponentAverage.toFixed(2))
+    opponentAverage: Number(opponentAverage.toFixed(2)),
+    levelGap: Number(levelGap.toFixed(2))
   };
 }
 
 const CP_DB_FILE = path.join(__dirname, 'data', 'circlepadel_db.json');
 
 function getInitialCirclePadelDB() {
-  const today = new Date().toISOString().split('T')[0];
   return {
     appConfig: {
       clubName: 'CirclePadel Club',
@@ -85,118 +103,8 @@ function getInitialCirclePadelDB() {
       { id: 'court_3', name: 'Terrain 3', surface: 'Gazon synthétique vert', isActive: true, amenities: ['Éclairage LED', 'Chauffage'] },
       { id: 'court_4', name: 'Terrain 4', surface: 'Moquette indoor', isActive: true, amenities: ['Éclairage LED', 'Climatisation'] },
     ],
-    players: [
-      {
-        id: 'p_youssef',
-        firstName: 'Youssef',
-        lastName: 'Ben Salem',
-        email: 'youssef.bs@gmail.com',
-        phone: '+216 21 345 678',
-        role: 'player',
-        status: 'pending',
-        level: null,
-        preferredSide: 'right',
-        playStyle: 'all-around',
-        reliabilityScore: 85,
-        totalMatchesPlayed: 0,
-        skills: { bandeja: 5, vibora: 5, salida_cristal: 4, volee: 6, placement: 5, regularite: 5, mental: 6 },
-        levelHistory: [{ date: today, level: null, note: 'Inscription initiale — en attente évaluation coach' }],
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 'p_amine',
-        firstName: 'Amine',
-        lastName: 'Trabelsi',
-        email: 'amine.trabelsi@gmail.com',
-        phone: '+216 98 765 432',
-        role: 'player',
-        status: 'pending',
-        level: null,
-        preferredSide: 'left',
-        playStyle: 'offensive',
-        reliabilityScore: 80,
-        totalMatchesPlayed: 0,
-        skills: { bandeja: 6, vibora: 6, salida_cristal: 5, volee: 7, placement: 6, regularite: 5, mental: 7 },
-        levelHistory: [{ date: today, level: null, note: 'Inscription initiale — en attente évaluation coach' }],
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 'p_sarra',
-        firstName: 'Sarra',
-        lastName: 'Khemir',
-        email: 'sarra.khemir@gmail.com',
-        phone: '+216 55 123 456',
-        role: 'player',
-        status: 'pending',
-        level: null,
-        preferredSide: 'right',
-        playStyle: 'defensive',
-        reliabilityScore: 90,
-        totalMatchesPlayed: 0,
-        skills: { bandeja: 4, vibora: 4, salida_cristal: 5, volee: 5, placement: 6, regularite: 6, mental: 7 },
-        levelHistory: [{ date: today, level: null, note: 'Inscription initiale — en attente évaluation coach' }],
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 'p_mehdi',
-        firstName: 'Mehdi',
-        lastName: 'Gharbi',
-        email: 'mehdi.gharbi@gmail.com',
-        phone: '+216 23 888 999',
-        role: 'player',
-        status: 'active',
-        level: 4,
-        preferredSide: 'left',
-        playStyle: 'offensive',
-        reliabilityScore: 92,
-        totalMatchesPlayed: 14,
-        skills: { bandeja: 7, vibora: 7, salida_cristal: 6, volee: 7, placement: 6, regularite: 7, mental: 7 },
-        levelHistory: [{ date: today, level: 4, note: 'Évaluation coach Ali validée' }],
-        levelValidatedAt: new Date().toISOString(),
-        levelValidatedBy: 'coach_ali',
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 'p_karim',
-        firstName: 'Karim',
-        lastName: 'Jlassi',
-        email: 'karim.jlassi@gmail.com',
-        phone: '+216 94 111 222',
-        role: 'player',
-        status: 'active',
-        level: 3,
-        preferredSide: 'right',
-        playStyle: 'all-around',
-        reliabilityScore: 88,
-        totalMatchesPlayed: 8,
-        skills: { bandeja: 5, vibora: 5, salida_cristal: 5, volee: 5, placement: 5, regularite: 5, mental: 6 },
-        levelHistory: [{ date: today, level: 3, note: 'Évaluation coach Ali validée' }],
-        levelValidatedAt: new Date().toISOString(),
-        levelValidatedBy: 'coach_ali',
-        createdAt: new Date().toISOString()
-      }
-    ],
-    bookings: [
-      {
-        id: 'book_demo_1',
-        courtId: 'court_1',
-        courtName: 'Terrain 1',
-        date: today,
-        startTime: '18:30',
-        endTime: '20:00',
-        type: 'open',
-        status: 'confirmed',
-        minLevel: 3,
-        maxLevel: 5,
-        targetLevel: 4,
-        pricePerPlayer: 25,
-        createdBy: 'p_mehdi',
-        players: [
-          { id: 'p_mehdi', name: 'Mehdi Gharbi', level: 4, isOrganizer: true },
-          { id: 'p_karim', name: 'Karim Jlassi', level: 3 }
-        ]
-      }
-    ],
+    players: [],
+    bookings: [],
     notifications: [],
     transactions: [],
     matchReviews: []
@@ -256,9 +164,8 @@ const server = http.createServer(async (req, res) => {
       }
       const raw = fs.readFileSync(CP_DB_FILE, 'utf-8');
       const data = JSON.parse(raw);
-      if (!data.players || data.players.length === 0) {
-        data.players = getInitialCirclePadelDB().players;
-        fs.writeFileSync(CP_DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
+      if (!Array.isArray(data.players)) {
+        data.players = [];
       }
       return jsonResponse(data);
     } catch (err) {
@@ -273,13 +180,6 @@ const server = http.createServer(async (req, res) => {
     try {
       const body = await parseJsonBody();
       if (body && typeof body === 'object') {
-        let currentData = {};
-        if (fs.existsSync(CP_DB_FILE)) {
-          try { currentData = JSON.parse(fs.readFileSync(CP_DB_FILE, 'utf-8')); } catch (e) {}
-        }
-        if ((!body.players || body.players.length === 0) && currentData.players && currentData.players.length > 0) {
-          body.players = currentData.players;
-        }
         fs.writeFileSync(CP_DB_FILE, JSON.stringify(body, null, 2), 'utf-8');
         return jsonResponse({ success: true, timestamp: Date.now() });
       }

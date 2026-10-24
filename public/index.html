@@ -103,7 +103,7 @@
             <span class="cv-icon">✅</span>
             <div>
               <strong>Niveau validé par le coach</strong> —
-              Votre niveau <strong id="cvLevel">5</strong>/7 a été certifié par votre coach.
+              Votre niveau <strong id="cvLevel">5</strong>/10 a été certifié par votre coach.
               Il ne peut être modifié que par lui.
             </div>
           </div>
@@ -290,54 +290,122 @@
             <button class="filter-btn-icon" onclick="navigateToScreen('screen-settings')" title="Paramètres">⚙</button>
           </div>
 
-          <!-- Hero card -->
-          <div class="profile-hero-card">
-            <div class="profile-avatar-large" id="profileAvatarLarge">🎾</div>
-            <div class="profile-name" id="profileName">Moslem Gouia</div>
-            <div class="profile-phone" id="profilePhone">+216 22 227 041</div>
+          <!-- FIFA ULTIMATE TEAM (FUT) PADEL CARD -->
+          <div class="fut-card-container">
+            <div class="fut-card gold-edition" id="futPlayerCard">
+              <div class="fut-card-inner">
+                <div class="fut-card-texture"></div>
 
-            <!-- Level display -->
-            <div class="profile-level-display">
-              <div class="level-number-big" id="profileLevelBig">5</div>
-              <div class="level-info-col">
-                <div class="level-info-label">Niveau officiel</div>
-                <div class="level-info-title" id="profileLevelTitle">Confirmé</div>
-                <div class="level-info-coach" id="profileLevelCoach">Validé par le coach</div>
+                <!-- Top Header: Rating, Position, Country, Club & Portrait -->
+                <div class="fut-card-header">
+                  <div class="fut-badge-col">
+                    <div class="fut-rating" id="futCardRating">6.0</div>
+                    <div class="fut-pos" id="futCardPos">DRT</div>
+                    <div class="fut-flag" title="Tunisie">🇹🇳</div>
+                    <div class="fut-club-logo" title="CirclePadel Club">🎾</div>
+                  </div>
+
+                  <div class="fut-player-portrait-wrap">
+                    <div class="fut-portrait-glow"></div>
+                    <div class="fut-player-avatar" id="futPlayerAvatar">🎾</div>
+                    <div class="fut-coach-verified-badge" id="futCoachVerified">
+                      <span id="futCoachVerifiedText">✓ CERTIFIÉ COACH</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Player Name Banner -->
+                <div class="fut-name-banner">
+                  <div class="fut-name" id="futPlayerName">TAREK BEN AMOR</div>
+                  <div class="fut-style-pill" id="futPlayerStyle">⚡ OFFENSIF · DROITIER</div>
+                </div>
+
+                <!-- Gold Line Divider with Diamond -->
+                <div class="fut-gold-divider">
+                  <span></span><div class="fut-diamond"></div><span></span>
+                </div>
+
+                <!-- 6 FUT Padel Attributes Grid -->
+                <div class="fut-stats-grid">
+                  <div class="fut-stat-col">
+                    <div class="fut-stat-item">
+                      <span class="fut-stat-val" id="futStatReg">70</span>
+                      <span class="fut-stat-label">REG</span>
+                    </div>
+                    <div class="fut-stat-item">
+                      <span class="fut-stat-val" id="futStatPla">65</span>
+                      <span class="fut-stat-label">PLA</span>
+                    </div>
+                    <div class="fut-stat-item">
+                      <span class="fut-stat-val" id="futStatVit">60</span>
+                      <span class="fut-stat-label">VIT</span>
+                    </div>
+                  </div>
+                  <div class="fut-stats-v-divider"></div>
+                  <div class="fut-stat-col">
+                    <div class="fut-stat-item">
+                      <span class="fut-stat-val" id="futStatVol">65</span>
+                      <span class="fut-stat-label">VOL</span>
+                    </div>
+                    <div class="fut-stat-item">
+                      <span class="fut-stat-val" id="futStatBan">60</span>
+                      <span class="fut-stat-label">BAN</span>
+                    </div>
+                    <div class="fut-stat-item">
+                      <span class="fut-stat-val" id="futStatMen">70</span>
+                      <span class="fut-stat-label">MEN</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Card Footer: Chemistry / Reliability & Level -->
+                <div class="fut-card-footer">
+                  <div class="fut-chem-badge" id="futCardChem" title="Fiabilité compétitive éprouvée face à des pairs">
+                    <span class="fut-chem-icon">🎯</span>
+                    <span class="fut-chem-text">FIAB: <strong id="futCardReliability">50%</strong></span>
+                  </div>
+                  <div class="fut-level-badge" id="futCardLevelBadge">
+                    NIVEAU <strong id="futCardLevelNum">6</strong>/10
+                  </div>
+                </div>
               </div>
             </div>
 
-            <!-- Stats rapides -->
-            <div class="profile-stats-row">
-              <div class="profile-stat-item">
-                <div class="stat-value" id="statMatchesPlayed">0</div>
-                <div class="stat-label">Matchs</div>
-              </div>
-              <div class="profile-stat-item">
-                <div class="stat-value" id="statReliability">–</div>
-                <div class="stat-label">Fiabilité</div>
-              </div>
-              <div class="profile-stat-item">
-                <div class="stat-value" id="statSide">D</div>
-                <div class="stat-label">Côté</div>
-              </div>
-              <div class="profile-stat-item">
-                <div class="stat-value" id="statStyle">OFF</div>
-                <div class="stat-label">Style</div>
-              </div>
-            </div>
-
-            <!-- Player tags -->
-            <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center">
-              <span class="info-badge gold" id="profileSideBadge">🖐 Droitier</span>
-              <span class="info-badge gold" id="profileStyleBadge">⚡ Offensif</span>
-              <span class="info-badge green" id="profileStatusBadge">✔ Actif</span>
-            </div>
-
-            <!-- Bouton Authentification (Connexion / Déconnexion) -->
-            <div style="margin-top:14px; display:flex; justify-content:center">
-              <button class="btn-primary-action" id="btnProfileAuthAction" style="width:auto; padding:8px 24px; font-size:13px">
+            <!-- Boutons d'actions Carte & Écran Terrain -->
+            <div class="fut-card-actions" style="margin-top:16px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap; width:100%">
+              <button type="button" class="btn-courtside-screen" id="btnOpenCourtsideDisplay" onclick="openCourtsideDisplay()">
+                📺 Affichage Écran Terrain (LED Stadium)
+              </button>
+              <button class="btn-primary-action" id="btnProfileAuthAction" style="width:auto; padding:9px 20px; font-size:13px">
                 🔐 Se connecter / Créer un compte
               </button>
+            </div>
+
+            <!-- Compatibilité stats rapides & contact (repliable) -->
+            <div class="profile-card-subinfo" style="width:100%; max-width:340px; margin-top:14px; background:var(--bg-card-2); border:1px solid var(--border-card); border-radius:var(--radius-md); padding:12px 14px">
+              <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-bottom:8px">
+                <span style="color:var(--text-secondary)">Contact : <strong id="profilePhone" style="color:var(--text-white)">—</strong></span>
+                <span class="info-badge green" id="profileStatusBadge">✔ Actif</span>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12px; border-top:1px solid rgba(255,255,255,0.06); padding-top:8px">
+                <div>Matchs joués : <strong id="statMatchesPlayed" style="color:var(--gold)">0</strong></div>
+                <div>Fiabilité pairs : <strong id="statReliability" style="color:var(--gold)">50%</strong></div>
+              </div>
+              <div id="profileReliabilityDesc" style="font-size:11px; color:var(--text-muted); margin-top:6px; line-height:1.35">
+                Niveau initial coach. Se consolide lors des confrontations avec des pairs de même niveau.
+              </div>
+              <!-- Hidden compatibility elements required by legacy queries -->
+              <div style="display:none">
+                <span id="profileName"></span>
+                <span id="profileLevelBig"></span>
+                <span id="profileLevelTitle"></span>
+                <span id="profileLevelCoach"></span>
+                <span id="statSide"></span>
+                <span id="statStyle"></span>
+                <span id="profileSideBadge"></span>
+                <span id="profileStyleBadge"></span>
+                <span id="profilePeerConfrontationsBadge"></span>
+              </div>
             </div>
           </div>
 
@@ -742,7 +810,7 @@
                   <span style="font-weight:700; color:var(--text-white); font-size:15px">Joueurs inscrits en attente d'évaluation coach</span>
                   <span class="badge" id="adminPendingCountBadge" style="background:var(--amber); color:#000; font-weight:800; border-radius:12px; padding:2px 8px; font-size:12px">0</span>
                 </div>
-                <span style="font-size:12px; color:var(--text-secondary)">Évaluez leurs compétences pour leur attribuer un niveau officiel (1–7)</span>
+                <span style="font-size:12px; color:var(--text-secondary)">Évaluez leurs compétences pour leur attribuer un niveau officiel (1–10)</span>
               </div>
               <div id="adminPendingPlayersCards" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px">
                 <!-- Peuplé par JS -->
@@ -991,13 +1059,34 @@
         <!-- Peuplé dynamiquement par JS -->
       </div>
 
+      <!-- Équation de moyenne propre au Padel -->
+      <div id="evalPadelCalculationBox" style="background:linear-gradient(135deg, rgba(212,175,55,0.1) 0%, rgba(18,22,30,0.9) 100%); border:1px solid rgba(212,175,55,0.4); border-radius:var(--radius-md); padding:14px 16px; margin:18px 0;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
+          <span style="font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.8px; color:var(--gold); display:flex; align-items:center; gap:6px">
+            📐 Équation Padel Pondérée
+          </span>
+          <span id="evalCalculatedScoreBadge" style="font-family:'Outfit',sans-serif; font-size:16px; font-weight:900; color:var(--gold); background:rgba(0,0,0,0.5); padding:3px 10px; border-radius:var(--radius-sm); border:1px solid rgba(212,175,55,0.3)">
+            5.00 / 10
+          </span>
+        </div>
+        <div style="font-size:11px; color:var(--text-secondary); line-height:1.45; margin-bottom:10px">
+          <strong>Pondération officielle Padel :</strong> Régularité (25%) + Placement (20%) + Vitre (15%) + Volée (15%) + Bandeja (10%) + Mental (10%) + Víbora (5%)
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,0.4); padding:10px 14px; border-radius:var(--radius-sm); border:1px solid rgba(255,255,255,0.06)">
+          <div style="font-size:12px; color:var(--text-primary); font-weight:600">Niveau Padel calculé automatiquement :</div>
+          <div id="evalCalculatedLevelDisplay" style="font-family:'Outfit',sans-serif; font-size:15px; font-weight:900; color:var(--gold)">
+            Niveau 5/10 · Intermédiaire
+          </div>
+        </div>
+      </div>
+
       <!-- Niveau global officiel -->
-      <div class="eval-section-label" style="margin-top:20px">Niveau global officiel (1 à 7) · Dictée coach</div>
+      <div class="eval-section-label" style="margin-top:20px">Niveau global officiel (1 à 10) · Validé par le Coach</div>
       <div class="eval-level-selector level-selector-row" id="evalLevelSelector">
         <!-- Peuplé dynamiquement par JS -->
       </div>
       <div style="font-size:11px; color:var(--gold); margin-top:8px; line-height:1.4">
-        ⚠️ Ce niveau sera le niveau officiel du joueur. Il ne peut être modifié que par le gérant sous dictée du coach.
+        ⚠️ Ce niveau est calculé à partir de l'équation de moyenne Padel et validé par le coach.
       </div>
 
       <!-- Commentaire coach -->
@@ -1205,7 +1294,7 @@
 
   <!-- ── Modale : Authentification Joueur Réelle (Firebase Auth) ── -->
   <div class="modal-overlay" id="modal-auth" role="dialog" aria-modal="true">
-    <div class="modal-sheet" style="max-width:440px">
+    <div class="modal-sheet" style="max-width:440px" onclick="event.stopPropagation()">
       <div class="modal-drag-indicator"></div>
       <div class="modal-top-bar">
         <div class="modal-title" id="authModalTitle">🎾 Espace Joueur CirclePadel</div>
@@ -1221,7 +1310,7 @@
       <!-- Formulaire Connexion -->
       <div id="authLoginForm">
         <div class="modal-field-group">
-          <label class="modal-label">Email</label>
+          <label class="modal-label">Email ou Identifiant</label>
           <input type="email" class="login-field" id="authLoginEmail" placeholder="votre.email@exemple.com" autocomplete="email" />
         </div>
         <div class="modal-field-group">
@@ -1237,8 +1326,8 @@
       <div id="authRegisterForm" style="display:none">
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
           <div class="modal-field-group">
-            <label class="modal-label">Prénom</label>
-            <input type="text" class="login-field" id="authRegFirstName" placeholder="Ex: Karim" />
+            <label class="modal-label">Prénom *</label>
+            <input type="text" class="login-field" id="authRegFirstName" placeholder="Ex: Karim" required />
           </div>
           <div class="modal-field-group">
             <label class="modal-label">Nom</label>
@@ -1250,11 +1339,11 @@
           <input type="tel" class="login-field" id="authRegPhone" placeholder="+216 20 123 456" />
         </div>
         <div class="modal-field-group">
-          <label class="modal-label">Email</label>
-          <input type="email" class="login-field" id="authRegEmail" placeholder="joueur@circlepadel.com" autocomplete="email" />
+          <label class="modal-label">Email (optionnel)</label>
+          <input type="email" class="login-field" id="authRegEmail" placeholder="joueur@circlepadel.tn" autocomplete="email" />
         </div>
         <div class="modal-field-group">
-          <label class="modal-label">Mot de passe (min 6 caractères)</label>
+          <label class="modal-label">Mot de passe (optionnel · défaut: padel2026)</label>
           <input type="password" class="login-field" id="authRegPassword" placeholder="••••••••" autocomplete="new-password" />
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
@@ -1276,7 +1365,7 @@
           </div>
         </div>
         <button class="btn-primary-action" id="btnAuthSubmitRegister" style="margin-top:6px">
-          Créer mon compte
+          Créer mon compte joueur 🎾
         </button>
       </div>
 
@@ -1284,6 +1373,36 @@
         <button type="button" class="btn-table-action" onclick="closeAllModals()" style="font-size:12px; opacity:0.7">
           Fermer
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modale : Mode Écran Terrain (Courtside Stadium Display) ── -->
+  <div class="modal-overlay courtside-overlay" id="modal-courtside-display" role="dialog" aria-modal="true">
+    <div class="courtside-stage">
+      <div class="courtside-top-bar">
+        <div class="courtside-club-brand">
+          <span style="font-size:30px">🎾</span>
+          <div>
+            <div style="font-family:'Outfit',sans-serif; font-size:20px; font-weight:900; letter-spacing:1.5px; color:var(--gold)">CIRCLEPADEL CLUB · LA MARSA</div>
+            <div style="font-size:11px; color:var(--text-secondary); letter-spacing:2px">AFFICHAGE COURTSIDE · ÉCRAN TERRAIN OFFICIEL</div>
+          </div>
+        </div>
+        <button class="modal-close-btn" onclick="closeModal('modal-courtside-display')" style="font-size:22px; width:44px; height:44px; border-radius:50%; background:rgba(255,255,255,0.12); border:1px solid rgba(212,175,55,0.4); color:var(--gold); cursor:pointer; display:flex; align-items:center; justify-content:center" title="Quitter le mode plein écran">✕</button>
+      </div>
+
+      <div class="courtside-center-arena">
+        <div class="courtside-match-tag">🏆 MATCH EN DIRECT · PRÉSENTATION OFFICIELLE DU JOUEUR</div>
+        <div id="courtsideCardMount">
+          <!-- Carte FIFA insérée dynamiquement en grand format -->
+        </div>
+
+        <div class="courtside-footer-ticker">
+          <div class="ticker-item">⚡ STYLE : <strong id="csTickerStyle">—</strong></div>
+          <div class="ticker-item">🎯 FIABILITÉ : <strong id="csTickerRel">—</strong></div>
+          <div class="ticker-item">🎾 CONFRONTATIONS PAIRS : <strong id="csTickerMatches">—</strong></div>
+          <div class="ticker-item">🏅 NIVEAU OFFICIEL : <strong id="csTickerLevel">—</strong></div>
+        </div>
       </div>
     </div>
   </div>

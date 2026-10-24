@@ -804,10 +804,63 @@ function openBookingFromSlot(courtId, time) {
 // PROFILE SCREEN
 // ============================================================================
 
-const LEVEL_LABELS = { 1:'Débutant', 2:'Débutant+', 3:'Intermédiaire', 4:'Intermédiaire+', 5:'Confirmé', 6:'Avancé', 7:'Élite' };
+const LEVEL_LABELS = {
+  1: 'Initiation (Découverte)',
+  2: 'Débutant',
+  3: 'Débutant perfectionnement',
+  4: 'Intermédiaire loisir',
+  5: 'Intermédiaire',
+  6: 'Intermédiaire confirmé',
+  7: 'Avancé',
+  8: 'Avancé compétition',
+  9: 'Expert régional',
+  10: 'Élite / Professionnel'
+};
 const SIDE_LABELS = { right:'Droitier', left:'Gaucher', both:'Ambidextre' };
 const STYLE_LABELS = { offensive:'Offensif', defensive:'Défensif', 'all-around':'Équilibré' };
 const SKILL_LABELS = { bandeja:'Bandeja', vibora:'Víbora', salida_cristal:'Sortie de vitre', volee:'Volée', placement:'Placement', regularite:'Régularité', mental:'Mental' };
+
+/**
+ * PONDÉRATION OFFICIELLE EXPERTE PADEL :
+ * - Régularité (25%) : Réduction des fautes directes (base fondamentale du padel)
+ * - Placement (20%) : Transitions fond/filet et couverture du terrain
+ * - Sortie de vitre (15%) : Maîtrise des parois (spécificité padel)
+ * - Volée (15%) : Contrôle et finition au filet
+ * - Bandeja (10%) : Coup de maintien tactique au filet
+ * - Mental (10%) : Gestion des moments chauds & Punto de Oro
+ * - Víbora (5%) : Accélération offensive latérale
+ */
+const PADEL_SKILL_WEIGHTS = {
+  regularite: 0.25,
+  placement: 0.20,
+  salida_cristal: 0.15,
+  volee: 0.15,
+  bandeja: 0.10,
+  mental: 0.10,
+  vibora: 0.05
+};
+
+/**
+ * Calcule la note globale pondérée (1 à 10) et le niveau officiel (1 à 10)
+ * selon l'équation de moyenne propre au padel
+ */
+function calculatePadelLevelFromSkills(skills = {}) {
+  let weightedSum = 0;
+  let totalWeight = 0;
+
+  for (const [key, weight] of Object.entries(PADEL_SKILL_WEIGHTS)) {
+    const val = Number(skills[key]) || 5;
+    weightedSum += val * weight;
+    totalWeight += weight;
+  }
+
+  const weightedScore = Number((weightedSum / (totalWeight || 1)).toFixed(2));
+
+  // Échelle intuitive unifiée sur 10 : le niveau officiel correspond directement à la moyenne pondérée de 1 à 10
+  const officialLevel = Math.max(1, Math.min(10, Math.round(weightedScore)));
+
+  return { weightedScore, officialLevel };
+}
 
 function renderProfileScreen() {
   const user = (DB.players || []).find(p => p.id === DB.currentUser?.id) || DB.currentUser || {
@@ -828,8 +881,28 @@ function renderProfileScreen() {
     : 'Évaluation coach requise';
   const matchesEl = document.getElementById('statMatchesPlayed');
   if (matchesEl) matchesEl.textContent = user.totalMatchesPlayed || 0;
+  
   const relEl = document.getElementById('statReliability');
-  if (relEl) relEl.textContent = user.reliabilityScore ? `${user.reliabilityScore}%` : '—';
+  const peerMatches = user.peerConfrontationsCount || 0;
+  const relVal = user.reliabilityScore || 50;
+  if (relEl) {
+    relEl.textContent = `${relVal}%`;
+    relEl.title = `Fiabilité : ${relVal}% — Validée sur ${peerMatches} confrontation(s) face à des pairs de même niveau (±1.0)`;
+  }
+
+  const peerBadge = document.getElementById('profilePeerConfrontationsBadge');
+  if (peerBadge) {
+    peerBadge.textContent = `${peerMatches} confrontation${peerMatches > 1 ? 's' : ''} face à des pairs`;
+  }
+  const relDesc = document.getElementById('profileReliabilityDesc');
+  if (relDesc) {
+    if (peerMatches === 0) {
+      relDesc.textContent = "Niveau initial coach (50% de fiabilité). Votre niveau réel se consolidera lors de vos confrontations en match avec des joueurs de votre niveau (écart ±1.0).";
+    } else {
+      relDesc.textContent = `${peerMatches} match(s) disputé(s) face à des pairs de même niveau. Votre niveau réel est calibré et validé à ${relVal}%.`;
+    }
+  }
+
   const sideEl = document.getElementById('statSide');
   if (sideEl) sideEl.textContent = user.preferredSide === 'right' ? 'D' : user.preferredSide === 'left' ? 'G' : '±';
   const styleEl = document.getElementById('statStyle');
@@ -868,6 +941,80 @@ function renderProfileScreen() {
 
   // Match history (from bookings)
   renderProfileHistory(user);
+
+  // ── Populer la Carte FIFA Padel Ultimate Team ──
+  const futRating = document.getElementById('futCardRating');
+  if (futRating) {
+    if (user.level != null) {
+      futRating.textContent = (user.level % 1 === 0 ? `${user.level}.0` : user.level.toFixed(1));
+    } else if (user.weightedScore != null) {
+      futRating.textContent = user.weightedScore.toFixed(1);
+    } else {
+      futRating.textContent = '--';
+    }
+  }
+
+  const futPos = document.getElementById('futCardPos');
+  if (futPos) {
+    futPos.textContent = user.preferredSide === 'left' ? 'GAU' : (user.preferredSide === 'both' ? 'POLY' : 'DRT');
+  }
+
+  const futAvatar = document.getElementById('futPlayerAvatar');
+  if (futAvatar) {
+    const f = user.firstName?.[0] || 'C';
+    const l = user.lastName?.[0] || 'P';
+    futAvatar.textContent = (f + l).toUpperCase();
+  }
+
+  const futVerified = document.getElementById('futCoachVerified');
+  const futVerifiedText = document.getElementById('futCoachVerifiedText');
+  if (futVerified && futVerifiedText) {
+    if (user.level != null) {
+      futVerified.style.display = 'block';
+      futVerified.style.background = 'rgba(46, 204, 113, 0.18)';
+      futVerified.style.borderColor = 'rgba(46, 204, 113, 0.5)';
+      futVerified.style.color = '#2ecc71';
+      futVerifiedText.textContent = `✓ CERTIFIÉ COACH · NIV ${user.level}/10`;
+    } else {
+      futVerified.style.display = 'block';
+      futVerified.style.background = 'rgba(243, 156, 18, 0.18)';
+      futVerified.style.borderColor = 'rgba(243, 156, 18, 0.5)';
+      futVerified.style.color = 'var(--gold)';
+      futVerifiedText.textContent = '⏳ EN ATTENTE ÉVALUATION COACH';
+    }
+  }
+
+  const futName = document.getElementById('futPlayerName');
+  if (futName) {
+    futName.textContent = `${(user.firstName || 'JOUEUR')} ${(user.lastName || '')}`.trim().toUpperCase();
+  }
+
+  const futStyle = document.getElementById('futPlayerStyle');
+  if (futStyle) {
+    futStyle.textContent = `⚡ ${(STYLE_LABELS[user.playStyle] || 'POLYVALENT').toUpperCase()} · ${(SIDE_LABELS[user.preferredSide] || 'DROITIER').toUpperCase()}`;
+  }
+
+  // 6 Attributs FUT Padel (valeur sur 99)
+  const baseStat = user.level ? Math.round(user.level * 10) : 50;
+  const regVal = user.skills?.regularite ? Math.round(user.skills.regularite * 10) : baseStat;
+  const plaVal = user.skills?.placement ? Math.round(user.skills.placement * 10) : baseStat;
+  const vitVal = user.skills?.salida_cristal ? Math.round(user.skills.salida_cristal * 10) : (user.skills?.vibora ? Math.round(user.skills.vibora * 10) : baseStat);
+  const volVal = user.skills?.volee ? Math.round(user.skills.volee * 10) : baseStat;
+  const banVal = user.skills?.bandeja ? Math.round(user.skills.bandeja * 10) : baseStat;
+  const menVal = user.skills?.mental ? Math.round(user.skills.mental * 10) : baseStat;
+
+  const futReg = document.getElementById('futStatReg'); if (futReg) futReg.textContent = regVal;
+  const futPla = document.getElementById('futStatPla'); if (futPla) futPla.textContent = plaVal;
+  const futVit = document.getElementById('futStatVit'); if (futVit) futVit.textContent = vitVal;
+  const futVol = document.getElementById('futStatVol'); if (futVol) futVol.textContent = volVal;
+  const futBan = document.getElementById('futStatBan'); if (futBan) futBan.textContent = banVal;
+  const futMen = document.getElementById('futStatMen'); if (futMen) futMen.textContent = menVal;
+
+  const futRel = document.getElementById('futCardReliability');
+  if (futRel) futRel.textContent = `${user.reliabilityScore || 50}%`;
+
+  const futLvlNum = document.getElementById('futCardLevelNum');
+  if (futLvlNum) futLvlNum.textContent = (user.level != null ? user.level : '?');
 }
 
 function updateAuthUI() {
@@ -896,8 +1043,8 @@ function updateAuthUI() {
 }
 
 async function handlePlayerLogin(email, password) {
-  if (!email || !password) {
-    showToast('Veuillez saisir votre email et mot de passe.', 'error');
+  if (!email) {
+    showToast('Veuillez saisir votre email, téléphone ou nom.', 'error');
     return;
   }
   const submitBtn = document.getElementById('btnAuthSubmitLogin');
@@ -908,50 +1055,75 @@ async function handlePlayerLogin(email, password) {
   }
 
   try {
-    const cred = await fbSignIn(email, password);
-    const u = cred.user;
-    let player = (DB.players || []).find(p => p.id === u.uid || p.email === u.email);
-    if (!player) {
+    const norm = email.toLowerCase().trim();
+    // 1. Recherche parmi les joueurs locaux
+    let localPlayer = (DB.players || []).find(p => 
+      (p.email && p.email.toLowerCase() === norm) ||
+      (p.phone && p.phone.replace(/[\s\-\+\.]/g, '') === norm.replace(/[\s\-\+\.]/g, '')) ||
+      ((p.firstName + ' ' + (p.lastName || '')).toLowerCase().trim() === norm) ||
+      (p.firstName && p.firstName.toLowerCase() === norm)
+    );
+
+    // 2. Si mot de passe et format email, tenter Firebase
+    let fbUser = null;
+    if (password && norm.includes('@')) {
       try {
-        player = await fbGetPlayer(u.uid);
-        if (player) DB.players.push(player);
-      } catch (e) {}
+        const cred = await fbSignIn(norm, password);
+        fbUser = cred?.user;
+      } catch (fbErr) {
+        console.warn('Firebase login info:', fbErr.code || fbErr.message);
+      }
     }
-    if (!player) {
-      const parts = (u.displayName || email.split('@')[0]).split(' ');
-      player = {
-        id: u.uid,
-        firstName: parts[0] || 'Joueur',
-        lastName: parts.slice(1).join(' ') || '',
-        email: u.email,
-        phone: '',
-        role: 'player',
-        status: 'pending',
-        level: null,
-        preferredSide: 'right',
-        playStyle: 'all-around',
-        reliabilityScore: 80,
-        totalMatchesPlayed: 0,
-        skills: {},
-        levelHistory: [],
-        createdAt: new Date().toISOString(),
-      };
-      DB.players.push(player);
-      fbSavePlayer(player).catch(e => console.warn('fbSavePlayer async error:', e));
+
+    if (fbUser) {
+      let player = (DB.players || []).find(p => p.id === fbUser.uid || p.email === fbUser.email);
+      if (!player) {
+        try {
+          player = await fbGetPlayer(fbUser.uid);
+          if (player && !DB.players.some(p => p.id === player.id)) DB.players.push(player);
+        } catch (_) {}
+      }
+      if (!player) {
+        const parts = (fbUser.displayName || norm.split('@')[0]).split(' ');
+        player = {
+          id: fbUser.uid,
+          firstName: parts[0] || 'Joueur',
+          lastName: parts.slice(1).join(' ') || '',
+          email: fbUser.email,
+          phone: '',
+          role: 'player',
+          status: 'pending',
+          level: null,
+          preferredSide: 'right',
+          playStyle: 'all-around',
+          reliabilityScore: 50,
+          peerConfrontationsCount: 0,
+          totalMatchesPlayed: 0,
+          skills: {},
+          levelHistory: [],
+          createdAt: new Date().toISOString(),
+        };
+        DB.players.push(player);
+        fbSavePlayer(player).catch(() => {});
+      }
+      DB.currentUser = player;
+    } else if (localPlayer) {
+      DB.currentUser = localPlayer;
+    } else {
+      showToast('Aucun joueur trouvé avec cet identifiant.', 'error');
+      return;
     }
-    DB.currentUser = player;
+
     saveDB(DB);
     updateAuthUI();
+    updateAuthRoleUI();
     renderHomeScreen();
+    renderProfileScreen();
     closeAllModals();
-    showToast(`Bienvenue ${player.firstName} 🎾`, 'success');
+    showToast(`Ravi de vous revoir, ${DB.currentUser.firstName} 🎾`, 'success');
   } catch (err) {
     console.error('Login error:', err);
-    let msg = 'Identifiants incorrects.';
-    if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') msg = 'Aucun compte trouvé avec ces identifiants.';
-    else if (err.code === 'auth/wrong-password') msg = 'Mot de passe incorrect.';
-    else if (err.code === 'auth/invalid-email') msg = 'Adresse email invalide.';
-    showToast(msg, 'error');
+    showToast('Erreur lors de la connexion.', 'error');
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
@@ -961,67 +1133,109 @@ async function handlePlayerLogin(email, password) {
 }
 
 async function handlePlayerRegister({ firstName, lastName, phone, email, password, preferredSide, playStyle }) {
-  if (!firstName || !email || !password) {
-    showToast('Prénom, email et mot de passe obligatoires.', 'error');
+  if (!firstName || !firstName.trim()) {
+    showToast('Veuillez indiquer au moins votre prénom.', 'error');
+    const fInp = document.getElementById('authRegFirstName');
+    if (fInp) fInp.focus();
     return;
   }
-  if (password.length < 6) {
-    showToast('Le mot de passe doit comporter au moins 6 caractères.', 'error');
-    return;
-  }
+
+  const cleanFirst = firstName.trim();
+  const cleanLast = (lastName || '').trim();
+  const cleanPhone = (phone || '').trim();
+  const cleanSide = preferredSide || 'right';
+  const cleanStyle = playStyle || 'all-around';
+
+  // Email sécurisé (automatique si non renseigné)
+  const slug = cleanFirst.toLowerCase().replace(/[^a-z0-9]/g, '') || 'joueur';
+  const slugLast = cleanLast ? '.' + cleanLast.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+  const rnd = Math.floor(1000 + Math.random() * 9000);
+  const safeEmail = (email && email.trim()) ? email.trim().toLowerCase() : `${slug}${slugLast}.${rnd}@circlepadel.tn`;
+
+  // Mot de passe sécurisé (défaut padel2026)
+  const safePassword = (password && password.length >= 6) ? password : 'padel2026';
+
   const submitBtn = document.getElementById('btnAuthSubmitRegister');
   const originalText = submitBtn ? submitBtn.innerHTML : '';
   if (submitBtn) {
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<span>⏳ Création du compte...</span>';
+    submitBtn.innerHTML = '<span>⏳ Création de votre profil...</span>';
   }
 
+  let finalUid = null;
+
+  // Tentative Firebase Auth (non bloquante en cas de refus réseau ou email déjà utilisé)
   try {
-    const cred = await fbCreateUser(email, password);
-    const u = cred.user;
-    const fullName = `${firstName} ${lastName || ''}`.trim();
-    fbUpdateUserProfile(fullName).catch(() => {});
-
-    const newPlayer = {
-      id: u.uid,
-      firstName,
-      lastName: lastName || '',
-      phone: phone || '',
-      email: u.email,
-      role: 'player',
-      status: 'pending',
-      level: null,
-      preferredSide: preferredSide || 'right',
-      playStyle: playStyle || 'all-around',
-      reliabilityScore: 100,
-      totalMatchesPlayed: 0,
-      skills: {},
-      levelHistory: [{ date: getTodayStr(), level: null, note: 'Inscription initiale — en attente évaluation coach' }],
-      createdAt: new Date().toISOString(),
-    };
-
-    DB.players.push(newPlayer);
-    DB.currentUser = newPlayer;
-    saveDB(DB);
-    updateAuthUI();
-    renderHomeScreen();
-    closeAllModals();
-    showToast(`Compte créé avec succès ! Bienvenue ${firstName} 🎾`, 'success');
-
-    // Sauvegarde Firestore en arrière-plan pour ne pas bloquer l'UI
-    fbSavePlayer(newPlayer).catch(e => console.warn('fbSavePlayer async error:', e));
-  } catch (err) {
-    console.error('Registration error:', err);
-    let msg = 'Erreur lors de la création du compte.';
-    if (err.code === 'auth/email-already-in-use') msg = 'Cet email est déjà associé à un compte existant.';
-    else if (err.code === 'auth/invalid-email') msg = 'Adresse email invalide.';
-    else if (err.code === 'auth/weak-password') msg = 'Mot de passe trop court (min 6 caractères).';
-    showToast(msg, 'error');
-  } finally {
-    if (submitBtn) {
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = originalText;
+    const cred = await fbCreateUser(safeEmail, safePassword);
+    if (cred?.user?.uid) {
+      finalUid = cred.user.uid;
+      const fullName = `${cleanFirst} ${cleanLast}`.trim();
+      fbUpdateUserProfile(fullName).catch(() => {});
     }
+  } catch (fbErr) {
+    console.warn('Firebase createUser notice (mode local garanti):', fbErr.code || fbErr.message);
+    if (fbErr.code === 'auth/email-already-in-use') {
+      try {
+        const cred = await fbSignIn(safeEmail, safePassword);
+        if (cred?.user?.uid) finalUid = cred.user.uid;
+      } catch (_) {}
+    }
+  }
+
+  if (!finalUid) {
+    finalUid = 'usr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+  }
+
+  const newPlayer = {
+    id: finalUid,
+    firstName: cleanFirst,
+    lastName: cleanLast,
+    phone: cleanPhone,
+    email: safeEmail,
+    role: 'player',
+    status: 'pending', // en attente d'évaluation coach
+    level: null,       // Pas encore évalué par le coach
+    preferredSide: cleanSide,
+    playStyle: cleanStyle,
+    reliabilityScore: 50,
+    peerConfrontationsCount: 0,
+    totalMatchesPlayed: 0,
+    skills: {},
+    levelHistory: [{
+      date: getTodayStr(),
+      level: null,
+      note: 'Inscription joueur · En attente de passage devant le coach'
+    }],
+    createdAt: new Date().toISOString(),
+  };
+
+  // Enregistrement immédiat dans DB.players et session active
+  DB.players = (DB.players || []).filter(p => p.id !== newPlayer.id && p.email !== newPlayer.email);
+  DB.players.push(newPlayer);
+  DB.currentUser = newPlayer;
+
+  // Sauvegarde locale + sync backend /api/circlepadel/db
+  saveDB(DB, true);
+
+  // Sauvegarde Firestore en tâche de fond
+  fbSavePlayer(newPlayer).catch(e => console.warn('fbSavePlayer async error:', e));
+
+  // Mise à jour de l'UI
+  updateAuthUI();
+  updateAuthRoleUI();
+  renderHomeScreen();
+  renderProfileScreen();
+  if (typeof renderAdminPlayers === 'function') renderAdminPlayers();
+  if (typeof renderCoachPendingPlayers === 'function') renderCoachPendingPlayers();
+
+  // Fermer la modale et afficher directement la carte joueur FIFA
+  closeAllModals();
+  navigateToScreen('screen-profile');
+  showToast(`Bienvenue ${cleanFirst} ! Votre carte joueur est prête 🎾`, 'success');
+
+  if (submitBtn) {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = originalText;
   }
 }
 
@@ -1030,10 +1244,47 @@ async function handlePlayerLogout() {
     await fbSignOut();
   } catch (e) {}
   DB.currentUser = { id: 'guest', firstName: 'Invité', lastName: '', role: 'player', email: '' };
-  saveDB(DB);
+  saveDB(DB, true);
   updateAuthUI();
+  updateAuthRoleUI();
   renderHomeScreen();
+  renderProfileScreen();
   showToast('Déconnexion réussie.', 'info');
+}
+
+/**
+ * Affiche la carte joueur en grand format sur l'écran du terrain (Mode Écran Terrain / LED Stadium)
+ */
+function openCourtsideDisplay() {
+  const user = (DB.players || []).find(p => p.id === DB.currentUser?.id) || DB.currentUser || {};
+  const mount = document.getElementById('courtsideCardMount');
+  const srcCard = document.getElementById('futPlayerCard');
+  if (mount && srcCard) {
+    mount.innerHTML = '';
+    const cloned = srcCard.cloneNode(true);
+    cloned.id = 'futPlayerCard_courtside';
+    cloned.classList.add('courtside-active-card');
+    mount.appendChild(cloned);
+  }
+
+  const tickerStyle = document.getElementById('csTickerStyle');
+  if (tickerStyle) {
+    tickerStyle.textContent = `${(STYLE_LABELS[user.playStyle] || 'Polyvalent')} · ${(SIDE_LABELS[user.preferredSide] || 'Droitier')}`;
+  }
+  const tickerRel = document.getElementById('csTickerRel');
+  if (tickerRel) {
+    tickerRel.textContent = `${user.reliabilityScore || 50}% (${user.peerConfrontationsCount || 0} match(s) face à des pairs)`;
+  }
+  const tickerMatches = document.getElementById('csTickerMatches');
+  if (tickerMatches) {
+    tickerMatches.textContent = `${user.peerConfrontationsCount || 0} match(s) calibré(s)`;
+  }
+  const tickerLevel = document.getElementById('csTickerLevel');
+  if (tickerLevel) {
+    tickerLevel.textContent = user.level != null ? `Niveau ${user.level}/10 · ${LEVEL_LABELS[user.level] || 'Certifié'}` : 'En attente d\'évaluation coach';
+  }
+
+  openModal('modal-courtside-display');
 }
 
 function switchAuthTab(tab) {
@@ -1131,28 +1382,36 @@ function renderSkillsList(skills) {
 
 function renderLevelHistory(user) {
   const container = document.getElementById('levelHistoryContainer');
+  if (!container) return;
   const history = user.levelHistory || [];
   if (history.length === 0) {
     container.innerHTML = '<div style="color:var(--text-muted); font-size:13px; padding:8px 0">Aucun changement de niveau enregistré.</div>';
     return;
   }
-  container.innerHTML = history.map(h => `
+  container.innerHTML = history.map(h => {
+    const rawDate = h.changedAt ? (h.changedAt.includes('T') ? h.changedAt.split('T')[0] : h.changedAt) : (h.date || getTodayStr());
+    const dateFormatted = formatDate(rawDate);
+    const newLvl = h.newLevel != null ? h.newLevel : (h.level != null ? h.level : '?');
+    const prevLvl = h.previousLevel != null ? h.previousLevel : '-';
+    const noteText = h.coachComment || h.note || '';
+    return `
     <div style="display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-bottom:1px solid var(--border-subtle)">
       <div style="width:40px; height:40px; border-radius:50%; background:var(--gold-glow-sm); border:1px solid var(--border-gold-sm); display:flex; align-items:center; justify-content:center; font-family:'Outfit',sans-serif; font-size:16px; font-weight:900; color:var(--gold); flex-shrink:0">
-        ${h.newLevel}
+        ${newLvl}
       </div>
       <div>
         <div style="font-size:13px; font-weight:700; color:var(--text-white)">
-          Niveau ${h.previousLevel} → ${h.newLevel}
+          ${prevLvl !== '-' ? `Niveau ${prevLvl} → ${newLvl}` : (newLvl !== '?' ? `Niveau : ${newLvl}` : 'Inscription · En attente d\'évaluation')}
+          ${(h.newLevel != null && h.previousLevel != null) ? `
           <span style="font-size:11px; color:${h.newLevel > h.previousLevel ? 'var(--green)' : 'var(--red)'}">
             ${h.newLevel > h.previousLevel ? '▲' : '▼'}
-          </span>
+          </span>` : ''}
         </div>
-        <div style="font-size:11px; color:var(--text-muted); margin:2px 0">${formatDate(h.changedAt.split('T')[0])}</div>
-        ${h.coachComment ? `<div style="font-size:12px; color:var(--text-secondary); font-style:italic; margin-top:4px">"${h.coachComment}"</div>` : ''}
+        <div style="font-size:11px; color:var(--text-muted); margin:2px 0">${dateFormatted}</div>
+        ${noteText ? `<div style="font-size:12px; color:var(--text-secondary); font-style:italic; margin-top:4px">"${noteText}"</div>` : ''}
       </div>
-    </div>`
-  ).join('');
+    </div>`;
+  }).join('');
 }
 
 function renderProfileHistory(user) {
@@ -1472,7 +1731,10 @@ function renderAdminPlayers() {
           <div style="width:40px; height:4px; background:var(--border-subtle); border-radius:2px; overflow:hidden">
             <div style="width:${p.reliabilityScore || 50}%; height:100%; background:var(--gradient-gold)"></div>
           </div>
-          <span style="font-size:12px; color:var(--text-secondary)">${p.reliabilityScore || 50}%</span>
+          <span style="font-size:12px; color:var(--text-secondary); font-weight:600">${p.reliabilityScore || 50}%</span>
+        </div>
+        <div style="font-size:10px; color:var(--text-muted); margin-top:2px" title="Niveau éprouvé lors de confrontations face à des pairs de même niveau (±1.0)">
+          ${p.peerConfrontationsCount || 0} match(s) pairs
         </div>
       </td>
       <td style="font-family:'Outfit',sans-serif; font-size:16px; font-weight:900; color:var(--text-secondary)">${p.totalMatchesPlayed || 0}</td>
@@ -1727,6 +1989,17 @@ let evalCurrentPlayerId = null;
 let evalSkillValues = {};
 let evalLevelValue = null;
 
+function updateEvalPadelCalculationUI() {
+  const { weightedScore, officialLevel } = calculatePadelLevelFromSkills(evalSkillValues);
+  const badge = document.getElementById('evalCalculatedScoreBadge');
+  if (badge) badge.textContent = `${weightedScore.toFixed(2)} / 10`;
+  const disp = document.getElementById('evalCalculatedLevelDisplay');
+  if (disp) {
+    disp.textContent = `Niveau ${officialLevel}/10 · ${LEVEL_LABELS[officialLevel] || ''}`;
+  }
+  return { weightedScore, officialLevel };
+}
+
 function openPlayerEvalModal(playerId) {
   const player = (DB.players || []).find(p => p.id === playerId);
   if (!player) {
@@ -1739,7 +2012,9 @@ function openPlayerEvalModal(playerId) {
   Object.keys(SKILL_LABELS).forEach(k => {
     if (evalSkillValues[k] === undefined) evalSkillValues[k] = 5;
   });
-  evalLevelValue = player.level || null;
+
+  const { weightedScore, officialLevel } = updateEvalPadelCalculationUI();
+  evalLevelValue = player.level || officialLevel;
 
   const modalTitle = document.getElementById('evalModalTitle');
   if (modalTitle) modalTitle.innerHTML = `Évaluation · <span id="evalPlayerName">${player.firstName} ${player.lastName || ''}</span>`;
@@ -1750,7 +2025,7 @@ function openPlayerEvalModal(playerId) {
   const levelCard = document.getElementById('evalPlayerCurrentLevel');
   if (levelCard) {
     levelCard.innerHTML = player.level
-      ? `<span class="level-badge">${player.level}/7 <span class="coach-check">✓</span></span>`
+      ? `<span class="level-badge">${player.level}/10 <span class="coach-check">✓</span></span>`
       : `<span class="level-badge pending">⏳ En attente d'évaluation coach</span>`;
   }
 
@@ -1766,10 +2041,11 @@ function openPlayerEvalModal(playerId) {
         <button type="button" class="skill-dot-btn ${n <= currentVal ? 'active' : ''}"
           data-val="${n}" onclick="setSkillValue('${skillKey}', ${n})">${n}</button>
       `).join('');
+      const weightPct = Math.round((PADEL_SKILL_WEIGHTS[skillKey] || 0) * 100);
       return `
         <div class="skill-eval-row" data-skill="${skillKey}" style="margin-bottom:14px">
           <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:12px">
-            <span style="font-weight:600; color:var(--text-white)">${skillLabel}</span>
+            <span style="font-weight:600; color:var(--text-white)">${skillLabel} <span style="font-size:10px; color:var(--text-muted); font-weight:400">(${weightPct}%)</span></span>
             <span id="skillValDisplay_${skillKey}" style="color:var(--gold); font-weight:700">${currentVal}/10</span>
           </div>
           <div class="skill-eval-dots" style="display:flex; gap:4px; flex-wrap:wrap">
@@ -1780,10 +2056,10 @@ function openPlayerEvalModal(playerId) {
     }).join('');
   }
 
-  // Level selector (1–7)
+  // Level selector (1–10)
   const levelSel = document.getElementById('evalLevelSelector');
   if (levelSel) {
-    levelSel.innerHTML = Array.from({ length: 7 }, (_, i) => i + 1).map(n => `
+    levelSel.innerHTML = Array.from({ length: 10 }, (_, i) => i + 1).map(n => `
       <div class="eval-level-btn ${n === evalLevelValue ? 'active' : ''}"
         onclick="setEvalLevel(${n})" title="${LEVEL_LABELS[n] || ''}">
         ${n}
@@ -1809,6 +2085,10 @@ function setSkillValue(skillKey, val) {
   }
   const disp = document.getElementById(`skillValDisplay_${skillKey}`);
   if (disp) disp.textContent = `${val}/10`;
+
+  // Recalculer instantanément selon l'équation de moyenne propre au Padel
+  const { officialLevel } = updateEvalPadelCalculationUI();
+  setEvalLevel(officialLevel);
 }
 
 function setEvalLevel(level) {
@@ -1826,7 +2106,7 @@ async function saveEvaluation(e) {
     return;
   }
   if (!evalLevelValue) {
-    showToast('Veuillez sélectionner un niveau officiel (1–7).', 'error');
+    showToast('Veuillez sélectionner un niveau officiel (1–10).', 'error');
     return;
   }
 
@@ -1846,16 +2126,21 @@ async function saveEvaluation(e) {
 
     const comment = document.getElementById('evalCoachComment')?.value?.trim() || '';
     const previousLevel = player.level;
+    const { weightedScore } = calculatePadelLevelFromSkills(evalSkillValues);
 
     player.level = evalLevelValue;
+    player.weightedScore = weightedScore;
     player.status = 'active'; // Joueur validé et actif !
     player.skills = { ...evalSkillValues };
+    player.reliabilityScore = player.reliabilityScore || 50; // Fiabilité initiale coach 50%
+    player.peerConfrontationsCount = player.peerConfrontationsCount || 0;
     player.levelValidatedAt = new Date().toISOString();
     player.levelValidatedBy = 'coach_ali';
     player.levelHistory = player.levelHistory || [];
     player.levelHistory.push({
       previousLevel: previousLevel || null,
       newLevel: evalLevelValue,
+      weightedScore: weightedScore,
       changedAt: new Date().toISOString(),
       changedBy: 'coach_ali',
       coachComment: comment,
@@ -1868,7 +2153,7 @@ async function saveEvaluation(e) {
       userId: player.id,
       type: 'level_updated',
       title: 'Niveau validé par le coach',
-      body: `Félicitations ! Votre niveau officiel a été certifié à ${evalLevelValue}/7 par votre coach.${comment ? ` Note : "${comment}"` : ''}`,
+      body: `Félicitations ! Votre niveau officiel a été certifié à ${evalLevelValue}/10 par votre coach.${comment ? ` Note : "${comment}"` : ''}`,
       isRead: false,
       sentAt: new Date().toISOString(),
     });
@@ -1883,7 +2168,7 @@ async function saveEvaluation(e) {
       updateAuthUI();
     }
 
-    showToast(`✓ Niveau ${evalLevelValue}/7 validé pour ${player.firstName}`, 'success');
+    showToast(`✓ Niveau ${evalLevelValue}/10 validé pour ${player.firstName}`, 'success');
 
     // Sauvegarde Firestore en arrière-plan
     fbUpdatePlayerLevel(player.id, { level: evalLevelValue, coachComment: comment, coachId: 'coach_ali' })
@@ -2123,7 +2408,7 @@ function initCreateMatchLevelSelectors() {
   ['createMatchLevelMin', 'createMatchLevelMax'].forEach((containerId, idx) => {
     const container = document.getElementById(containerId);
     if (!container) return;
-    container.innerHTML = Array.from({ length: 7 }, (_, i) => i + 1).map(n => `
+    container.innerHTML = Array.from({ length: 10 }, (_, i) => i + 1).map(n => `
       <div class="eval-level-btn ${n === (idx === 0 ? evalMatchLevelMin : evalMatchLevelMax) ? 'active' : ''}"
         onclick="${idx === 0 ? `setMatchLevelMin(${n})` : `setMatchLevelMax(${n})`}"
         title="${LEVEL_LABELS[n]}">${n}</div>`
@@ -2656,6 +2941,11 @@ document.addEventListener('DOMContentLoaded', () => {
       await handlePlayerLogin(email, password);
     }
 
+    // ── Mode Écran Terrain (LED Stadium) ──
+    if (id === 'btnOpenCourtsideDisplay') {
+      openCourtsideDisplay();
+    }
+
     // ── Soumission Formulaire Inscription Joueur ──
     if (id === 'btnAuthSubmitRegister') {
       const firstName = document.getElementById('authRegFirstName')?.value?.trim();
@@ -2807,6 +3097,30 @@ window.handlePlayerRegister    = handlePlayerRegister;
 window.handlePlayerLogout      = handlePlayerLogout;
 window.switchAuthTab           = switchAuthTab;
 window.updateAuthUI            = updateAuthUI;
+window.openCourtsideDisplay    = openCourtsideDisplay;
+
+// Validation formulaires auth au clavier (touche Entrée)
+document.addEventListener('keydown', async (e) => {
+  if (e.key === 'Enter') {
+    const active = document.activeElement;
+    if (active && (active.id === 'authLoginEmail' || active.id === 'authLoginPassword')) {
+      e.preventDefault();
+      const email = document.getElementById('authLoginEmail')?.value?.trim();
+      const password = document.getElementById('authLoginPassword')?.value;
+      await handlePlayerLogin(email, password);
+    } else if (active && ['authRegFirstName', 'authRegLastName', 'authRegPhone', 'authRegEmail', 'authRegPassword'].includes(active.id)) {
+      e.preventDefault();
+      const firstName = document.getElementById('authRegFirstName')?.value?.trim();
+      const lastName = document.getElementById('authRegLastName')?.value?.trim();
+      const phone = document.getElementById('authRegPhone')?.value?.trim();
+      const email = document.getElementById('authRegEmail')?.value?.trim();
+      const password = document.getElementById('authRegPassword')?.value;
+      const preferredSide = document.getElementById('authRegSide')?.value || 'right';
+      const playStyle = document.getElementById('authRegStyle')?.value || 'all-around';
+      await handlePlayerRegister({ firstName, lastName, phone, email, password, preferredSide, playStyle });
+    }
+  }
+});
 
 // ============================================================================
 // TOGGLE THÈME CLAIR / SOMBRE

@@ -2709,23 +2709,31 @@ img { display: block; max-width: 100%; }
 .eval-level-selector,
 .level-selector-row {
   display: grid !important;
-  grid-template-columns: repeat(7, 1fr) !important;
-  gap: 8px !important;
+  grid-template-columns: repeat(10, 1fr) !important;
+  gap: 6px !important;
   margin-bottom: 16px !important;
   width: 100% !important;
+}
+
+@media (max-width: 520px) {
+  .eval-level-selector,
+  .level-selector-row {
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 8px !important;
+  }
 }
 
 .eval-level-btn {
   aspect-ratio: 1;
   width: 100%;
-  min-height: 42px;
-  max-height: 52px;
+  min-height: 36px;
+  max-height: 48px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-subtle);
   background: var(--bg-input);
   color: var(--text-secondary);
   font-family: 'Outfit', sans-serif;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 900;
   display: flex;
   align-items: center;
@@ -3119,4 +3127,436 @@ button:disabled, .btn-primary-action:disabled, .btn-join-match:disabled, .view-t
 button:active:not(:disabled), .btn-primary-action:active:not(:disabled) {
   transform: scale(0.98);
 }
+
+/* ==========================================================================
+   FIFA ULTIMATE TEAM (FUT) PADEL CARD
+   Prête pour affichage courtside / écrans du terrain
+   ========================================================================== */
+
+.fut-card-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin: 8px 0 20px 0;
+  perspective: 1000px;
+}
+
+.fut-card {
+  position: relative;
+  width: 310px;
+  min-height: 460px;
+  border-radius: 24px;
+  background: linear-gradient(165deg, #2b2518 0%, #151820 35%, #0a0b0e 75%, #1e1b12 100%);
+  padding: 3px;
+  box-shadow: 
+    0 22px 50px rgba(0, 0, 0, 0.85),
+    0 0 35px rgba(212, 175, 55, 0.25),
+    inset 0 0 20px rgba(212, 175, 55, 0.15);
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.4s ease;
+  overflow: hidden;
+  user-select: none;
+}
+
+.fut-card:hover {
+  transform: translateY(-5px) rotateX(2deg) rotateY(-2deg);
+  box-shadow: 
+    0 30px 60px rgba(0, 0, 0, 0.9),
+    0 0 50px rgba(212, 175, 55, 0.4),
+    inset 0 0 30px rgba(212, 175, 55, 0.25);
+}
+
+/* Metallic gold rim */
+.fut-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  padding: 2px;
+  background: linear-gradient(135deg, #ffe082 0%, #d4af37 25%, #4a3e1b 50%, #d4af37 75%, #fff1a8 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Diagonal holographic sheen */
+.fut-card::after {
+  content: '';
+  position: absolute;
+  top: -60%;
+  left: -60%;
+  width: 220%;
+  height: 220%;
+  background: linear-gradient(
+    115deg,
+    transparent 0%,
+    transparent 42%,
+    rgba(255, 255, 255, 0.12) 47%,
+    rgba(212, 175, 55, 0.22) 51%,
+    transparent 56%,
+    transparent 100%
+  );
+  transform: rotate(25deg);
+  pointer-events: none;
+  z-index: 9;
+}
+
+.fut-card-inner {
+  position: relative;
+  background: radial-gradient(circle at 50% 28%, #1c202a 0%, #0e1015 65%, #06070a 100%);
+  border-radius: 21px;
+  padding: 16px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.fut-card-texture {
+  position: absolute;
+  inset: 0;
+  opacity: 0.07;
+  background-image: 
+    radial-gradient(#d4af37 1px, transparent 1px),
+    linear-gradient(45deg, rgba(212,175,55,0.06) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(212,175,55,0.06) 25%, transparent 25%);
+  background-size: 18px 18px;
+  pointer-events: none;
+}
+
+.fut-card-header {
+  display: flex;
+  align-items: flex-start;
+  position: relative;
+  min-height: 145px;
+  z-index: 2;
+}
+
+.fut-badge-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 62px;
+  padding-top: 2px;
+}
+
+.fut-rating {
+  font-family: 'Outfit', sans-serif;
+  font-size: 38px;
+  font-weight: 900;
+  line-height: 0.95;
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9), 0 0 16px rgba(212, 175, 55, 0.7);
+  letter-spacing: -1px;
+}
+
+.fut-pos {
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--gold);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.fut-flag {
+  font-size: 18px;
+  line-height: 1;
+  margin-top: 3px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+}
+
+.fut-club-logo {
+  font-size: 18px;
+  margin-top: 3px;
+  filter: drop-shadow(0 0 6px rgba(212,175,55,0.6));
+}
+
+.fut-player-portrait-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.fut-portrait-glow {
+  position: absolute;
+  top: 10px;
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.35) 0%, rgba(212, 175, 55, 0.08) 50%, transparent 70%);
+  filter: blur(8px);
+  pointer-events: none;
+}
+
+.fut-player-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(0,0,0,0.7) 100%);
+  border: 2px solid rgba(212, 175, 55, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.7), inset 0 0 20px rgba(212,175,55,0.25);
+  position: relative;
+  z-index: 2;
+}
+
+.fut-coach-verified-badge {
+  margin-top: 8px;
+  background: rgba(46, 204, 113, 0.15);
+  border: 1px solid rgba(46, 204, 113, 0.45);
+  color: #2ecc71;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  z-index: 2;
+}
+
+.fut-name-banner {
+  text-align: center;
+  margin-top: 6px;
+  position: relative;
+  z-index: 2;
+}
+
+.fut-name {
+  font-family: 'Outfit', sans-serif;
+  font-size: 18px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fut-style-pill {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.fut-gold-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 8px 0;
+  opacity: 0.7;
+}
+
+.fut-gold-divider span {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+
+.fut-diamond {
+  width: 5px;
+  height: 5px;
+  background: var(--gold);
+  transform: rotate(45deg);
+}
+
+.fut-stats-grid {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 5px 6px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  position: relative;
+  z-index: 2;
+}
+
+.fut-stat-col {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+}
+
+.fut-stats-v-divider {
+  width: 1px;
+  height: 50px;
+  background: linear-gradient(180deg, transparent, rgba(212,175,55,0.4), transparent);
+  margin: 0 6px;
+}
+
+.fut-stat-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 5px;
+}
+
+.fut-stat-val {
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 900;
+  color: #fff;
+  min-width: 22px;
+  text-align: right;
+}
+
+.fut-stat-label {
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+
+.fut-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 11px;
+  position: relative;
+  z-index: 2;
+}
+
+.fut-chem-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+}
+
+.fut-chem-badge strong {
+  color: var(--gold);
+}
+
+.fut-level-badge {
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  background: rgba(212, 175, 55, 0.2);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
+/* ==========================================================================
+   COURTSIDE STADIUM DISPLAY MODE (Full LED Viewport)
+   ========================================================================== */
+
+.courtside-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: radial-gradient(circle at 50% 15%, #181c26 0%, #06070a 100%) !important;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.courtside-overlay.active {
+  display: flex !important;
+}
+
+.courtside-stage {
+  width: 100%;
+  max-width: 860px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.courtside-top-bar {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.35);
+}
+
+.courtside-club-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.courtside-center-arena {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+}
+
+.courtside-match-tag {
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: var(--gold);
+  background: rgba(212, 175, 55, 0.15);
+  border: 1px solid rgba(212, 175, 55, 0.45);
+  padding: 6px 20px;
+  border-radius: 20px;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+  text-shadow: 0 0 12px rgba(212,175,55,0.5);
+}
+
+.courtside-stage .fut-card {
+  width: 340px;
+  min-height: 490px;
+  transform: scale(1.05);
+  box-shadow: 
+    0 30px 70px rgba(0, 0, 0, 0.95),
+    0 0 60px rgba(212, 175, 55, 0.45),
+    inset 0 0 35px rgba(212, 175, 55, 0.3);
+}
+
+.courtside-footer-ticker {
+  display: flex;
+  gap: 18px;
+  margin-top: 26px;
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  padding: 10px 22px;
+  border-radius: 30px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.courtside-footer-ticker strong {
+  color: var(--gold);
+}
+
 
