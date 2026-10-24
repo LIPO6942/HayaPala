@@ -4004,5 +4004,31 @@ button:active:not(:disabled), .btn-primary-action:active:not(:disabled) {
   font-weight: 500;
 }
 
+/* ==========================================================================
+   TERRAIN OCCUPÉ & DISPONIBLE BADGES (PLANNING JOUEUR)
+   ========================================================================== */
+.slot-type-badge.occupied {
+  background: rgba(231, 76, 60, 0.22) !important;
+  color: #ff6b6b !important;
+  border: 1px solid rgba(231, 76, 60, 0.45) !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.5px;
+}
+
+.slot-item.slot-occupied {
+  background: rgba(231, 76, 60, 0.08) !important;
+  border-color: rgba(231, 76, 60, 0.35) !important;
+  cursor: not-allowed !important;
+  opacity: 0.9;
+}
+
+.slot-type-badge.available {
+  background: rgba(46, 204, 113, 0.12) !important;
+  color: #2ecc71 !important;
+  border: 1px solid rgba(46, 204, 113, 0.3) !important;
+  font-weight: 700 !important;
+}
+
+
 
 

@@ -124,6 +124,26 @@ function mergePlayersLists(currentList, incomingList) {
   return Array.from(unique.values());
 }
 
+/**
+ * Fusionne intelligemment la liste des créneaux et réservations
+ * Garantit qu'aucun créneau réservé par le gérant ou un joueur ne disparaît.
+ */
+function mergeBookingsLists(currentList, incomingList) {
+  const map = new Map();
+  (incomingList || []).forEach(b => {
+    if (b && b.id) map.set(b.id, b);
+  });
+  (currentList || []).forEach(b => {
+    if (!b || !b.id) return;
+    if (!map.has(b.id)) {
+      map.set(b.id, b);
+    } else {
+      map.set(b.id, { ...map.get(b.id), ...b });
+    }
+  });
+  return Array.from(map.values());
+}
+
 function saveDB(data, pushToServer = true) {
   try {
     data._fromFirestore = true;
@@ -152,7 +172,7 @@ async function syncFromBackend() {
     if (remote && Array.isArray(remote.players)) {
       DB.players = mergePlayersLists(DB.players, remote.players);
       if (Array.isArray(remote.courts) && remote.courts.length) DB.courts = remote.courts;
-      if (Array.isArray(remote.bookings)) DB.bookings = remote.bookings;
+      if (Array.isArray(remote.bookings)) DB.bookings = mergeBookingsLists(DB.bookings, remote.bookings);
       if (remote.appConfig) DB.appConfig = { ...DEFAULT_CONFIG, ...remote.appConfig };
       if (Array.isArray(remote.notifications)) DB.notifications = remote.notifications;
 
@@ -169,6 +189,8 @@ async function syncFromBackend() {
       renderAdminPlayers();
       renderAdminKPIs();
       renderAdminAlerts();
+      renderCourtsGrid();
+      renderAdminTimetable();
       renderHomeScreen();
       renderMatchesList();
     }
@@ -230,7 +252,8 @@ async function syncFromFirestore() {
     // Fusionner réservations + matchs ouverts
     const regularBookings = bookings.filter(b => b.type !== 'open');
     const openAsBookings  = openMatches.map(m => ({ ...m, type: 'open', status: m.status || 'confirmed' }));
-    DB.bookings = [...regularBookings, ...openAsBookings];
+    const firestoreBookings = [...regularBookings, ...openAsBookings];
+    DB.bookings = mergeBookingsLists(DB.bookings, firestoreBookings);
     if (config) DB.appConfig = { ...DEFAULT_CONFIG, ...config };
 
     // Charger les notifications du joueur courant
@@ -266,11 +289,10 @@ function startRealtimeListeners() {
 
   fbListenBookings(getTodayStr(), bookings => {
     try {
-      const other = DB.bookings.filter(b => b.date !== getTodayStr());
-      DB.bookings = [...other, ...bookings];
-      saveDB(DB);
+      DB.bookings = mergeBookingsLists(DB.bookings, bookings);
+      saveDB(DB, false);
       renderAdminTimetable();
-      renderCourtsPlanningGrid();
+      renderCourtsGrid();
       renderHomeOpenMatches(DB.currentUser);
       renderAdminKPIs();
     } catch (e) {
@@ -791,13 +813,20 @@ function renderCourtsGrid() {
         b.courtId === court.id && b.date === planningSelectedDate && b.startTime === time && b.status === 'confirmed'
       );
 
-      let slotClass = '', badgeClass = 'available', badgeText = 'Libre', dotHtml = '';
+      let slotClass = '', badgeClass = 'available', badgeText = '🟢 Libre', dotHtml = '';
+      let isOccupied = false;
       if (booking) {
         const spots = (DB.appConfig?.maxPlayersPerMatch || 4) - (booking.players || []).length;
-        if (booking.type === 'private') { slotClass = 'booked'; badgeClass = 'private'; badgeText = 'Privée'; }
-        else if (booking.type === 'open') { slotClass = 'open-match'; badgeClass = 'open'; badgeText = `Ouvert · ${spots} libre${spots > 1 ? 's' : ''}`; }
-        else if (booking.type === 'course') { slotClass = 'booked'; badgeClass = 'course'; badgeText = 'Cours'; }
-        else if (booking.type === 'blocked') { slotClass = 'blocked'; badgeClass = 'blocked'; badgeText = 'Bloqué'; }
+        if (booking.type === 'private' || booking.type === 'course' || booking.type === 'blocked' || spots <= 0) {
+          isOccupied = true;
+          slotClass = 'booked slot-occupied';
+          badgeClass = 'occupied';
+          badgeText = booking.type === 'course' ? '🎓 Cours' : (booking.type === 'blocked' ? '⛔ Entretien' : '🔴 Occupé');
+        } else if (booking.type === 'open') {
+          slotClass = 'open-match';
+          badgeClass = 'open';
+          badgeText = `🎾 Ouvert · ${spots} place${spots > 1 ? 's' : ''}`;
+        }
 
         if (booking.type !== 'blocked' && booking.type !== 'course') {
           const filled = (booking.players || []).length;
@@ -807,9 +836,11 @@ function renderCourtsGrid() {
         }
       }
 
-      const clickHandler = booking
-        ? `openModal('modal-slot-detail'); renderSlotDetail('${booking.id}')`
-        : `openBookingFromSlot('${court.id}', '${time}')`;
+      const clickHandler = isOccupied
+        ? `showToast('Ce terrain est déjà réservé / occupé à cet horaire.', 'info')`
+        : (booking && booking.type === 'open'
+          ? `openModal('modal-slot-detail'); renderSlotDetail('${booking.id}')`
+          : `openBookingFromSlot('${court.id}', '${time}')`);
 
       return `
         <div class="slot-item ${slotClass}" onclick="${clickHandler}" style="cursor:pointer">
@@ -1022,18 +1053,19 @@ function renderProfileScreen() {
   const futVerified = document.getElementById('futCoachVerified');
   const futVerifiedText = document.getElementById('futCoachVerifiedText');
   if (futVerified && futVerifiedText) {
-    if (user.level != null) {
+    if (user.levelValidatedAt) {
       futVerified.style.display = 'block';
-      futVerified.style.background = 'rgba(46, 204, 113, 0.18)';
-      futVerified.style.borderColor = 'rgba(46, 204, 113, 0.5)';
+      futVerified.style.background = 'rgba(46, 204, 113, 0.2)';
+      futVerified.style.borderColor = 'rgba(46, 204, 113, 0.6)';
       futVerified.style.color = '#2ecc71';
-      futVerifiedText.textContent = `✓ CERTIFIÉ COACH · NIV ${user.level}/10`;
+      futVerifiedText.textContent = `✓ CERTIFIÉ COACH & CLUB · NIV ${user.level}/10`;
     } else {
+      const selfLvl = (user.selfEstimatedLevel != null ? Number(user.selfEstimatedLevel).toFixed(1) : (user.level != null ? Number(user.level).toFixed(1) : '5.0'));
       futVerified.style.display = 'block';
-      futVerified.style.background = 'rgba(243, 156, 18, 0.18)';
-      futVerified.style.borderColor = 'rgba(243, 156, 18, 0.5)';
+      futVerified.style.background = 'rgba(243, 156, 18, 0.2)';
+      futVerified.style.borderColor = 'rgba(243, 156, 18, 0.6)';
       futVerified.style.color = 'var(--gold)';
-      futVerifiedText.textContent = '⏳ EN ATTENTE ÉVALUATION COACH';
+      futVerifiedText.textContent = `⏳ AUTO-ÉVALUATION (${selfLvl}/10) · EN ATTENTE COACH`;
     }
   }
 
@@ -1204,13 +1236,13 @@ async function handlePlayerLogin(email, password) {
     renderHomeScreen();
     renderProfileScreen();
 
-    // Célébration animée EA Sports Pro à la connexion
+    // Célébration animée EA Sports Pro à la connexion (rapide et percutante)
     showCelebrationModal({
       title: `Ravi de vous revoir, ${DB.currentUser.firstName} !`,
-      subtitle: `Connexion sécurisée établie. Votre carte officielle CirclePadel et vos stats sont synchronisées en direct.`,
+      subtitle: `Connexion sécurisée établie. Votre profil CirclePadel et vos stats sont synchronisées.`,
       badgeText: 'SESSION ATHLÈTE VALIDÉE',
       icon: '🎾',
-      durationMs: 2000,
+      durationMs: 950,
       onComplete: () => {
         navigateToScreen('screen-profile');
         showToast(`Bon match chez CirclePadel 🎾`, 'success');
@@ -1227,7 +1259,7 @@ async function handlePlayerLogin(email, password) {
   }
 }
 
-async function handlePlayerRegister({ firstName, lastName, phone, email, password, preferredSide, playStyle }) {
+async function handlePlayerRegister({ firstName, lastName, phone, email, password, preferredSide, playStyle, selfEstimatedLevel }) {
   if (!firstName || !firstName.trim()) {
     showToast('Veuillez indiquer au moins votre prénom.', 'error');
     const fInp = document.getElementById('authRegFirstName');
@@ -1240,6 +1272,7 @@ async function handlePlayerRegister({ firstName, lastName, phone, email, passwor
   const cleanPhone = (phone || '').trim();
   const cleanSide = preferredSide || 'right';
   const cleanStyle = playStyle || 'all-around';
+  const cleanSelfLevel = typeof selfEstimatedLevel === 'number' ? selfEstimatedLevel : (parseFloat(document.getElementById('authRegLevelRange')?.value) || 5.0);
 
   // Email sécurisé (automatique si non renseigné)
   const slug = cleanFirst.toLowerCase().replace(/[^a-z0-9]/g, '') || 'joueur';
@@ -1289,7 +1322,8 @@ async function handlePlayerRegister({ firstName, lastName, phone, email, passwor
     email: safeEmail,
     role: 'player',
     status: 'pending', // en attente d'évaluation coach
-    level: null,       // Pas encore évalué par le coach
+    selfEstimatedLevel: cleanSelfLevel,
+    level: cleanSelfLevel, // Note préliminaire immédiate
     preferredSide: cleanSide,
     playStyle: cleanStyle,
     reliabilityScore: 50,
@@ -1298,8 +1332,8 @@ async function handlePlayerRegister({ firstName, lastName, phone, email, passwor
     skills: {},
     levelHistory: [{
       date: getTodayStr(),
-      level: null,
-      note: 'Inscription joueur · En attente de passage devant le coach'
+      level: cleanSelfLevel,
+      note: `Inscription joueur · Auto-évaluation préliminaire ${cleanSelfLevel}/10`
     }],
     createdAt: new Date().toISOString(),
   };
@@ -1321,7 +1355,7 @@ async function handlePlayerRegister({ firstName, lastName, phone, email, passwor
     userId: 'admin',
     type: 'coach_eval_needed',
     title: 'Nouveau joueur à évaluer',
-    message: `${cleanFirst} ${cleanLast} vient de créer son compte. Évaluation coach requise.`,
+    message: `${cleanFirst} ${cleanLast} vient de créer son compte. Auto-évaluation : ${cleanSelfLevel}/10. Évaluation coach requise.`,
     playerId: newPlayer.id,
     read: false,
     createdAt: new Date().toISOString()
@@ -1339,13 +1373,13 @@ async function handlePlayerRegister({ firstName, lastName, phone, email, passwor
   if (typeof renderAdminAlerts === 'function') renderAdminAlerts();
   if (typeof renderCoachPendingPlayers === 'function') renderCoachPendingPlayers();
 
-  // Animation de célébration pro EA Sports / CirclePadel
+  // Animation de célébration pro EA Sports / CirclePadel (rapide et percutante)
   showCelebrationModal({
-    title: `Bienvenue dans le Club, ${cleanFirst} !`,
-    subtitle: `Votre compte officiel est créé. Votre carte joueur CirclePadel est débloquée et envoyée au coach pour évaluation.`,
+    title: `Bienvenue, ${cleanFirst} !`,
+    subtitle: `Votre compte officiel est actif. Niveau auto-évalué : ${cleanSelfLevel}/10 (en attente de passage devant le coach).`,
     badgeText: 'NOUVEL ATHLÈTE ENREGISTRÉ',
     icon: '🏆',
-    durationMs: 2400,
+    durationMs: 1100,
     onComplete: () => {
       navigateToScreen('screen-profile');
       showToast(`Bienvenue ${cleanFirst} ! Votre carte joueur officielle est prête 🎾`, 'success');
@@ -2116,7 +2150,24 @@ function updateEvalPadelCalculationUI() {
   if (disp) {
     disp.textContent = `Niveau ${officialLevel}/10 · ${LEVEL_LABELS[officialLevel] || ''}`;
   }
-  return { weightedScore, officialLevel };
+
+  // Combinaison : 75% Coach (technique terrain) + 25% Auto-évaluation Joueur
+  const player = (DB.players || []).find(p => p.id === evalCurrentPlayerId);
+  const selfLvl = (player && player.selfEstimatedLevel != null) ? Number(player.selfEstimatedLevel) : (player && player.level != null ? Number(player.level) : officialLevel);
+  const combinedRaw = (0.75 * officialLevel) + (0.25 * selfLvl);
+  const combinedVal = Math.round(combinedRaw * 10) / 10;
+  const combinedLevelInt = Math.max(1, Math.min(10, Math.round(combinedVal)));
+
+  const combBadge = document.getElementById('evalCombinedLevelBadge');
+  if (combBadge) {
+    combBadge.textContent = `${combinedVal.toFixed(1)} / 10 (Niv ${combinedLevelInt})`;
+  }
+  const combFormula = document.getElementById('evalCombinedFormulaText');
+  if (combFormula) {
+    combFormula.textContent = `75% Coach (${officialLevel}) + 25% Auto-éval (${selfLvl.toFixed(1)}) = ${combinedVal.toFixed(1)}/10`;
+  }
+
+  return { weightedScore, officialLevel, combinedVal, combinedLevelInt };
 }
 
 function openPlayerEvalModal(playerId) {
@@ -2132,8 +2183,12 @@ function openPlayerEvalModal(playerId) {
     if (evalSkillValues[k] === undefined) evalSkillValues[k] = 5;
   });
 
-  const { weightedScore, officialLevel } = updateEvalPadelCalculationUI();
-  evalLevelValue = player.level || officialLevel;
+  const selfLvl = (player.selfEstimatedLevel != null) ? Number(player.selfEstimatedLevel) : (player.level || 5.0);
+  const selfScoreEl = document.getElementById('evalPlayerSelfScore');
+  if (selfScoreEl) selfScoreEl.textContent = `${selfLvl.toFixed(1)} / 10`;
+
+  const { combinedLevelInt } = updateEvalPadelCalculationUI();
+  evalLevelValue = player.levelValidatedAt ? player.level : combinedLevelInt;
 
   const modalTitle = document.getElementById('evalModalTitle');
   if (modalTitle) modalTitle.innerHTML = `Évaluation · <span id="evalPlayerName">${player.firstName} ${player.lastName || ''}</span>`;
@@ -2245,9 +2300,12 @@ async function saveEvaluation(e) {
 
     const comment = document.getElementById('evalCoachComment')?.value?.trim() || '';
     const previousLevel = player.level;
-    const { weightedScore } = calculatePadelLevelFromSkills(evalSkillValues);
+    const { weightedScore, officialLevel, combinedVal, combinedLevelInt } = updateEvalPadelCalculationUI();
 
-    player.level = evalLevelValue;
+    player.coachRawLevel = officialLevel;
+    player.selfEstimatedLevel = player.selfEstimatedLevel || officialLevel;
+    player.level = evalLevelValue || combinedLevelInt;
+    player.combinedScore = combinedVal;
     player.weightedScore = weightedScore;
     player.status = 'active'; // Joueur validé et actif !
     player.skills = { ...evalSkillValues };
@@ -2258,7 +2316,10 @@ async function saveEvaluation(e) {
     player.levelHistory = player.levelHistory || [];
     player.levelHistory.push({
       previousLevel: previousLevel || null,
-      newLevel: evalLevelValue,
+      newLevel: player.level,
+      coachRawLevel: officialLevel,
+      selfEstimatedLevel: player.selfEstimatedLevel,
+      formula: '75% Coach + 25% Auto-évaluation',
       weightedScore: weightedScore,
       changedAt: new Date().toISOString(),
       changedBy: 'coach_ali',
@@ -3258,7 +3319,8 @@ window.submitAuthRegister = async function() {
   const password = document.getElementById('authRegPassword')?.value;
   const preferredSide = document.getElementById('authRegSide')?.value || 'right';
   const playStyle = document.getElementById('authRegStyle')?.value || 'all-around';
-  await handlePlayerRegister({ firstName, lastName, phone, email, password, preferredSide, playStyle });
+  const selfEstimatedLevel = parseFloat(document.getElementById('authRegLevelRange')?.value) || 5.0;
+  await handlePlayerRegister({ firstName, lastName, phone, email, password, preferredSide, playStyle, selfEstimatedLevel });
 };
 
 // Brancher immédiatement les clics des onglets de connexion

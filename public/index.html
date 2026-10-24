@@ -1043,12 +1043,24 @@
       </div>
 
       <!-- Player info mini card -->
-      <div id="evalPlayerMiniCard" style="background:var(--bg-card-2); border:1px solid var(--border-card); border-radius:var(--radius-md); padding:14px 16px; margin-bottom:20px; display:flex; align-items:center; gap:12px">
+      <div id="evalPlayerMiniCard" style="background:var(--bg-card-2); border:1px solid var(--border-card); border-radius:var(--radius-md); padding:14px 16px; margin-bottom:14px; display:flex; align-items:center; gap:12px">
         <div style="width:40px;height:40px; background:var(--bg-card); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px">🎾</div>
         <div>
           <div style="font-weight:700; color:var(--text-white)" id="evalPlayerNameCard">—</div>
           <div style="font-size:12px; color:var(--text-secondary)" id="evalPlayerPhone">—</div>
           <div id="evalPlayerCurrentLevel" style="margin-top:4px"></div>
+        </div>
+      </div>
+
+      <!-- Auto-évaluation préliminaire du joueur & Ratio de combinaison (75% Coach / 25% Joueur) -->
+      <div id="evalPlayerSelfSection" style="background:rgba(212,175,55,0.08); border:1px solid rgba(212,175,55,0.3); border-radius:var(--radius-md); padding:12px 14px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center">
+        <div>
+          <div style="font-size:11px; font-weight:800; color:var(--gold); text-transform:uppercase; letter-spacing:0.5px">🎯 Auto-évaluation préliminaire du joueur</div>
+          <div style="font-size:11px; color:var(--text-secondary); margin-top:2px">Pondération retenue : <strong style="color:var(--text-white)">75% Coach / 25% Joueur</strong></div>
+        </div>
+        <div style="text-align:right">
+          <div id="evalPlayerSelfScore" style="font-family:'Outfit',sans-serif; font-size:18px; font-weight:900; color:var(--gold)">5.0 / 10</div>
+          <div style="font-size:10px; color:var(--text-muted)">Auto-estimé</div>
         </div>
       </div>
 
@@ -1072,9 +1084,22 @@
           <strong>Pondération officielle Padel :</strong> Régularité (25%) + Placement (20%) + Vitre (15%) + Volée (15%) + Bandeja (10%) + Mental (10%) + Víbora (5%)
         </div>
         <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,0.4); padding:10px 14px; border-radius:var(--radius-sm); border:1px solid rgba(255,255,255,0.06)">
-          <div style="font-size:12px; color:var(--text-primary); font-weight:600">Niveau Padel calculé automatiquement :</div>
+          <div style="font-size:12px; color:var(--text-primary); font-weight:600">Niveau technique Coach (100% terrain) :</div>
           <div id="evalCalculatedLevelDisplay" style="font-family:'Outfit',sans-serif; font-size:15px; font-weight:900; color:var(--gold)">
             Niveau 5/10 · Intermédiaire
+          </div>
+        </div>
+      </div>
+
+      <!-- Synthèse Combinée : 75% Coach / 25% Auto-évaluation Joueur -->
+      <div style="background:rgba(46,204,113,0.09); border:1.5px solid rgba(46,204,113,0.35); border-radius:var(--radius-md); padding:12px 14px; margin:14px 0 18px; display:flex; justify-content:space-between; align-items:center">
+        <div>
+          <div style="font-size:11.5px; font-weight:800; color:#2ecc71; text-transform:uppercase; letter-spacing:0.5px">⚖️ Note Finale Combinée (Padel Matchmaking)</div>
+          <div style="font-size:11px; color:var(--text-secondary); margin-top:2px" id="evalCombinedFormulaText">75% Coach + 25% Auto-éval joueur</div>
+        </div>
+        <div style="text-align:right">
+          <div id="evalCombinedLevelBadge" style="font-family:'Outfit',sans-serif; font-size:18px; font-weight:900; color:#2ecc71; background:rgba(0,0,0,0.4); padding:4px 12px; border-radius:8px; border:1px solid rgba(46,204,113,0.45)">
+            5.0 / 10
           </div>
         </div>
       </div>
@@ -1363,6 +1388,22 @@
             </select>
           </div>
         </div>
+
+        <!-- Auto-évaluation préliminaire par le joueur -->
+        <div class="modal-field-group" style="background:rgba(212,175,55,0.08); border:1px solid rgba(212,175,55,0.25); border-radius:10px; padding:12px 14px; margin:4px 0 10px">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
+            <label class="modal-label" style="color:var(--gold); font-weight:800; margin:0">🎯 Auto-évaluation préliminaire</label>
+            <span id="authRegLevelVal" style="font-family:'Outfit',sans-serif; font-size:15px; font-weight:900; color:var(--gold)">5.0 / 10</span>
+          </div>
+          <input type="range" id="authRegLevelRange" min="1" max="10" step="0.5" value="5.0"
+            style="width:100%; accent-color:var(--gold); cursor:pointer; height:6px"
+            oninput="document.getElementById('authRegLevelVal').textContent = parseFloat(this.value).toFixed(1) + ' / 10'; document.getElementById('authRegLevelDesc').textContent = (window.LEVEL_LABELS ? window.LEVEL_LABELS[Math.round(this.value)] : 'Niveau ' + this.value);" />
+          <div id="authRegLevelDesc" style="font-size:11px; color:var(--text-white); font-weight:600; margin-top:5px">Intermédiaire (Échanges réguliers, jeu avec les vitres)</div>
+          <div style="font-size:10px; color:var(--text-muted); margin-top:4px; line-height:1.4">
+            ℹ️ <em>Sert d'évaluation initiale sur votre carte jusqu'au passage devant le coach. Les deux notes seront ensuite combinées (75% Coach / 25% Joueur).</em>
+          </div>
+        </div>
+
         <button type="button" class="btn-primary-action" id="btnAuthSubmitRegister" style="margin-top:6px" onclick="submitAuthRegister()">
           Créer mon compte joueur 🎾
         </button>
