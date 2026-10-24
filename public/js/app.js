@@ -82,6 +82,48 @@ try {
 
 let _syncDebounceTimer = null;
 
+/**
+ * Fusionne intelligemment la liste locale et entrante de joueurs
+ * Garantit qu'aucun compte créé localement ou en attente d'évaluation ne disparaît.
+ */
+function mergePlayersLists(currentList, incomingList) {
+  const map = new Map();
+  // 1. Ajouter tous les joueurs distants
+  (incomingList || []).forEach(p => {
+    if (p && p.id) {
+      map.set(p.id, p);
+      if (p.email) map.set(`email_${p.email.toLowerCase().trim()}`, p);
+    }
+  });
+
+  // 2. Préserver impérativement tous les joueurs locaux
+  (currentList || []).forEach(p => {
+    if (!p || !p.id) return;
+    const byId = map.get(p.id);
+    const byEmail = p.email ? map.get(`email_${p.email.toLowerCase().trim()}`) : null;
+    const remoteMatch = byId || byEmail;
+
+    if (!remoteMatch) {
+      // Joueur créé localement mais pas encore présent sur le serveur : LE CONSERVER !
+      map.set(p.id, p);
+    } else {
+      // Si local est en attente d'évaluation coach ou plus récent, fusionner
+      const merged = { ...remoteMatch, ...p };
+      map.set(remoteMatch.id, merged);
+      if (p.id !== remoteMatch.id) map.set(p.id, merged);
+    }
+  });
+
+  // 3. Retourner la liste dédoublonnée
+  const unique = new Map();
+  map.forEach((p, k) => {
+    if (p && p.id && !k.startsWith('email_')) {
+      unique.set(p.id, p);
+    }
+  });
+  return Array.from(unique.values());
+}
+
 function saveDB(data, pushToServer = true) {
   try {
     data._fromFirestore = true;
@@ -98,7 +140,7 @@ function saveDB(data, pushToServer = true) {
           body: JSON.stringify(data)
         });
       } catch (e) {}
-    }, 150);
+    }, 50);
   }
 }
 
@@ -108,7 +150,7 @@ async function syncFromBackend() {
     if (!res.ok) return;
     const remote = await res.json();
     if (remote && Array.isArray(remote.players)) {
-      DB.players = remote.players;
+      DB.players = mergePlayersLists(DB.players, remote.players);
       if (Array.isArray(remote.courts) && remote.courts.length) DB.courts = remote.courts;
       if (Array.isArray(remote.bookings)) DB.bookings = remote.bookings;
       if (remote.appConfig) DB.appConfig = { ...DEFAULT_CONFIG, ...remote.appConfig };
@@ -183,7 +225,7 @@ async function syncFromFirestore() {
       fbGetOpenMatches(),
       fbGetConfig(),
     ]);
-    if (players.length)    DB.players  = players;
+    if (players && players.length) DB.players = mergePlayersLists(DB.players, players);
     if (courts.length)     DB.courts   = courts;
     // Fusionner réservations + matchs ouverts
     const regularBookings = bookings.filter(b => b.type !== 'open');
@@ -210,11 +252,13 @@ async function syncFromFirestore() {
 function startRealtimeListeners() {
   fbListenPlayers(players => {
     try {
-      DB.players = players;
-      saveDB(DB);
-      renderAdminPlayers();
-      renderAdminKPIs();
-      renderAdminAlerts();
+      if (players && players.length) {
+        DB.players = mergePlayersLists(DB.players, players);
+        saveDB(DB, false);
+        renderAdminPlayers();
+        renderAdminKPIs();
+        renderAdminAlerts();
+      }
     } catch (e) {
       console.warn('Realtime players error:', e);
     }
@@ -1057,23 +1101,53 @@ async function handlePlayerLogin(email, password) {
     return;
   }
   const submitBtn = document.getElementById('btnAuthSubmitLogin');
-  const originalText = submitBtn ? submitBtn.innerHTML : '';
   if (submitBtn) {
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span>⏳ Connexion en cours...</span>';
   }
 
   try {
-    const norm = email.toLowerCase().trim();
-    // 1. Recherche parmi les joueurs locaux
-    let localPlayer = (DB.players || []).find(p => 
-      (p.email && p.email.toLowerCase() === norm) ||
-      (p.phone && p.phone.replace(/[\s\-\+\.]/g, '') === norm.replace(/[\s\-\+\.]/g, '')) ||
-      ((p.firstName + ' ' + (p.lastName || '')).toLowerCase().trim() === norm) ||
-      (p.firstName && p.firstName.toLowerCase() === norm)
-    );
+    const norm = (email || '').toLowerCase().trim();
+    const cleanInput = norm.replace(/[\s\-\+\.]/g, '');
 
-    // 2. Si mot de passe et format email, tenter Firebase
+    // 1. Recherche parmi les joueurs locaux en mémoire
+    let localPlayer = (DB.players || []).find(p => {
+      const pEmail = (p.email || '').toLowerCase().trim();
+      const pPhone = (p.phone || '').replace(/[\s\-\+\.]/g, '');
+      const pFull = `${p.firstName || ''} ${p.lastName || ''}`.toLowerCase().trim();
+      const pFirst = (p.firstName || '').toLowerCase().trim();
+      return pEmail === norm ||
+             (pPhone && (pPhone === cleanInput || cleanInput.endsWith(pPhone) || pPhone.endsWith(cleanInput))) ||
+             pFull === norm ||
+             pFirst === norm ||
+             p.id === email;
+    });
+
+    // 2. Si non trouvé localement, interroger le serveur local /api/circlepadel/db
+    if (!localPlayer) {
+      try {
+        const res = await fetch('/api/circlepadel/db');
+        if (res.ok) {
+          const remote = await res.json();
+          if (remote && Array.isArray(remote.players)) {
+            DB.players = mergePlayersLists(DB.players, remote.players);
+            localPlayer = DB.players.find(p => {
+              const pEmail = (p.email || '').toLowerCase().trim();
+              const pPhone = (p.phone || '').replace(/[\s\-\+\.]/g, '');
+              const pFull = `${p.firstName || ''} ${p.lastName || ''}`.toLowerCase().trim();
+              const pFirst = (p.firstName || '').toLowerCase().trim();
+              return pEmail === norm ||
+                     (pPhone && (pPhone === cleanInput || cleanInput.endsWith(pPhone) || pPhone.endsWith(cleanInput))) ||
+                     pFull === norm ||
+                     pFirst === norm ||
+                     p.id === email;
+            });
+          }
+        }
+      } catch (_) {}
+    }
+
+    // 3. Si mot de passe et format email, tenter Firebase
     let fbUser = null;
     if (password && norm.includes('@')) {
       try {
@@ -1092,6 +1166,7 @@ async function handlePlayerLogin(email, password) {
           if (player && !DB.players.some(p => p.id === player.id)) DB.players.push(player);
         } catch (_) {}
       }
+      if (!player && localPlayer) player = localPlayer;
       if (!player) {
         const parts = (fbUser.displayName || norm.split('@')[0]).split(' ');
         player = {
@@ -1119,7 +1194,7 @@ async function handlePlayerLogin(email, password) {
     } else if (localPlayer) {
       DB.currentUser = localPlayer;
     } else {
-      showToast('Aucun joueur trouvé avec cet identifiant.', 'error');
+      showToast('Aucun joueur trouvé avec cet identifiant (nom, email ou téléphone).', 'error');
       return;
     }
 
@@ -1147,7 +1222,7 @@ async function handlePlayerLogin(email, password) {
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
-      submitBtn.innerHTML = originalText;
+      submitBtn.innerHTML = 'Se connecter';
     }
   }
 }
@@ -3022,28 +3097,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (id === 'tabAuthLogin') switchAuthTab('login');
     if (id === 'tabAuthRegister') switchAuthTab('register');
 
-    // ── Soumission Formulaire Connexion Joueur ──
-    if (id === 'btnAuthSubmitLogin') {
-      const email = document.getElementById('authLoginEmail')?.value?.trim();
-      const password = document.getElementById('authLoginPassword')?.value;
-      await handlePlayerLogin(email, password);
-    }
-
     // ── Mode Écran Terrain (LED Stadium) ──
     if (id === 'btnOpenCourtsideDisplay') {
       openCourtsideDisplay();
-    }
-
-    // ── Soumission Formulaire Inscription Joueur ──
-    if (id === 'btnAuthSubmitRegister') {
-      const firstName = document.getElementById('authRegFirstName')?.value?.trim();
-      const lastName = document.getElementById('authRegLastName')?.value?.trim();
-      const phone = document.getElementById('authRegPhone')?.value?.trim();
-      const email = document.getElementById('authRegEmail')?.value?.trim();
-      const password = document.getElementById('authRegPassword')?.value;
-      const preferredSide = document.getElementById('authRegSide')?.value || 'right';
-      const playStyle = document.getElementById('authRegStyle')?.value || 'all-around';
-      await handlePlayerRegister({ firstName, lastName, phone, email, password, preferredSide, playStyle });
     }
 
     // ── Mot de passe admin visible/masqué ──

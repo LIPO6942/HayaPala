@@ -3642,13 +3642,15 @@ button:active:not(:disabled), .btn-primary-action:active:not(:disabled) {
   position: relative;
   width: 330px;
   height: 495px;
-  border-radius: 18px;
-  overflow: hidden;
+  border-radius: 18px !important;
+  clip-path: none !important;
+  overflow: hidden !important;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9), 0 0 35px rgba(46, 204, 113, 0.35);
-  border: 2px solid rgba(212, 175, 55, 0.7);
+  border: 2px solid rgba(212, 175, 55, 0.75);
   transition: transform 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28), box-shadow 0.4s ease;
   user-select: none;
   background: #06150e;
+  padding: 0 !important;
 }
 
 .fut-card.green-edition:hover {
@@ -3656,7 +3658,7 @@ button:active:not(:disabled), .btn-primary-action:active:not(:disabled) {
   box-shadow: 0 28px 65px rgba(0, 0, 0, 0.95), 0 0 45px rgba(46, 204, 113, 0.55);
 }
 
-.fut-card-base-img {
+.fut-card.green-edition .fut-card-base-img {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -3664,9 +3666,10 @@ button:active:not(:disabled), .btn-primary-action:active:not(:disabled) {
   object-fit: cover;
   z-index: 1;
   pointer-events: none;
+  border-radius: 16px;
 }
 
-.fut-card-overlay-content {
+.fut-card.green-edition .fut-card-overlay-content {
   position: absolute;
   inset: 0;
   z-index: 3;
@@ -3675,15 +3678,15 @@ button:active:not(:disabled), .btn-primary-action:active:not(:disabled) {
   flex-direction: column;
 }
 
-.fut-coach-badge-top {
+.fut-card.green-edition .fut-coach-badge-top {
   position: absolute;
-  top: 14px;
-  right: 14px;
-  background: rgba(4, 20, 13, 0.92);
+  top: 12px;
+  right: 12px;
+  background: rgba(4, 20, 13, 0.94);
   border: 1.5px solid #2ecc71;
   border-radius: 12px;
   padding: 3px 10px;
-  font-size: 8.5px;
+  font-size: 8px;
   font-weight: 800;
   color: #2ecc71;
   letter-spacing: 0.8px;
@@ -3693,40 +3696,48 @@ button:active:not(:disabled), .btn-primary-action:active:not(:disabled) {
   z-index: 5;
 }
 
-.fut-name-zone {
+/* Plaque officielle Bleu Marine & Or du Joueur : Couvre intégralement la zone "PLAYER NAME" du visuel */
+.fut-card.green-edition .fut-name-zone {
   position: absolute;
-  top: 61.2%;
+  top: 62%;
   left: 50%;
   transform: translateX(-50%);
-  width: 84%;
+  width: 82%;
+  background: linear-gradient(180deg, #0e2942 0%, #071726 100%);
+  border: 1.5px solid #d4af37;
+  border-radius: 7px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.95), inset 0 1px 2px rgba(255, 215, 0, 0.45);
+  padding: 5px 10px 4px;
   text-align: center;
   pointer-events: auto;
   z-index: 4;
+  box-sizing: border-box;
 }
 
-.fut-name-zone .fut-name {
+.fut-card.green-edition .fut-name-zone .fut-name {
   font-family: 'Outfit', sans-serif;
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 900;
-  letter-spacing: 2.2px;
+  letter-spacing: 2px;
   color: #FFFFFF;
   text-transform: uppercase;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.95), 0 0 14px rgba(255, 215, 0, 0.5);
+  text-shadow: 0 2px 8px rgba(0,0,0,0.95), 0 0 14px rgba(255, 215, 0, 0.55);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: 1.1;
+  line-height: 1.15;
+  margin: 0;
 }
 
-.fut-name-zone .fut-style-pill {
+.fut-card.green-edition .fut-name-zone .fut-style-pill {
   display: inline-block;
   font-family: 'Outfit', sans-serif;
   font-size: 8px;
   font-weight: 800;
   color: #FFD700;
-  letter-spacing: 1px;
+  letter-spacing: 1.1px;
   text-transform: uppercase;
-  margin-top: 1px;
+  margin-top: 2px;
   text-shadow: 0 1px 4px rgba(0,0,0,0.9);
 }
 
