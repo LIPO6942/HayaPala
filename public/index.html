@@ -1420,6 +1420,20 @@
     </div>
   </div>
 
+  <!-- ── Modale : Détail du créneau / match ── -->
+  <div class="modal-overlay" id="modal-slot-detail" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-drag-handle"></div>
+      <div class="modal-header">
+        <div class="modal-title" id="slotDetailTitle">Détail du créneau</div>
+        <button class="modal-close-btn" onclick="closeModal('modal-slot-detail')" aria-label="Fermer">✕</button>
+      </div>
+      <div id="slotDetailContent">
+        <!-- Peuplé dynamiquement par renderSlotDetail -->
+      </div>
+    </div>
+  </div>
+
   <!-- ── Modale : Créer un match ouvert ── -->
   <div class="modal-overlay" id="modal-create-match" role="dialog" aria-modal="true">
     <div class="modal-sheet">

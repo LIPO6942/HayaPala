@@ -278,7 +278,11 @@ function getTomorrowStr() {
 /** Initialise Firestore au premier lancement (terrains + config uniquement) */
 async function initFirestoreIfEmpty() {
   try {
-    const [courts, config] = await Promise.all([fbGetCourts(), fbGetConfig()]);
+    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT_INIT')), 2000));
+    const [courts, config] = await Promise.race([
+      Promise.all([fbGetCourts(), fbGetConfig()]),
+      timeoutPromise
+    ]);
     if (!courts.length) {
       for (const c of COURTS_SEED) await fbSaveCourt(c);
       console.log('✅ Firestore : 4 terrains créés');
@@ -295,12 +299,16 @@ async function initFirestoreIfEmpty() {
 /** Synchronise le cache local depuis Firestore (appelé au démarrage) */
 async function syncFromFirestore() {
   try {
-    const [players, courts, bookings, openMatches, config] = await Promise.all([
-      fbGetPlayers(),
-      fbGetCourts(),
-      fbGetBookings(),
-      fbGetOpenMatches(),
-      fbGetConfig(),
+    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT_FIRESTORE')), 2500));
+    const [players, courts, bookings, openMatches, config] = await Promise.race([
+      Promise.all([
+        fbGetPlayers(),
+        fbGetCourts(),
+        fbGetBookings(),
+        fbGetOpenMatches(),
+        fbGetConfig(),
+      ]),
+      timeoutPromise
     ]);
     if (players && players.length) DB.players = mergePlayersLists(DB.players, players);
     if (courts.length)     DB.courts   = courts;
@@ -2120,6 +2128,25 @@ function canUserRecordMatchScore(booking = null, targetUser = null) {
 }
 window.canUserRecordMatchScore = canUserRecordMatchScore;
 
+function isBookingFinished(b) {
+  if (!b) return false;
+  if (b.status === 'completed' || b.scoreRecorded === true) return true;
+  if (b.status === 'cancelled') return false;
+  if (!b.date) return false;
+
+  const todayStr = getTodayStr();
+  if (b.date < todayStr) return true;
+  if (b.date > todayStr) return false;
+
+  const now = new Date();
+  const currentHH = String(now.getHours()).padStart(2, '0');
+  const currentMM = String(now.getMinutes()).padStart(2, '0');
+  const currentHHMM = `${currentHH}:${currentMM}`;
+  const endTime = b.endTime || (typeof addMinutes === 'function' ? addMinutes(b.startTime || '10:00', 90) : '23:59');
+  return currentHHMM >= endTime;
+}
+window.isBookingFinished = isBookingFinished;
+
 // ============================================================================
 // MY BOOKINGS
 // ============================================================================
@@ -2139,18 +2166,18 @@ function renderMyBookings() {
   }
 
   container.innerHTML = myBookings.map(b => {
-    const isPast = b.date < today;
+    const isFinished = isBookingFinished(b);
     const spots = (DB.appConfig?.maxPlayersPerMatch || 4) - (b.players || []).length;
     const hasRecorded = b.scoreRecorded === true;
     const canRecord = canUserRecordMatchScore(b).allowed;
     return `
-    <div class="match-list-card" style="${isPast ? 'opacity:0.85; border-color:rgba(255,255,255,0.08)' : ''}">
+    <div class="match-list-card" style="${isFinished ? 'opacity:0.85; border-color:rgba(255,255,255,0.08)' : ''}">
       <div class="match-list-top">
         <div>
           <div class="match-list-court">${b.courtName}</div>
           <div class="match-list-date">${b.date === today ? 'Aujourd\'hui' : formatDate(b.date)} · ${b.startTime} – ${b.endTime}</div>
         </div>
-        <span class="match-status-badge ${isPast ? '' : 'open'}">${isPast ? (hasRecorded ? '✓ Terminé & Homologué' : 'Match Terminé') : 'Confirmé'}</span>
+        <span class="match-status-badge ${isFinished ? '' : 'open'}">${isFinished ? (hasRecorded ? '✓ Terminé & Homologué' : 'Match Terminé') : 'Confirmé'}</span>
       </div>
       <div class="match-list-info-row">
         <div class="match-info-chip">
@@ -2162,18 +2189,17 @@ function renderMyBookings() {
       <div class="match-list-bottom">
         <span class="match-price-tag">${b.pricePerPlayer || 25} DT <span>/joueur</span></span>
         <div style="display:flex; gap:8px; align-items:center">
-          ${canRecord ? `
+          ${(isFinished && canRecord) ? `
             <button type="button" onclick="openRecordMatchForBooking('${b.id}', 'player')" style="padding:6px 12px; border-radius:var(--radius-full); border:1px solid var(--gold); background:rgba(212,175,55,0.15); color:var(--gold); font-size:11px; font-weight:800; cursor:pointer" title="Enregistrer ou modifier le score">
               ${hasRecorded ? '🏆 Modifier le score' : '🏆 Saisir le score'}
-            </button>` : `
-            <span style="font-size:10px; color:var(--text-muted); padding:4px 8px; background:rgba(255,255,255,0.03); border-radius:var(--radius-sm)">Compte requis</span>`}
-          ${!isPast && (b.players || []).some(p => p.userId === user.id) ? `
+            </button>` : ''}
+          ${!isFinished && (b.players || []).some(p => p.userId === user.id) ? `
             <button onclick="cancelMyBooking('${b.id}')" style="padding:6px 14px; border-radius:var(--radius-full); border:1px solid rgba(231,76,60,0.3); background:transparent; color:var(--red); font-size:11px; font-weight:700; cursor:pointer">
               Annuler
             </button>` : ''}
         </div>
       </div>
-      ${b.type === 'open' && !isPast && spots > 0 ? `
+      ${b.type === 'open' && !isFinished && spots > 0 ? `
         <div style="font-size:11px; color:var(--amber); margin-top:4px">⚡ ${spots} place${spots>1?'s':''} encore libre${spots>1?'s':''} — partagez le match !</div>` : ''}
     </div>`;
   }).join('');
@@ -2969,8 +2995,15 @@ function renderSlotDetail(bookingId) {
         </div>
       </div>
 
-      <!-- Action directe : Saisie officielle du score pour ce match -->
+      <!-- Action directe : Saisie officielle du score pour ce match (uniquement match terminé) -->
       ${(() => {
+        const isFinished = isBookingFinished(b);
+        if (!isFinished) {
+          return `
+          <div style="font-size:11.5px; color:var(--text-muted); text-align:center; padding:10px; background:rgba(255,255,255,0.03); border-radius:8px; border:1px solid rgba(255,255,255,0.06); margin-top:6px">
+            ⏳ La saisie du score sera disponible dès la fin de ce match (${b.endTime || 'fin du créneau'}).
+          </div>`;
+        }
         const auth = canUserRecordMatchScore(b);
         if (auth.allowed) {
           return `
@@ -3442,12 +3475,13 @@ function renderPlayerMiniFicheHTML(p) {
   const isFem = isPlayerFemale(p);
   const lvl = (p.level != null ? Number(p.level).toFixed(2) : (p.selfEstimatedLevel ? Number(p.selfEstimatedLevel).toFixed(2) : '5.00'));
   const fiab = (p.reliabilityScore || 50).toFixed(0);
-  const side = SIDE_LABELS[p.preferredSide] || 'Polyvalent';
-  const style = STYLE_LABELS[p.playStyle] || 'Équilibré';
+  const side = (typeof SIDE_LABELS !== 'undefined' && SIDE_LABELS[p.preferredSide]) || 'Polyvalent';
+  const style = (typeof STYLE_LABELS !== 'undefined' && STYLE_LABELS[p.playStyle]) || 'Équilibré';
   const matches = p.totalMatchesPlayed || 0;
   const avatarBg = isGuest ? 'rgba(255,255,255,0.08)' : (isFem ? 'rgba(233,30,99,0.2)' : 'rgba(52,152,219,0.2)');
   const avatarBorder = isGuest ? 'rgba(255,255,255,0.2)' : (isFem ? 'rgba(233,30,99,0.4)' : 'rgba(52,152,219,0.4)');
   const genderEmoji = isGuest ? '👤' : (isFem ? '👩' : '👨');
+  const fullName = (p.firstName ? `${p.firstName} ${p.lastName || ''}` : (p.name || 'Joueur')).trim();
 
   return `
     <div class="match-player-card-content">
@@ -3456,7 +3490,7 @@ function renderPlayerMiniFicheHTML(p) {
       </div>
       <div class="match-player-card-info">
         <div class="match-player-card-name">
-          <span>${p.firstName} ${p.lastName || ''}</span>
+          <span>${fullName}</span>
           <span style="font-size:9.5px; opacity:0.8; font-weight:600">${isGuest ? '👤 Invité' : (isFem ? '👩 Joueuse' : '👨 Joueur')}</span>
         </div>
         <div class="match-player-card-tags">
@@ -3544,7 +3578,8 @@ function setupSlotPicker(slotId, targetPlayerId, manualFallback = null) {
     const lvl = (p.level != null ? Number(p.level).toFixed(2) : (p.selfEstimatedLevel ? Number(p.selfEstimatedLevel).toFixed(2) : '5.00'));
     const isSel = (!manualFallback && p.id === targetPlayerId) ? 'selected' : '';
     const icon = isGuest ? '👤' : (isFem ? '👩' : '👨');
-    return `<option value="${p.id}" ${isSel}>${icon} ${p.firstName} ${p.lastName || ''} (Niv ${lvl} · Fiab ${(p.reliabilityScore || 50).toFixed(0)}%)</option>`;
+    const fullName = (p.firstName ? `${p.firstName} ${p.lastName || ''}` : (p.name || 'Joueur')).trim();
+    return `<option value="${p.id}" ${isSel}>${icon} ${fullName} (Niv ${lvl} · Fiab ${(p.reliabilityScore || 50).toFixed(0)}%)</option>`;
   }).join('');
 
   sel.innerHTML = html;
@@ -3634,6 +3669,7 @@ function dismissFinishedMatchScorePrompt() {
 window.dismissFinishedMatchScorePrompt = dismissFinishedMatchScorePrompt;
 
 function openRecordMatchForBooking(bookingId, role) {
+  closeAllModals();
   const b = (DB.bookings || []).find(bk => bk.id === bookingId);
   const auth = canUserRecordMatchScore(b);
   if (!auth.allowed) {
@@ -3647,6 +3683,7 @@ function openRecordMatchForBooking(bookingId, role) {
 window.openRecordMatchForBooking = openRecordMatchForBooking;
 
 function handleQuickCardRecordMatch() {
+  closeAllModals();
   const auth = canUserRecordMatchScore(null);
   if (!auth.allowed) {
     showToast(auth.reason, 'error');
@@ -3658,6 +3695,7 @@ function handleQuickCardRecordMatch() {
 window.handleQuickCardRecordMatch = handleQuickCardRecordMatch;
 
 function openRecordMatchModal(mode = 'admin', booking = null) {
+  closeAllModals();
   const auth = canUserRecordMatchScore(booking);
   if (!auth.allowed) {
     showToast(auth.reason, 'error');
@@ -3681,7 +3719,11 @@ function openRecordMatchModal(mode = 'admin', booking = null) {
     slotIds.forEach((sId, idx) => {
       const bp = bPlayers[idx];
       if (bp) {
-        const match = players.find(p => p.id === bp.userId || `${p.firstName} ${p.lastName}`.toLowerCase().trim() === (bp.name || '').toLowerCase().trim());
+        const match = players.find(p => {
+          if (p.id === bp.userId) return true;
+          const pName = (p.firstName ? `${p.firstName} ${p.lastName || ''}` : (p.name || '')).toLowerCase().trim();
+          return bp.name && pName === bp.name.toLowerCase().trim();
+        });
         if (match) {
           setupSlotPicker(sId, match.id, null);
         } else {
@@ -3729,59 +3771,63 @@ function setMatchScoreSets(setsWon, setsLost) {
 }
 
 function updateMatchSimulationPreview() {
-  const p1 = getSlotResolvedPlayer('matchTeam1Player1') || { level: 5.0, reliabilityScore: 50 };
-  const p2 = getSlotResolvedPlayer('matchTeam1Player2') || { level: 5.0, reliabilityScore: 50 };
-  const p3 = getSlotResolvedPlayer('matchTeam2Player1') || { level: 5.0, reliabilityScore: 50 };
-  const p4 = getSlotResolvedPlayer('matchTeam2Player2') || { level: 5.0, reliabilityScore: 50 };
+  try {
+    const p1 = getSlotResolvedPlayer('matchTeam1Player1') || { level: 5.0, reliabilityScore: 50 };
+    const p2 = getSlotResolvedPlayer('matchTeam1Player2') || { level: 5.0, reliabilityScore: 50 };
+    const p3 = getSlotResolvedPlayer('matchTeam2Player1') || { level: 5.0, reliabilityScore: 50 };
+    const p4 = getSlotResolvedPlayer('matchTeam2Player2') || { level: 5.0, reliabilityScore: 50 };
 
-  const p1Level = Number(p1.level || p1.selfEstimatedLevel || 5.0);
-  const p2Level = Number(p2.level || p2.selfEstimatedLevel || 5.0);
-  const p3Level = Number(p3.level || p3.selfEstimatedLevel || 5.0);
-  const p4Level = Number(p4.level || p4.selfEstimatedLevel || 5.0);
+    const p1Level = Number(p1.level || p1.selfEstimatedLevel || 5.0);
+    const p2Level = Number(p2.level || p2.selfEstimatedLevel || 5.0);
+    const p3Level = Number(p3.level || p3.selfEstimatedLevel || 5.0);
+    const p4Level = Number(p4.level || p4.selfEstimatedLevel || 5.0);
 
-  const t1Avg = (p1Level + p2Level) / 2;
-  const t2Avg = (p3Level + p4Level) / 2;
+    const t1Avg = (p1Level + p2Level) / 2;
+    const t2Avg = (p3Level + p4Level) / 2;
 
-  const t1AvgEl = document.getElementById('team1AverageBadge');
-  if (t1AvgEl) t1AvgEl.textContent = `Moyenne : ${t1Avg.toFixed(2)} / 10`;
-  const t2AvgEl = document.getElementById('team2AverageBadge');
-  if (t2AvgEl) t2AvgEl.textContent = `Moyenne : ${t2Avg.toFixed(2)} / 10`;
+    const t1AvgEl = document.getElementById('team1AverageBadge');
+    if (t1AvgEl) t1AvgEl.textContent = `Moyenne : ${t1Avg.toFixed(2)} / 10`;
+    const t2AvgEl = document.getElementById('team2AverageBadge');
+    if (t2AvgEl) t2AvgEl.textContent = `Moyenne : ${t2Avg.toFixed(2)} / 10`;
 
-  const simT1 = calculatePadelRatingUpdate({
-    playerLevel: t1Avg,
-    playerReliability: ((p1.reliabilityScore || 50) + (p2.reliabilityScore || 50)) / 2,
-    partnerLevel: t1Avg,
-    opponent1Level: p3Level,
-    opponent2Level: p4Level,
-    setsWon: currentMatchSheetScore.setsWon,
-    setsLost: currentMatchSheetScore.setsLost
-  });
+    const simT1 = calculatePadelRatingUpdate({
+      playerLevel: t1Avg,
+      playerReliability: ((p1.reliabilityScore || 50) + (p2.reliabilityScore || 50)) / 2,
+      partnerLevel: t1Avg,
+      opponent1Level: p3Level,
+      opponent2Level: p4Level,
+      setsWon: currentMatchSheetScore.setsWon,
+      setsLost: currentMatchSheetScore.setsLost
+    });
 
-  const simT2 = calculatePadelRatingUpdate({
-    playerLevel: t2Avg,
-    playerReliability: ((p3.reliabilityScore || 50) + (p4.reliabilityScore || 50)) / 2,
-    partnerLevel: t2Avg,
-    opponent1Level: p1Level,
-    opponent2Level: p2Level,
-    setsWon: currentMatchSheetScore.setsLost,
-    setsLost: currentMatchSheetScore.setsWon
-  });
+    const simT2 = calculatePadelRatingUpdate({
+      playerLevel: t2Avg,
+      playerReliability: ((p3.reliabilityScore || 50) + (p4.reliabilityScore || 50)) / 2,
+      partnerLevel: t2Avg,
+      opponent1Level: p1Level,
+      opponent2Level: p2Level,
+      setsWon: currentMatchSheetScore.setsLost,
+      setsLost: currentMatchSheetScore.setsWon
+    });
 
-  const probEl = document.getElementById('matchWinProbBadge');
-  if (probEl) probEl.textContent = `Probabilité Éq 1 : ${simT1.expectedWinRate}%`;
+    const probEl = document.getElementById('matchWinProbBadge');
+    if (probEl) probEl.textContent = `Probabilité Éq 1 : ${simT1.expectedWinRate}%`;
 
-  const prevT1 = document.getElementById('matchDeltaTeam1Preview');
-  if (prevT1) {
-    const sign = simT1.delta >= 0 ? `+${simT1.delta.toFixed(2)}` : `${simT1.delta.toFixed(2)}`;
-    prevT1.textContent = `${sign} pt (Niv estimé : ${(t1Avg + simT1.delta).toFixed(2)})`;
-    prevT1.style.color = simT1.delta >= 0 ? '#2ecc71' : '#ff6b6b';
-  }
+    const prevT1 = document.getElementById('matchDeltaTeam1Preview');
+    if (prevT1) {
+      const sign = simT1.delta >= 0 ? `+${simT1.delta.toFixed(2)}` : `${simT1.delta.toFixed(2)}`;
+      prevT1.textContent = `${sign} pt (Niv estimé : ${(t1Avg + simT1.delta).toFixed(2)})`;
+      prevT1.style.color = simT1.delta >= 0 ? '#2ecc71' : '#ff6b6b';
+    }
 
-  const prevT2 = document.getElementById('matchDeltaTeam2Preview');
-  if (prevT2) {
-    const sign = simT2.delta >= 0 ? `+${simT2.delta.toFixed(2)}` : `${simT2.delta.toFixed(2)}`;
-    prevT2.textContent = `${sign} pt (Niv estimé : ${(t2Avg + simT2.delta).toFixed(2)})`;
-    prevT2.style.color = simT2.delta >= 0 ? '#2ecc71' : '#ff6b6b';
+    const prevT2 = document.getElementById('matchDeltaTeam2Preview');
+    if (prevT2) {
+      const sign = simT2.delta >= 0 ? `+${simT2.delta.toFixed(2)}` : `${simT2.delta.toFixed(2)}`;
+      prevT2.textContent = `${sign} pt (Niv estimé : ${(t2Avg + simT2.delta).toFixed(2)})`;
+      prevT2.style.color = simT2.delta >= 0 ? '#2ecc71' : '#ff6b6b';
+    }
+  } catch (err) {
+    console.warn('Simulation preview update skipped:', err);
   }
 }
 
@@ -4069,7 +4115,9 @@ function deletePlayer(playerId) {
   const name = `${p.firstName} ${p.lastName || ''}`.trim();
   if (confirm(`Confirmez-vous la suppression du joueur "${name}" de la base de données ?\nCette action est irréversible.`)) {
     DB.players = (DB.players || []).filter(x => x.id !== playerId);
+    DB.lastDeletedPlayerId = playerId;
     saveDB(DB, true);
+    delete DB.lastDeletedPlayerId;
     closeAllModals();
     renderAdminPlayers();
     renderAdminKPIs();
@@ -5264,10 +5312,7 @@ document.addEventListener('DOMContentLoaded', () => {
 window.navigateToScreen        = navigateToScreen;
 window.switchViewMode          = switchViewMode;
 window.openModal               = openModal;
-window.closeModal              = (modalId) => {
-  const m = document.getElementById(modalId);
-  if (m) { m.classList.remove('active'); document.body.style.overflow = ''; }
-};
+window.closeModal              = closeModal;
 window.closeAllModals          = closeAllModals;
 window.showToast               = showToast;
 window.resetDemoData           = resetDemoData;
@@ -5301,6 +5346,10 @@ window.switchAuthTab           = switchAuthTab;
 window.updateAuthUI            = updateAuthUI;
 window.openCourtsideDisplay    = openCourtsideDisplay;
 window.showCelebrationModal    = showCelebrationModal;
+window.renderMyBookings        = renderMyBookings;
+window.renderAdminPlayers      = renderAdminPlayers;
+window.getTodayStr             = getTodayStr;
+window.DB                      = DB;
 
 window.submitAuthLogin = async function() {
   const email = document.getElementById('authLoginEmail')?.value?.trim();

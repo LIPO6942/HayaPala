@@ -222,8 +222,11 @@ const server = http.createServer(async (req, res) => {
         (existing.players || []).forEach(p => {
           if (p && p.id) playerMap.set(p.id, p);
         });
+        if (body.lastDeletedPlayerId) {
+          playerMap.delete(body.lastDeletedPlayerId);
+        }
         (body.players || []).forEach(p => {
-          if (p && p.id) {
+          if (p && p.id && p.id !== body.lastDeletedPlayerId) {
             const prev = playerMap.get(p.id);
             playerMap.set(p.id, prev ? { ...prev, ...p } : p);
           }
@@ -953,26 +956,33 @@ const server = http.createServer(async (req, res) => {
     return jsonResponse({ success: true, tournament: updated, message: "Tournoi mis à jour." });
   }
 
-  // GET /api/admin/players - Complete member directory with balance & stats
+  // GET /api/admin/players - Complete member directory with balance & stats (unified CirclePadel DB)
   if (method === 'GET' && pathname === '/api/admin/players') {
-    const community = db.findAll('community_players');
-    const user = db.getUser();
-    const all = [
-      {
-        id: user.id,
-        name: user.name + " (Vous)",
-        level: user.level,
-        reliability: user.levelReliability,
-        avatar: "🎾",
-        club: "Multi-clubs",
-        city: "Tunis",
-        phone: user.phone,
-        matches: user.matchesPlayed,
-        points: user.points,
-        role: "VIP / Admin"
-      },
-      ...community
-    ];
+    let cpPlayers = [];
+    try {
+      if (fs.existsSync(CP_DB_FILE)) {
+        const raw = fs.readFileSync(CP_DB_FILE, 'utf-8');
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed.players)) cpPlayers = parsed.players;
+      }
+    } catch (e) {}
+
+    const all = cpPlayers.map(p => ({
+      id: p.id,
+      name: `${p.firstName || ''} ${p.lastName || ''}`.trim() || p.name || 'Membre',
+      firstName: p.firstName || '',
+      lastName: p.lastName || '',
+      level: p.level || p.selfEstimatedLevel || 5.0,
+      reliability: p.reliabilityScore || 50,
+      gender: p.gender || 'male',
+      avatar: p.gender === 'female' ? '👩' : '👨',
+      phone: p.phone || '',
+      email: p.email || '',
+      matches: p.totalMatchesPlayed || 0,
+      points: p.loyaltyPoints || 0,
+      status: p.status || 'active',
+      role: p.role || 'player'
+    }));
     return jsonResponse({ success: true, players: all });
   }
 
