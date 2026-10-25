@@ -7,7 +7,7 @@
 // ── Firebase imports (CDN ESM) ─────────────────────────────────────────────
 import {
   fbSignIn, fbSignOut, fbOnAuthChange, fbCreateUser, fbUpdateUserProfile,
-  fbGetPlayers, fbGetPlayer, fbSavePlayer, fbDeletePlayer, fbUpdatePlayerLevel, fbListenPlayers,
+  fbGetPlayers, fbGetPlayer, fbSavePlayer, fbDeletePlayer, fbUpdatePlayerLevel, fbListenPlayers, fbGetTombstones,
   fbGetCourts, fbSaveCourt,
   fbGetBookings, fbAddBooking, fbUpdateBooking, fbCancelBooking, fbListenBookings,
   fbGetOpenMatches, fbJoinMatch, fbCreateOpenMatch, fbListenOpenMatches,
@@ -124,18 +124,25 @@ let _syncDebounceTimer = null;
 function mergePlayersLists(currentList, incomingList) {
   const deletedSet = new Set(DB.deletedPlayerIds || []);
   const map = new Map();
-  (currentList || []).forEach(p => {
-    if (p && p.id && !deletedSet.has(p.id)) map.set(p.id, p);
-  });
+
+  // 1. La liste distante (Firestore / backend) est la source de vérité
   (incomingList || []).forEach(p => {
     if (p && p.id && !deletedSet.has(p.id)) {
-      if (!map.has(p.id)) {
+      map.set(p.id, p);
+    }
+  });
+
+  // 2. Ne conserver de la liste locale que les joueurs créés récemment (< 5 min) non encore synchronisés
+  const now = Date.now();
+  (currentList || []).forEach(p => {
+    if (p && p.id && !deletedSet.has(p.id) && !map.has(p.id)) {
+      const createdTime = p.createdAt ? new Date(p.createdAt).getTime() : 0;
+      if (now - createdTime < 300000) { // 5 minutes de tolérance pour créations locales hors-ligne
         map.set(p.id, p);
-      } else {
-        map.set(p.id, { ...map.get(p.id), ...p });
       }
     }
   });
+
   return Array.from(map.values());
 }
 
@@ -344,21 +351,29 @@ async function initFirestoreIfEmpty() {
 async function syncFromFirestore() {
   try {
     const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT_FIRESTORE')), 2500));
-    const [players, courts, bookings, openMatches, config] = await Promise.race([
+    const [players, courts, bookings, openMatches, config, tombstones] = await Promise.race([
       Promise.all([
         fbGetPlayers(),
         fbGetCourts(),
         fbGetBookings(),
         fbGetOpenMatches(),
         fbGetConfig(),
+        fbGetTombstones(),
       ]),
       timeoutPromise
     ]);
+
+    if (Array.isArray(tombstones) && tombstones.length) {
+      const mergedDeleted = new Set([...(DB.deletedPlayerIds || []), ...tombstones]);
+      DB.deletedPlayerIds = Array.from(mergedDeleted);
+    }
+
     if (players && players.length) DB.players = mergePlayersLists(DB.players, players);
-    if (courts.length)     DB.courts   = courts;
+    if (courts && courts.length) DB.courts = courts;
+
     // Fusionner réservations + matchs ouverts
-    const regularBookings = bookings.filter(b => b.type !== 'open');
-    const openAsBookings  = openMatches.map(m => ({ ...m, type: 'open', status: m.status || 'confirmed' }));
+    const regularBookings = (bookings || []).filter(b => b.type !== 'open');
+    const openAsBookings  = (openMatches || []).map(m => ({ ...m, type: 'open', status: m.status || 'confirmed' }));
     const firestoreBookings = [...regularBookings, ...openAsBookings];
     DB.bookings = mergeBookingsLists(DB.bookings, firestoreBookings);
     if (config) DB.appConfig = { ...DEFAULT_CONFIG, ...config };
@@ -371,8 +386,17 @@ async function syncFromFirestore() {
       } catch (e) {}
     }
 
-    saveDB(DB);
-    console.log('🔥 Firestore sync OK —', players.length, 'joueurs,', DB.bookings.length, 'réservations/matchs');
+    sanitizeDB(DB);
+    saveDB(DB, false);
+
+    // Mettre à jour immédiatement toutes les vues actives
+    renderAdminPlayers();
+    renderAdminKPIs();
+    renderAdminAlerts();
+    renderCourtsGrid();
+    renderAdminTimetable();
+
+    console.log('🔥 Firestore sync OK —', (players || []).length, 'joueurs,', DB.bookings.length, 'réservations/matchs');
   } catch (e) {
     console.warn('⚠️ Firestore hors-ligne, cache local utilisé :', e.message);
   }
@@ -1885,7 +1909,7 @@ async function handlePlayerRegister({ firstName, lastName, phone, email, passwor
     role: 'player',
     status: 'pending', // en attente d'évaluation coach
     selfEstimatedLevel: cleanSelfLevel,
-    level: cleanSelfLevel, // Note préliminaire immédiate
+    level: null, // En attente d'évaluation officielle par le coach
     preferredSide: cleanSide,
     playStyle: cleanStyle,
     reliabilityScore: 50,
@@ -1897,7 +1921,7 @@ async function handlePlayerRegister({ firstName, lastName, phone, email, passwor
     levelHistory: [{
       date: getTodayStr(),
       level: cleanSelfLevel,
-      note: `Inscription joueur · Auto-évaluation préliminaire ${cleanSelfLevel}/10`
+      note: `Inscription joueur · Auto-évaluation déclarée ${cleanSelfLevel}/10 (en attente coach)`
     }],
     createdAt: new Date().toISOString(),
   };
@@ -2459,7 +2483,26 @@ function markNotifRead(notifId) {
 
 let adminCurrentDate = getTodayStr();
 
+let _firestoreStatusChecked = false;
+async function checkFirestoreStatus() {
+  try {
+    const res = await fetch('https://firestore.googleapis.com/v1/projects/circlepadel/databases/(default)/documents/players?key=AIzaSyCY5FYBi6-aHk0SQZDLEaqdbv-GpShn9Ds');
+    const banner = document.getElementById('adminFirestoreWarningBanner');
+    if (res.status === 404) {
+      if (banner) banner.style.display = 'block';
+    } else if (res.ok) {
+      if (banner) banner.style.display = 'none';
+      if (!_firestoreStatusChecked) {
+        _firestoreStatusChecked = true;
+        syncFromFirestore();
+      }
+    }
+  } catch (err) {}
+}
+window.checkFirestoreStatus = checkFirestoreStatus;
+
 function renderAdminDashboard() {
+  checkFirestoreStatus();
   renderAdminKPIs();
   renderAdminTimetable();
   renderAdminCourts();
@@ -2641,7 +2684,7 @@ function renderAdminPlayers() {
     if (activeFilter === 'male' && (isFem || isGuest)) return false;
     if (activeFilter === 'guest' && !isGuest) return false;
     if (activeFilter === 'active' && p.status !== 'active') return false;
-    if (activeFilter === 'pending' && p.status !== 'pending' && !!p.level) return false;
+    if (activeFilter === 'pending' && p.status !== 'pending' && p.level != null) return false;
     if (activeFilter === 'suspended' && p.status !== 'suspended') return false;
 
     if (searchQuery) {
@@ -2675,10 +2718,13 @@ function renderAdminPlayers() {
       ? '<span class="info-badge" style="background:var(--amber-bg); border:1px solid rgba(243,156,18,0.2); color:var(--amber)">⏳ En attente</span>'
       : '<span class="info-badge red">⛔ Suspendu</span>';
 
+    const isPending = p.status === 'pending' || !p.level;
     const lvlNum = p.level != null ? Number(p.level).toFixed(2) : (p.selfEstimatedLevel ? Number(p.selfEstimatedLevel).toFixed(2) : null);
-    const levelCell = lvlNum
-      ? `<span class="level-badge">${lvlNum} ${p.levelValidatedAt ? '<span class="coach-check">✓</span>' : '<span style="font-size:9px; color:var(--amber)">(auto)</span>'}</span>`
-      : `<span class="level-badge pending">${isGuest ? 'Non évalué' : 'À évaluer'}</span>`;
+    const levelCell = isPending
+      ? `<span class="level-badge pending" style="background:var(--amber-bg); border:1px solid rgba(243,156,18,0.3); color:var(--amber); font-weight:700">⏳ À évaluer ${p.selfEstimatedLevel ? `(${Number(p.selfEstimatedLevel).toFixed(1)})` : ''}</span>`
+      : (lvlNum
+        ? `<span class="level-badge">${lvlNum} ${p.levelValidatedAt ? '<span class="coach-check">✓</span>' : '<span style="font-size:9px; color:var(--amber)">(auto)</span>'}</span>`
+        : `<span class="level-badge pending">${isGuest ? 'Non évalué' : 'À évaluer'}</span>`);
 
     return `
     <tr data-gender="${genderKey}" data-status="${p.status || 'pending'}">
@@ -5296,18 +5342,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── Admin player filter chips (Statut & Genre Homme / Femme) ──
   document.querySelectorAll('[data-player-filter]').forEach(chip => {
-    chip.addEventListener('click', () => {
-      document.querySelectorAll('[data-player-filter]').forEach(c => c.classList.remove('active'));
-      chip.classList.add('active');
-      const filter = chip.dataset.playerFilter;
-      document.querySelectorAll('#adminPlayersTableBody tr').forEach(row => {
-        if (filter === 'all') { row.style.display = ''; return; }
-        if (filter === 'male') { row.style.display = (row.dataset.gender === 'male') ? '' : 'none'; return; }
-        if (filter === 'female') { row.style.display = (row.dataset.gender === 'female') ? '' : 'none'; return; }
-        if (filter === 'active') { row.style.display = (row.dataset.status === 'active') ? '' : 'none'; return; }
-        if (filter === 'pending') { row.style.display = (row.dataset.status === 'pending') ? '' : 'none'; return; }
-        if (filter === 'suspended') { row.style.display = (row.dataset.status === 'suspended') ? '' : 'none'; return; }
-      });
+    chip.addEventListener('click', (e) => {
+      e.preventDefault();
+      setAdminPlayerFilter(chip.dataset.playerFilter);
     });
   });
 

@@ -104,8 +104,26 @@ async function fbDeletePlayer(playerId) {
   try {
     const ref = doc(db, COL.players, playerId);
     await deleteDoc(ref);
+    // Enregistrer également dans le document tombstones pour propager la suppression sur tous les appareils
+    const tombRef = doc(db, COL.config, 'tombstones');
+    const snap = await getDoc(tombRef);
+    const existing = snap.exists() ? (snap.data().deletedPlayerIds || []) : [];
+    if (!existing.includes(playerId)) {
+      existing.push(playerId);
+      await setDoc(tombRef, { deletedPlayerIds: existing, updatedAt: serverTimestamp() }, { merge: true });
+    }
   } catch (e) {
     console.warn('fbDeletePlayer error:', e);
+  }
+}
+
+async function fbGetTombstones() {
+  try {
+    const tombRef = doc(db, COL.config, 'tombstones');
+    const snap = await getDoc(tombRef);
+    return snap.exists() ? (snap.data().deletedPlayerIds || []) : [];
+  } catch (e) {
+    return [];
   }
 }
 
@@ -315,7 +333,7 @@ export {
   // Auth
   fbSignIn, fbSignOut, fbCreateUser, fbOnAuthChange, fbUpdateUserProfile,
   // Players
-  fbGetPlayers, fbGetPlayer, fbSavePlayer, fbDeletePlayer, fbUpdatePlayerLevel, fbListenPlayers,
+  fbGetPlayers, fbGetPlayer, fbSavePlayer, fbDeletePlayer, fbUpdatePlayerLevel, fbListenPlayers, fbGetTombstones,
   // Courts
   fbGetCourts, fbSaveCourt,
   // Bookings
