@@ -25,7 +25,7 @@ export default function handler(req, res) {
     if (memoryDB) {
       return res.status(200).json(memoryDB);
     }
-    return res.status(200).json({ ok: true, players: [], bookings: [] });
+    return res.status(200).json({ ok: true, empty: true });
   }
 
   return res.status(405).json({ error: 'Method not allowed' });

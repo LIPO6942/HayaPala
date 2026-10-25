@@ -216,7 +216,8 @@ function saveDB(data, pushToServer = true, immediate = false) {
     localStorage.setItem(DB_KEY, JSON.stringify(data));
   } catch (e) {}
 
-  if (pushToServer) {
+  // En production sur HTTPS, Firestore est la source de vérité directe (pas d'envoi vers un backend tiers)
+  if (pushToServer && window.location.protocol !== 'https:') {
     const url = getApiBaseUrl() + '/api/circlepadel/db';
     if (immediate) {
       clearTimeout(_syncDebounceTimer);
@@ -243,11 +244,14 @@ function saveDB(data, pushToServer = true, immediate = false) {
 let _lastCollaborativeSyncToast = 0;
 
 async function syncFromBackend(isFromRealtimeEvent = false, realtimePayload = null) {
+  // Sur HTTPS (Vercel / production), Firestore gère 100% du temps réel via WebSockets
+  if (window.location.protocol === 'https:') return;
+
   try {
     const res = await fetch(getApiBaseUrl() + '/api/circlepadel/db');
     if (!res.ok) return;
     const remote = await res.json();
-    if (remote && Array.isArray(remote.players)) {
+    if (remote && Array.isArray(remote.players) && remote.players.length > 0) {
       if (Array.isArray(remote.deletedPlayerIds)) {
         const mergedDeleted = new Set([...(DB.deletedPlayerIds || []), ...remote.deletedPlayerIds]);
         DB.deletedPlayerIds = Array.from(mergedDeleted);
@@ -5731,10 +5735,12 @@ document.addEventListener('DOMContentLoaded', () => {
       renderAdminKPIs();
     } catch (e) {}
 
-    // Polling régulier pour synchronisation en direct entre onglets et sessions (2s)
-    setInterval(syncFromBackend, 2000);
-    window.addEventListener('focus', () => syncFromBackend(true));
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) syncFromBackend(true); });
+    // Polling régulier uniquement si en mode local (sur HTTPS / Vercel, Firestore gère le temps réel)
+    if (window.location.protocol !== 'https:') {
+      setInterval(syncFromBackend, 2000);
+      window.addEventListener('focus', () => syncFromBackend(true));
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) syncFromBackend(true); });
+    }
 
     // Synchronisation inter-onglets instantanée (0ms) via LocalStorage event
     window.addEventListener('storage', (e) => {
