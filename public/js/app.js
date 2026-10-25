@@ -329,18 +329,41 @@ function getTomorrowStr() {
 /** Initialise Firestore au premier lancement (terrains + config uniquement) */
 async function initFirestoreIfEmpty() {
   try {
-    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT_INIT')), 2000));
-    const [courts, config] = await Promise.race([
-      Promise.all([fbGetCourts(), fbGetConfig()]),
+    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT_INIT')), 3500));
+    const [courts, config, players] = await Promise.race([
+      Promise.all([fbGetCourts(), fbGetConfig(), fbGetPlayers()]),
       timeoutPromise
     ]);
-    if (!courts.length) {
+    if (!courts || !courts.length) {
       for (const c of COURTS_SEED) await fbSaveCourt(c);
       console.log('✅ Firestore : 4 terrains créés');
     }
     if (!config) {
       await fbSaveConfig(DEFAULT_CONFIG);
       console.log('✅ Firestore : config club initialisée');
+    }
+    if (!players || !players.length) {
+      const initialPlayers = (DB.players && DB.players.length) ? DB.players : [
+        {
+          id: 'user_moslem',
+          firstName: 'Moslem',
+          lastName: 'Gouia',
+          email: 'moslem.gouia@example.com',
+          phone: '+216 22 227 041',
+          gender: 'male',
+          role: 'admin',
+          status: 'active',
+          level: 5.0,
+          reliabilityScore: 82,
+          totalMatchesPlayed: 24,
+          loyaltyPoints: 45,
+          createdAt: new Date().toISOString()
+        }
+      ];
+      for (const p of initialPlayers) {
+        await fbSavePlayer(p);
+      }
+      console.log('✅ Firestore : membres initiaux synchronisés');
     }
   } catch (e) {
     console.warn('⚠️ Init Firestore :', e.message);
