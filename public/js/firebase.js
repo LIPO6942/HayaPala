@@ -100,6 +100,15 @@ async function fbSavePlayer(player) {
   await setDoc(ref, { ...player, updatedAt: serverTimestamp() }, { merge: true });
 }
 
+async function fbDeletePlayer(playerId) {
+  try {
+    const ref = doc(db, COL.players, playerId);
+    await deleteDoc(ref);
+  } catch (e) {
+    console.warn('fbDeletePlayer error:', e);
+  }
+}
+
 async function fbUpdatePlayerLevel(playerId, { level, coachComment, coachId }) {
   const ref       = doc(db, COL.players, playerId);
   const snap      = await getDoc(ref);
@@ -306,7 +315,7 @@ export {
   // Auth
   fbSignIn, fbSignOut, fbCreateUser, fbOnAuthChange, fbUpdateUserProfile,
   // Players
-  fbGetPlayers, fbGetPlayer, fbSavePlayer, fbUpdatePlayerLevel, fbListenPlayers,
+  fbGetPlayers, fbGetPlayer, fbSavePlayer, fbDeletePlayer, fbUpdatePlayerLevel, fbListenPlayers,
   // Courts
   fbGetCourts, fbSaveCourt,
   // Bookings

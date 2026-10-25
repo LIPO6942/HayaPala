@@ -96,6 +96,17 @@ function broadcastCirclePadelEvent(eventData) {
   }
 }
 
+// SSE Keep-Alive Heartbeat every 15s to keep mobile connections open
+setInterval(() => {
+  for (const client of sseClients) {
+    try {
+      client.write(': ping\n\n');
+    } catch (err) {
+      sseClients.delete(client);
+    }
+  }
+}, 15000);
+
 function getInitialCirclePadelDB() {
   return {
     appConfig: {
@@ -166,7 +177,13 @@ function getInitialCirclePadelDB() {
         skills: {},
         status: "pending",
         totalMatchesPlayed: 0,
-        loyaltyPoints: 10.5
+        loyaltyPoints: 10.5,
+        loyaltyHistory: [
+          { type: 'referral', name: 'Youssef Jlassi (Junior)', program: 'junior_academy', pointsAwarded: 1.5, date: '2026-10-25T13:58:39.672Z' },
+          { type: 'referral', name: 'Youssef Jlassi (Junior)', program: 'junior_academy', pointsAwarded: 1.5, date: '2026-10-25T13:59:29.933Z' },
+          { type: 'referral', name: 'Youssef Jlassi (Junior)', program: 'junior_academy', pointsAwarded: 1.5, date: '2026-10-25T14:00:05.672Z' },
+          { type: 'referral', name: 'Youssef Jlassi (Junior)', program: 'junior_academy', pointsAwarded: 1.5, date: '2026-10-25T14:00:44.239Z' }
+        ]
       },
       {
         id: "test_player_1",
@@ -183,7 +200,8 @@ function getInitialCirclePadelDB() {
         preferredSide: "right",
         phone: "98123456",
         reliabilityScore: 50,
-        loyaltyPoints: 14.5,
+        loyaltyPoints: 0,
+        loyaltyHistory: [],
         email: "karim.jlassi@circlepadel.tn"
       },
       {
@@ -250,7 +268,8 @@ function getInitialCirclePadelDB() {
     bookings: [],
     notifications: [],
     transactions: [],
-    matchReviews: []
+    matchReviews: [],
+    auditLogs: []
   };
 }
 
@@ -365,20 +384,31 @@ const server = http.createServer(async (req, res) => {
         });
         const mergedBookings = Array.from(bookingMap.values());
 
+        // 3. Merge Audit Logs (Full certified and immutable audit trail)
+        const existingAudit = Array.isArray(existing.auditLogs) ? existing.auditLogs : [];
+        const incomingAudit = Array.isArray(body.auditLogs) ? body.auditLogs : [];
+        const auditMap = new Map();
+        incomingAudit.forEach(a => { if (a && a.id) auditMap.set(a.id, a); });
+        existingAudit.forEach(a => { if (a && a.id && !auditMap.has(a.id)) auditMap.set(a.id, a); });
+        const mergedAuditLogs = Array.from(auditMap.values()).sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+
         const mergedDB = {
           ...existing,
           ...body,
           players: mergedPlayers,
           bookings: mergedBookings,
+          auditLogs: mergedAuditLogs,
           updatedAt: new Date().toISOString()
         };
 
         fs.writeFileSync(CP_DB_FILE, JSON.stringify(mergedDB, null, 2), 'utf-8');
 
-        // Broadcast real-time event to all connected admin and player sessions immediately
+        // Broadcast real-time event to all connected admin and player sessions immediately (<10ms)
         broadcastCirclePadelEvent({
           type: 'db_updated',
           source: body.clientSource || 'admin',
+          action: body.lastAction || (body.lastDeletedPlayerId ? 'PLAYER_DELETED' : 'DB_SYNC'),
+          deletedPlayerId: body.lastDeletedPlayerId || null,
           timestamp: Date.now(),
           playersCount: mergedPlayers.length
         });

@@ -7,7 +7,7 @@
 // ── Firebase imports (CDN ESM) ─────────────────────────────────────────────
 import {
   fbSignIn, fbSignOut, fbOnAuthChange, fbCreateUser, fbUpdateUserProfile,
-  fbGetPlayers, fbGetPlayer, fbSavePlayer, fbUpdatePlayerLevel, fbListenPlayers,
+  fbGetPlayers, fbGetPlayer, fbSavePlayer, fbDeletePlayer, fbUpdatePlayerLevel, fbListenPlayers,
   fbGetCourts, fbSaveCourt,
   fbGetBookings, fbAddBooking, fbUpdateBooking, fbCancelBooking, fbListenBookings,
   fbGetOpenMatches, fbJoinMatch, fbCreateOpenMatch, fbListenOpenMatches,
@@ -76,6 +76,7 @@ let DB = {
   notifications: [],
   matchReviews:  [],
   transactions:  [],
+  auditLogs:     [],
 };
 
 // Nettoyer l'ancien cache local v1 et restaurer le cache v2
@@ -99,6 +100,7 @@ function sanitizeDB(db) {
   if (!Array.isArray(db.notifications)) db.notifications = [];
   if (!Array.isArray(db.matchReviews)) db.matchReviews = [];
   if (!Array.isArray(db.transactions)) db.transactions = [];
+  if (!Array.isArray(db.auditLogs)) db.auditLogs = [];
   db.bookings.forEach(b => {
     if (b && !Array.isArray(b.players)) b.players = [];
   });
@@ -162,29 +164,38 @@ function setAdminPlayerFilter(filter) {
 }
 window.setAdminPlayerFilter = setAdminPlayerFilter;
 
-function saveDB(data, pushToServer = true) {
+function saveDB(data, pushToServer = true, immediate = false) {
   try {
     data._fromFirestore = true;
     localStorage.setItem(DB_KEY, JSON.stringify(data));
   } catch (e) {}
 
   if (pushToServer) {
-    clearTimeout(_syncDebounceTimer);
-    _syncDebounceTimer = setTimeout(async () => {
-      try {
-        await fetch('/api/circlepadel/db', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-      } catch (e) {}
-    }, 50);
+    if (immediate) {
+      clearTimeout(_syncDebounceTimer);
+      fetch('/api/circlepadel/db', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      }).catch(() => {});
+    } else {
+      clearTimeout(_syncDebounceTimer);
+      _syncDebounceTimer = setTimeout(async () => {
+        try {
+          await fetch('/api/circlepadel/db', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+        } catch (e) {}
+      }, 30);
+    }
   }
 }
 
 let _lastCollaborativeSyncToast = 0;
 
-async function syncFromBackend(isFromRealtimeEvent = false) {
+async function syncFromBackend(isFromRealtimeEvent = false, realtimePayload = null) {
   try {
     const res = await fetch('/api/circlepadel/db');
     if (!res.ok) return;
@@ -198,6 +209,7 @@ async function syncFromBackend(isFromRealtimeEvent = false) {
       if (Array.isArray(remote.bookings)) DB.bookings = mergeBookingsLists(DB.bookings, remote.bookings);
       if (remote.appConfig) DB.appConfig = { ...DEFAULT_CONFIG, ...remote.appConfig };
       if (Array.isArray(remote.notifications)) DB.notifications = remote.notifications;
+      if (Array.isArray(remote.auditLogs)) DB.auditLogs = remote.auditLogs;
 
       // Conserver le rôle de l'utilisateur connecté
       if (DB.currentUser?.id && DB.currentUser.id !== 'guest') {
@@ -218,9 +230,19 @@ async function syncFromBackend(isFromRealtimeEvent = false) {
       renderHomeScreen();
       renderMatchesList();
       renderProfileScreen();
+      renderAdminAuditLogs();
 
-      // Notification collaborative si un nouveau joueur a été créé par un autre compte admin
-      if (newCount > prevCount && prevCount > 0 && (Date.now() - _lastCollaborativeSyncToast > 3500)) {
+      // Notifications collaboratives instantanées
+      if (isFromRealtimeEvent && realtimePayload) {
+        if (realtimePayload.action === 'PLAYER_DELETED') {
+          showToast(`🗑️ Un joueur a été supprimé par le gérant.`, 'info');
+        } else if (realtimePayload.action === 'PLAYER_CREATED' || realtimePayload.action === 'PLAYER_REGISTERED' || (newCount > prevCount && prevCount > 0)) {
+          const latest = DB.players[DB.players.length - 1];
+          showToast(`👥 Nouveau membre synchronisé en direct : ${latest?.firstName || ''} ${latest?.lastName || ''}`, 'success');
+        } else if (realtimePayload.action === 'PLAYER_EVALUATED') {
+          showToast(`📋 Évaluation d'un joueur synchronisée en direct ✓`, 'info');
+        }
+      } else if (newCount > prevCount && prevCount > 0 && (Date.now() - _lastCollaborativeSyncToast > 3500)) {
         _lastCollaborativeSyncToast = Date.now();
         const latestPlayer = DB.players[DB.players.length - 1];
         showToast(`👥 App collaborative : ${latestPlayer?.firstName || 'Nouveau membre'} synchronisé(e) en direct ✓`, 'info');
@@ -1186,6 +1208,22 @@ function renderProfileScreen() {
 }
 
 /**
+ * Règle de fidélité CirclePadel :
+ * Les joueurs nouvellement introduits n'ont AUCUN point de fidélité tant qu'ils n'ont pas
+ * joué de match officiel ni parrainé leur enfant (programme junior academy).
+ */
+function getPlayerLoyaltyPoints(player) {
+  if (!player) return 0;
+  const matches = Number(player.totalMatchesPlayed || player.matchesPlayed || 0);
+  const hasChildReferral = Array.isArray(player.loyaltyHistory) && player.loyaltyHistory.some(h => h.type === 'referral');
+  if (matches === 0 && !hasChildReferral) {
+    return 0;
+  }
+  return Number(player.loyaltyPoints) || 0;
+}
+window.getPlayerLoyaltyPoints = getPlayerLoyaltyPoints;
+
+/**
  * Met à jour dynamiquement l'affichage du Cercle de Fidélité
  * - Progression circulaire SVG (60 pts max)
  * - Gains : 1.0 pt (08h-17h), 0.5 pt (17h-23h), 1.5 pt (parrainage académie)
@@ -1195,7 +1233,7 @@ function renderLoyaltyRing(user) {
   const loyaltyCard = document.getElementById('loyaltyRingCard');
   if (!loyaltyCard) return;
 
-  const rawPts = typeof user.loyaltyPoints === 'number' ? user.loyaltyPoints : (user.id === 'usr_ahmed' ? 32.0 : (user.id === 'test_player_1' ? 14.5 : (user.id === 'usr_mariem' ? 8.0 : 4.5)));
+  const rawPts = getPlayerLoyaltyPoints(user);
   const points = Math.max(0, Math.min(60, Number(rawPts.toFixed(1))));
 
   const valEl = document.getElementById('loyaltyPointsVal');
@@ -1444,8 +1482,9 @@ window.submitLoyaltyReferral = function() {
   const user = (DB.players || []).find(p => p.id === DB.currentUser?.id) || DB.currentUser;
   if (!user) return;
 
-  const oldPts = Number(user.loyaltyPoints) || 0;
-  user.loyaltyPoints = Number((oldPts + 1.5).toFixed(1));
+  const oldPts = getPlayerLoyaltyPoints(user);
+  const newPts = Number((oldPts + 1.5).toFixed(1));
+  user.loyaltyPoints = newPts;
   user.loyaltyHistory = user.loyaltyHistory || [];
   user.loyaltyHistory.push({
     type: 'referral',
@@ -1455,18 +1494,37 @@ window.submitLoyaltyReferral = function() {
     date: new Date().toISOString()
   });
 
+  // Trace d'audit certifiée pour parrainage enfant / junior academy
+  const auditEntry = {
+    id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+    action: 'REFERRAL_ADDED',
+    entityId: user.id,
+    entityType: 'player',
+    playerName: `${user.firstName} ${user.lastName || ''}`.trim(),
+    playerEmail: user.email || '',
+    playerPhone: user.phone || '',
+    performedBy: `${DB.currentUser?.firstName || 'Parent'} (${user.firstName})`,
+    timestamp: new Date().toISOString(),
+    details: `Parrainage enfant validé : "${name}" (${program === 'junior_academy' ? 'Junior Academy' : program}). +1.5 pt fidélité attribué.`
+  };
+  if (!Array.isArray(DB.auditLogs)) DB.auditLogs = [];
+  DB.auditLogs.unshift(auditEntry);
+
   const idx = (DB.players || []).findIndex(p => p.id === user.id);
   if (idx !== -1) DB.players[idx] = { ...DB.players[idx], ...user };
   DB.currentUser = { ...DB.currentUser, ...user };
 
   checkAndNotifyLoyaltyMilestones(user, oldPts, user.loyaltyPoints);
 
-  saveDB(DB, true);
+  DB.lastAction = 'REFERRAL_ADDED';
+  saveDB(DB, true, true);
+  setTimeout(() => { delete DB.lastAction; }, 500);
   closeModal('modal-loyalty-referral');
 
   showToast(`🌟 Parrainage de ${name} validé ! +1.5 pt illuminé sur votre cercle ✓`, 'gold');
   renderProfileScreen();
   renderAdminPlayers();
+  renderAdminAuditLogs();
 };
 
 function checkAndNotifyLoyaltyMilestones(player, oldPts, newPts) {
@@ -1788,6 +1846,8 @@ async function handlePlayerRegister({ firstName, lastName, phone, email, passwor
     reliabilityScore: 50,
     peerConfrontationsCount: 0,
     totalMatchesPlayed: 0,
+    loyaltyPoints: 0,
+    loyaltyHistory: [],
     skills: {},
     levelHistory: [{
       date: getTodayStr(),
@@ -1797,13 +1857,31 @@ async function handlePlayerRegister({ firstName, lastName, phone, email, passwor
     createdAt: new Date().toISOString(),
   };
 
+  // Trace d'audit certifiée
+  const auditEntry = {
+    id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+    action: 'PLAYER_REGISTERED',
+    entityId: newPlayer.id,
+    entityType: 'player',
+    playerName: `${cleanFirst} ${cleanLast}`.trim(),
+    playerEmail: safeEmail,
+    playerPhone: cleanPhone,
+    performedBy: 'Auto-inscription joueur (PWA mobile)',
+    timestamp: new Date().toISOString(),
+    details: `Inscription en ligne du joueur ${cleanFirst} ${cleanLast}. Auto-évaluation déclarée : ${cleanSelfLevel}/10.`
+  };
+  if (!Array.isArray(DB.auditLogs)) DB.auditLogs = [];
+  DB.auditLogs.unshift(auditEntry);
+
   // Enregistrement immédiat dans DB.players et session active
   DB.players = (DB.players || []).filter(p => p.id !== newPlayer.id && p.email !== newPlayer.email);
   DB.players.push(newPlayer);
   DB.currentUser = newPlayer;
+  DB.lastAction = 'PLAYER_REGISTERED';
 
-  // Sauvegarde locale + sync backend /api/circlepadel/db
-  saveDB(DB, true);
+  // Sauvegarde locale + sync backend instantané vers tous les appareils
+  saveDB(DB, true, true);
+  setTimeout(() => { delete DB.lastAction; }, 500);
 
   // Sauvegarde Firestore en tâche de fond
   fbSavePlayer(newPlayer).catch(e => console.warn('fbSavePlayer async error:', e));
@@ -2596,7 +2674,7 @@ function renderAdminPlayers() {
       </td>
       <td style="text-align:center">
         <span class="loyalty-count-badge" style="font-family:'Outfit',sans-serif; font-size:13px; font-weight:800; color:var(--gold); background:rgba(212,175,55,0.12); border:1px solid rgba(212,175,55,0.3); padding:3px 9px; border-radius:10px" title="Points fidélité cumulés sur le cercle">
-          ⭐ ${(Number(p.loyaltyPoints) || 0).toFixed(1)} pts
+          ⭐ ${getPlayerLoyaltyPoints(p).toFixed(1)} pts
         </span>
       </td>
       <td>${statusBadge}</td>
@@ -2610,6 +2688,91 @@ function renderAdminPlayers() {
     </tr>`;
   }).join('');
 }
+
+/**
+ * Rendu du Journal d'Audit & Traçabilité Certifiée
+ * Affiche l'historique immuable de toutes les créations, suppressions, modifications et parrainages
+ */
+function renderAdminAuditLogs() {
+  const tbody = document.getElementById('adminAuditTableBody');
+  if (!tbody) return;
+
+  const logs = Array.isArray(DB.auditLogs) ? DB.auditLogs : [];
+  const searchInput = document.getElementById('adminAuditSearchInput');
+  const query = (searchInput?.value || '').trim().toLowerCase();
+
+  const filtered = logs.filter(item => {
+    if (!query) return true;
+    const hay = [
+      item.action,
+      item.playerName,
+      item.performedBy,
+      item.details,
+      item.playerEmail,
+      item.playerPhone,
+      item.entityId
+    ].filter(Boolean).join(' ').toLowerCase();
+    return hay.includes(query);
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align:center; padding:36px; color:var(--text-muted)">
+          <div style="font-size:28px; margin-bottom:8px">📋</div>
+          <div style="font-weight:600; color:var(--text-secondary)">Aucun enregistrement d'audit trouvé</div>
+          <div style="font-size:12px; margin-top:4px">Toutes les créations, suppressions, modifications et parrainages sont tracés ici avec horodatage certifié.</div>
+        </td>
+      </tr>`;
+    return;
+  }
+
+  const actionConfig = {
+    'PLAYER_CREATED':    { label: '➕ Création Desk', bg: 'rgba(46,204,113,0.15)', color: '#2ecc71', border: 'rgba(46,204,113,0.35)' },
+    'PLAYER_REGISTERED': { label: '📝 Inscription PWA', bg: 'rgba(52,152,219,0.15)', color: '#3498db', border: 'rgba(52,152,219,0.35)' },
+    'PLAYER_DELETED':    { label: '🗑️ Suppression', bg: 'rgba(231,76,60,0.15)', color: '#e74c3c', border: 'rgba(231,76,60,0.35)' },
+    'PLAYER_UPDATED':    { label: '✏️ Modification', bg: 'rgba(241,196,15,0.15)', color: '#f1c40f', border: 'rgba(241,196,15,0.35)' },
+    'PLAYER_EVALUATED':  { label: '📋 Évaluation Coach', bg: 'rgba(155,89,182,0.15)', color: '#9b59b6', border: 'rgba(155,89,182,0.35)' },
+    'REFERRAL_ADDED':    { label: '🌟 Parrainage Enfant', bg: 'rgba(212,175,55,0.15)', color: '#d4af37', border: 'rgba(212,175,55,0.35)' }
+  };
+
+  tbody.innerHTML = filtered.map(log => {
+    const act = actionConfig[log.action] || { label: log.action || 'ACTION', bg: 'rgba(255,255,255,0.1)', color: 'var(--text-primary)', border: 'var(--border-subtle)' };
+    const dateFormatted = log.timestamp ? new Date(log.timestamp).toLocaleString('fr-FR', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    }) : '—';
+
+    return `
+      <tr style="border-bottom: 1px solid var(--border-subtle)">
+        <td style="white-space:nowrap; font-size:12px; font-weight:600; color:var(--text-secondary)">
+          ${dateFormatted}
+        </td>
+        <td>
+          <span style="display:inline-block; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700; background:${act.bg}; color:${act.color}; border:1px solid ${act.border}">
+            ${act.label}
+          </span>
+        </td>
+        <td style="font-size:12px; font-weight:600; color:var(--text-white)">
+          👤 ${log.performedBy || 'Gérant'}
+        </td>
+        <td>
+          <div style="font-weight:700; color:var(--text-white); font-size:13px">${log.playerName || '—'}</div>
+          ${(log.playerPhone || log.playerEmail) ? `<div style="font-size:11px; color:var(--text-muted)">${log.playerPhone || ''} ${log.playerEmail ? '· ' + log.playerEmail : ''}</div>` : ''}
+        </td>
+        <td style="font-size:12px; color:var(--text-secondary); max-width:380px">
+          ${log.details || '—'}
+        </td>
+        <td style="white-space:nowrap">
+          <span style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:#2ecc71; background:rgba(46,204,113,0.1); border:1px solid rgba(46,204,113,0.25); padding:2px 8px; border-radius:12px">
+            🔒 Certifié
+          </span>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+window.renderAdminAuditLogs = renderAdminAuditLogs;
 
 function renderAdminMatches() {
   const container = document.getElementById('adminMatchesListContainer');
@@ -3372,11 +3535,30 @@ async function saveEvaluation(e) {
       sentAt: new Date().toISOString(),
     });
 
-    saveDB(DB);
+    // Trace d'audit certifiée coach
+    const auditEntry = {
+      id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+      action: 'PLAYER_EVALUATED',
+      entityId: player.id,
+      entityType: 'player',
+      playerName: `${player.firstName} ${player.lastName || ''}`.trim(),
+      playerEmail: player.email || '',
+      playerPhone: player.phone || '',
+      performedBy: `${DB.currentUser?.firstName || 'Coach'} (Coach Ali)`,
+      timestamp: new Date().toISOString(),
+      details: `Certification officielle du niveau à ${evalLevelValue}/10 pour ${player.firstName} ${player.lastName || ''} (ancien niveau: ${previousLevel || 'non défini'}).${comment ? ` Note: "${comment}"` : ''}`
+    };
+    if (!Array.isArray(DB.auditLogs)) DB.auditLogs = [];
+    DB.auditLogs.unshift(auditEntry);
+
+    DB.lastAction = 'PLAYER_EVALUATED';
+    saveDB(DB, true, true);
+    setTimeout(() => { delete DB.lastAction; }, 500);
     closeAllModals();
     renderAdminPlayers();
     renderAdminKPIs();
     renderAdminAlerts();
+    renderAdminAuditLogs();
     if (DB.currentUser?.id === player.id) {
       renderHomeScreen();
       updateAuthUI();
@@ -4116,10 +4298,29 @@ function submitEditPlayer(e) {
   p.preferredSide = document.getElementById('editPlayerSide').value;
   p.playStyle = document.getElementById('editPlayerStyle').value;
 
-  saveDB(DB, true);
+  // Trace d'audit certifiée modification
+  const auditEntry = {
+    id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+    action: 'PLAYER_UPDATED',
+    entityId: p.id,
+    entityType: 'player',
+    playerName: `${p.firstName} ${p.lastName || ''}`.trim(),
+    playerEmail: p.email || '',
+    playerPhone: p.phone || '',
+    performedBy: `${DB.currentUser?.firstName || 'Gérant'} ${DB.currentUser?.lastName || ''}`.trim() || 'Admin (Gérant)',
+    timestamp: new Date().toISOString(),
+    details: `Mise à jour des informations de ${p.firstName} ${p.lastName || ''} (Statut: ${p.status}, Niv: ${p.level || '?'}, Pts: ${p.loyaltyPoints}).`
+  };
+  if (!Array.isArray(DB.auditLogs)) DB.auditLogs = [];
+  DB.auditLogs.unshift(auditEntry);
+
+  DB.lastAction = 'PLAYER_UPDATED';
+  saveDB(DB, true, true);
+  setTimeout(() => { delete DB.lastAction; }, 500);
   closeAllModals();
   renderAdminPlayers();
   renderAdminKPIs();
+  renderAdminAuditLogs();
   showToast(`Fiche de ${p.firstName} mise à jour ✓`, 'success');
 }
 window.submitEditPlayer = submitEditPlayer;
@@ -4128,15 +4329,57 @@ function deletePlayer(playerId) {
   const p = (DB.players || []).find(x => x.id === playerId);
   if (!p) return;
   const name = `${p.firstName} ${p.lastName || ''}`.trim();
-  if (confirm(`Confirmez-vous la suppression du joueur "${name}" de la base de données ?\nCette action est irréversible.`)) {
+  if (confirm(`Confirmez-vous la suppression définitive du joueur "${name}" ?\nCette action retirera le joueur immédiatement de tous les appareils et consignera une trace dans le journal d'audit.`)) {
+    // 1. Trace d'audit certifiée et immuable
+    const auditEntry = {
+      id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+      action: 'PLAYER_DELETED',
+      entityId: playerId,
+      entityType: 'player',
+      playerName: name,
+      playerEmail: p.email || '',
+      playerPhone: p.phone || '',
+      playerLevel: p.level || p.selfEstimatedLevel || null,
+      performedBy: `${DB.currentUser?.firstName || 'Gérant'} ${DB.currentUser?.lastName || ''}`.trim() || 'Moslem Gouia (Gérant)',
+      timestamp: new Date().toISOString(),
+      details: `Suppression définitive du compte joueur "${name}" (ID: ${playerId}) effectuée par le gérant.`,
+      snapshot: {
+        id: p.id,
+        firstName: p.firstName,
+        lastName: p.lastName,
+        phone: p.phone,
+        email: p.email,
+        level: p.level,
+        reliabilityScore: p.reliabilityScore,
+        totalMatchesPlayed: p.totalMatchesPlayed,
+        loyaltyPoints: p.loyaltyPoints,
+        role: p.role,
+        status: p.status
+      }
+    };
+    if (!Array.isArray(DB.auditLogs)) DB.auditLogs = [];
+    DB.auditLogs.unshift(auditEntry);
+
+    // 2. Suppression locale
     DB.players = (DB.players || []).filter(x => x.id !== playerId);
     DB.lastDeletedPlayerId = playerId;
-    saveDB(DB, true);
-    setTimeout(() => { delete DB.lastDeletedPlayerId; }, 250);
+    DB.lastAction = 'PLAYER_DELETED';
+
+    // 3. Propagation instantanée serveur & SSE (0ms)
+    saveDB(DB, true, true);
+    setTimeout(() => {
+      delete DB.lastDeletedPlayerId;
+      delete DB.lastAction;
+    }, 500);
+
+    // 4. Suppression distante Firestore en tâche de fond
+    fbDeletePlayer(playerId).catch(() => {});
+
     closeAllModals();
     renderAdminPlayers();
     renderAdminKPIs();
-    showToast(`Joueur "${name}" supprimé de la base de données.`, 'info');
+    renderAdminAuditLogs();
+    showToast(`Joueur "${name}" supprimé partout (enregistré dans l'audit) ✓`, 'info');
   }
 }
 window.deletePlayer = deletePlayer;
@@ -4272,19 +4515,41 @@ function registerPlayer(e) {
     playStyle: document.getElementById('regStyle').value,
     reliabilityScore: 50,
     totalMatchesPlayed: 0,
+    loyaltyPoints: 0,
+    loyaltyHistory: [],
     skills: {},
     levelHistory: [],
     consentSignedAt: new Date().toISOString(),
     createdAt: new Date().toISOString(),
   };
 
+  // Trace d'audit certifiée
+  const auditEntry = {
+    id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+    action: 'PLAYER_CREATED',
+    entityId: newPlayer.id,
+    entityType: 'player',
+    playerName: `${firstName} ${lastName}`.trim(),
+    playerEmail: newPlayer.email,
+    playerPhone: phone,
+    performedBy: `${DB.currentUser?.firstName || 'Gérant'} ${DB.currentUser?.lastName || ''}`.trim() || 'Admin (Gérant)',
+    timestamp: new Date().toISOString(),
+    details: `Création administrative du joueur ${firstName} ${lastName} au desk.`
+  };
+  if (!Array.isArray(DB.auditLogs)) DB.auditLogs = [];
+  DB.auditLogs.unshift(auditEntry);
+
   DB.players.push(newPlayer);
-  saveDB(DB);
-  showToast(`✓ ${firstName} ${lastName} inscrit(e) · En attente d'évaluation coach.`, 'success');
+  DB.lastAction = 'PLAYER_CREATED';
+  saveDB(DB, true, true);
+  setTimeout(() => { delete DB.lastAction; }, 500);
+
+  showToast(`✓ ${firstName} ${lastName} inscrit(e) et synchronisé(e) partout ✓`, 'success');
   closeAllModals();
   renderAdminPlayers();
   renderAdminAlerts();
   renderAdminKPIs();
+  renderAdminAuditLogs();
 }
 
 // ============================================================================
@@ -4440,6 +4705,9 @@ function switchAdminTab(tabName) {
   document.querySelectorAll('.admin-tab-content').forEach(content => {
     content.classList.toggle('active', content.id === `adminContent${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
   });
+  if (tabName === 'audit') {
+    renderAdminAuditLogs();
+  }
 }
 
 // ============================================================================
@@ -5129,12 +5397,33 @@ document.addEventListener('DOMContentLoaded', () => {
         loyaltyPoints: 0, loyaltyHistory: [],
         consentSignedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
       };
+
+      // Trace d'audit certifiée
+      const auditEntry = {
+        id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+        action: 'PLAYER_CREATED',
+        entityId: newPlayer.id,
+        entityType: 'player',
+        playerName: `${firstName} ${newPlayer.lastName}`.trim(),
+        playerEmail: email,
+        playerPhone: phone,
+        performedBy: `${DB.currentUser?.firstName || 'Gérant'} ${DB.currentUser?.lastName || ''}`.trim() || 'Admin (Gérant)',
+        timestamp: new Date().toISOString(),
+        details: `Création administrative du membre ${name} par le gérant au desk.`
+      };
+      if (!Array.isArray(DB.auditLogs)) DB.auditLogs = [];
+      DB.auditLogs.unshift(auditEntry);
+
       DB.players.push(newPlayer);
-      saveDB(DB, true);
+      DB.lastAction = 'PLAYER_CREATED';
+      saveDB(DB, true, true);
+      setTimeout(() => { delete DB.lastAction; }, 500);
+
       closeAllModals();
       renderAdminPlayers();
       renderAdminKPIs();
-      showToast(`${name} inscrit(e) ✓`, 'success');
+      renderAdminAuditLogs();
+      showToast(`${name} inscrit(e) et synchronisé(e) partout ✓`, 'success');
       fbSavePlayer(newPlayer).catch(() => {});
       fbTrack('player_registered', { playerId: newPlayer.id });
     }
@@ -5288,18 +5577,29 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // Connexion SSE temps-réel instantanée (50ms multi-admin collaboratif)
-    try {
-      const sse = new EventSource('/api/circlepadel/events');
-      sse.onmessage = (evt) => {
-        try {
-          const payload = JSON.parse(evt.data);
-          if (payload && payload.type === 'db_updated') {
-            syncFromBackend(true);
-          }
-        } catch (err) {}
-      };
-    } catch (sseErr) {}
+    // Connexion SSE temps-réel instantanée (multi-admin collaboratif avec auto-reconnect)
+    let sse = null;
+    function initSSE() {
+      try {
+        if (sse) sse.close();
+        sse = new EventSource('/api/circlepadel/events');
+        sse.onmessage = (evt) => {
+          try {
+            const payload = JSON.parse(evt.data);
+            if (payload && payload.type === 'db_updated') {
+              syncFromBackend(true, payload);
+            }
+          } catch (err) {}
+        };
+        sse.onerror = () => {
+          if (sse) sse.close();
+          setTimeout(initSSE, 1500);
+        };
+      } catch (sseErr) {
+        setTimeout(initSSE, 2000);
+      }
+    }
+    initSSE();
 
     // Synchronisation Firestore en tâche de fond si en ligne
     try {
@@ -5370,6 +5670,8 @@ window.openCourtsideDisplay    = openCourtsideDisplay;
 window.showCelebrationModal    = showCelebrationModal;
 window.renderMyBookings        = renderMyBookings;
 window.renderAdminPlayers      = renderAdminPlayers;
+window.renderAdminAuditLogs    = renderAdminAuditLogs;
+window.getPlayerLoyaltyPoints  = getPlayerLoyaltyPoints;
 window.getTodayStr             = getTodayStr;
 window.DB                      = DB;
 

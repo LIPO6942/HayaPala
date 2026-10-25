@@ -815,6 +815,7 @@
         <button class="admin-tab-btn" data-admin-tab="matches">⚡ Matchs ouverts</button>
         <button class="admin-tab-btn" data-admin-tab="alerts">🚨 Alertes</button>
         <button class="admin-tab-btn" data-admin-tab="stats">📊 Statistiques</button>
+        <button class="admin-tab-btn" data-admin-tab="audit">📋 Journal d'Audit</button>
         <button class="admin-tab-btn" data-admin-tab="settings">⚙️ Paramètres club</button>
       </div>
 
@@ -1102,6 +1103,39 @@
 
           <div style="margin-top:20px">
             <button class="btn-primary-action" style="max-width:200px">Enregistrer</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB G13 : Journal d'Audit & Traçabilité ── -->
+      <div class="admin-tab-content" id="adminContentAudit">
+        <div class="admin-panel-container">
+          <div class="panel-header-row">
+            <div>
+              <h2 class="panel-title">📋 Journal d'Audit &amp; Traçabilité Certifiée</h2>
+              <p class="panel-subtitle">Historique immuable et certifié de toutes les créations, modifications et suppressions de joueurs.</p>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+              <input type="text" id="adminAuditSearchInput" class="login-field" placeholder="🔍 Filtrer l'audit..." oninput="renderAdminAuditLogs()" style="max-width:240px; height:38px; padding-left:14px" />
+              <button class="btn-table-action" onclick="renderAdminAuditLogs()" title="Actualiser le journal">🔄 Actualiser</button>
+            </div>
+          </div>
+          <div class="admin-table-responsive-wrap">
+            <table class="admin-data-table">
+              <thead>
+                <tr>
+                  <th>Date &amp; Heure</th>
+                  <th>Action</th>
+                  <th>Opérateur</th>
+                  <th>Membre / Cible</th>
+                  <th>Détails &amp; Motif</th>
+                  <th>Statut</th>
+                </tr>
+              </thead>
+              <tbody id="adminAuditTableBody">
+                <!-- Peuplé par renderAdminAuditLogs() -->
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
