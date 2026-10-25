@@ -147,6 +147,10 @@
             <div class="action-quick-card" id="quickCardJoinMatch" onclick="navigateToScreen('screen-join-match')">
               <div class="quick-card-icon">🎾</div>
               <div class="quick-card-bottom">
+                <div class="quick-card-title">Rejoindre<br>un match</div>
+                <div class="quick-card-arrow">›</div>
+              </div>
+            </div>
             <div class="action-quick-card" id="quickCardRecordMatch" onclick="openRecordMatchModal('player')" style="background:linear-gradient(135deg, rgba(212,175,55,0.12), rgba(46,204,113,0.08)); border-color:rgba(212,175,55,0.35)">
               <div class="quick-card-icon">🏆</div>
               <div class="quick-card-bottom">
@@ -434,18 +438,41 @@
             </div>
 
             <div class="loyalty-stage-wrap">
-              <svg class="loyalty-svg-ring" viewBox="0 0 220 220">
+              <svg class="loyalty-svg-ring" viewBox="0 0 220 220" id="loyaltySvgDial">
                 <defs>
                   <linearGradient id="loyaltyGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stop-color="#2ECC71" />
                     <stop offset="50%" stop-color="#D4AF37" />
                     <stop offset="100%" stop-color="#F1C40F" />
                   </linearGradient>
+                  <linearGradient id="loyaltyNeedleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="rgba(212,175,55,0.2)" />
+                    <stop offset="70%" stop-color="#d4af37" />
+                    <stop offset="100%" stop-color="#fff" />
+                  </linearGradient>
                 </defs>
+                
+                <!-- Crans horaires d'horloge (tous les 5 points : 0, 5, 10, ..., 60) -->
+                <g class="loyalty-clock-ticks" id="loyaltyClockTicks"></g>
+
                 <!-- Anneau de trajectoire sombre -->
                 <circle class="loyalty-bg-circle" cx="110" cy="110" r="90" />
                 <!-- Anneau de progression illuminé (circonférence = 2 * PI * 90 ~= 565.48) -->
                 <circle class="loyalty-progress-circle" id="loyaltyCircleBar" cx="110" cy="110" r="90" stroke-dasharray="565" stroke-dashoffset="565" />
+
+                <!-- Aiguille d'horloge reliant l'anneau intérieur à la balle de padel -->
+                <line id="loyaltyClockNeedle" x1="110" y1="110" x2="200" y2="110" stroke="url(#loyaltyNeedleGrad)" stroke-width="2.4" stroke-linecap="round" />
+
+                <!-- Balle de Padel mobile (aiguille vivante de l'horloge des 60 points) -->
+                <g id="loyaltyPadelBallMarker" transform="translate(200, 110)">
+                  <!-- Halo lumineux doré -->
+                  <circle r="12" fill="rgba(212, 175, 55, 0.4)" class="pulse-ball-glow" />
+                  <!-- Balle officielle jaune fluo Padel -->
+                  <circle r="8.5" fill="#dfff00" stroke="#0f172a" stroke-width="1.4" />
+                  <!-- Coutures blanches caractéristiques de padel -->
+                  <path d="M -5 -4 A 5.5 5.5 0 0 1 5 -4" fill="none" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round" />
+                  <path d="M -5 4 A 5.5 5.5 0 0 0 5 4" fill="none" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round" />
+                </g>
               </svg>
               <div class="loyalty-center-content">
                 <div class="loyalty-center-val" id="loyaltyPointsVal">0.0</div>
@@ -1272,35 +1299,81 @@
       </div>
 
       <!-- Co-joueurs / Invités accompagnateurs (Padel 4 joueurs) -->
-      <div style="background:rgba(212,175,55,0.06); border:1px solid rgba(212,175,55,0.25); border-radius:10px; padding:12px; margin-bottom:14px">
+      <div style="background:rgba(212,175,55,0.06); border:1.5px solid rgba(212,175,55,0.25); border-radius:12px; padding:12px; margin-bottom:14px">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
-          <span style="font-size:11.5px; font-weight:800; color:var(--gold); text-transform:uppercase">👥 Joueurs du match (Optionnel)</span>
-          <span style="font-size:10px; color:var(--text-muted)">4 joueurs</span>
+          <span style="font-size:11.5px; font-weight:800; color:var(--gold); text-transform:uppercase">🏟️ Terrain &amp; 4 Joueurs du Match</span>
+          <span style="font-size:10px; color:var(--text-muted)">Disposition tactique</span>
         </div>
-        <div style="font-size:11px; color:var(--text-secondary); margin-bottom:10px; line-height:1.4">
-          Précisez avec qui vous allez jouer. Ils apparaîtront sur votre créneau dans le planning du gérant et seront enregistrés comme <strong>Invités</strong> dans la base de données.
+        <div style="font-size:11px; color:var(--text-secondary); margin-bottom:8px; line-height:1.4">
+          Visualisez votre terrain en direct. Cliquez sur un <strong>+</strong> ou saisissez vos partenaires et adversaires.
+        </div>
+
+        <!-- MINI-TERRAIN PADEL TACTIQUE (COMPACT & AÉRÉ) -->
+        <div class="mini-padel-court-wrap" style="margin:6px 0 10px">
+          <div class="mini-padel-court">
+            <div class="mini-court-glass-border"></div>
+            <div class="mini-court-service-left"></div>
+            <div class="mini-court-center-line"></div>
+            <div class="mini-court-net"></div>
+            <div class="mini-court-service-right"></div>
+            
+            <!-- Équipe 1 (Gauche) -->
+            <div class="mini-court-half">
+              <div class="court-tactical-spot" id="bookSpot1" title="Organisateur (Vous)">
+                <div class="tactical-pin filled" id="bookSpotPin1">🎾</div>
+                <div class="tactical-info">
+                  <span class="tactical-name" id="bookSpotName1">Vous</span>
+                  <span class="tactical-sub">Équipe 1</span>
+                </div>
+              </div>
+              <div class="court-tactical-spot" id="bookSpot2" onclick="document.getElementById('bookCoPlayer2').focus()" title="Cliquer pour renseigner le partenaire">
+                <div class="tactical-pin empty" id="bookSpotPin2">+</div>
+                <div class="tactical-info">
+                  <span class="tactical-name" id="bookSpotName2">Place 2</span>
+                  <span class="tactical-sub">Partenaire</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Équipe 2 (Droite) -->
+            <div class="mini-court-half">
+              <div class="court-tactical-spot" id="bookSpot3" onclick="document.getElementById('bookCoPlayer3').focus()" title="Cliquer pour renseigner l'adversaire 1">
+                <div class="tactical-pin empty" id="bookSpotPin3">+</div>
+                <div class="tactical-info">
+                  <span class="tactical-name" id="bookSpotName3">Place 3</span>
+                  <span class="tactical-sub">Adversaire 1</span>
+                </div>
+              </div>
+              <div class="court-tactical-spot" id="bookSpot4" onclick="document.getElementById('bookCoPlayer4').focus()" title="Cliquer pour renseigner l'adversaire 2">
+                <div class="tactical-pin empty" id="bookSpotPin4">+</div>
+                <div class="tactical-info">
+                  <span class="tactical-name" id="bookSpotName4">Place 4</span>
+                  <span class="tactical-sub">Adversaire 2</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
         
         <div style="display:flex; flex-direction:column; gap:8px">
-          <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-white); background:rgba(255,255,255,0.04); padding:6px 10px; border-radius:6px">
-            <span>🎾</span>
-            <span style="font-weight:700" id="bookPlayer1NameDisplay">Joueur 1 : Vous (Organisateur)</span>
+          <div style="display:none">
+            <span id="bookPlayer1NameDisplay">Joueur 1 : Vous (Organisateur)</span>
           </div>
 
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
             <div>
               <label class="modal-label" style="font-size:10px">Joueur 2 (Partenaire)</label>
-              <input type="text" class="login-field" id="bookCoPlayer2" placeholder="Nom ou invité..." list="clubPlayersDatalist" style="font-size:11.5px; padding:7px" />
+              <input type="text" class="login-field" id="bookCoPlayer2" placeholder="Nom ou invité..." list="clubPlayersDatalist" style="font-size:11.5px; padding:7px" oninput="updateBookingCourtTacticalSpots()" />
             </div>
             <div>
               <label class="modal-label" style="font-size:10px">Joueur 3 (Adversaire 1)</label>
-              <input type="text" class="login-field" id="bookCoPlayer3" placeholder="Nom ou invité..." list="clubPlayersDatalist" style="font-size:11.5px; padding:7px" />
+              <input type="text" class="login-field" id="bookCoPlayer3" placeholder="Nom ou invité..." list="clubPlayersDatalist" style="font-size:11.5px; padding:7px" oninput="updateBookingCourtTacticalSpots()" />
             </div>
           </div>
 
           <div>
             <label class="modal-label" style="font-size:10px">Joueur 4 (Adversaire 2)</label>
-            <input type="text" class="login-field" id="bookCoPlayer4" placeholder="Nom ou invité..." list="clubPlayersDatalist" style="font-size:11.5px; padding:7px" />
+            <input type="text" class="login-field" id="bookCoPlayer4" placeholder="Nom ou invité..." list="clubPlayersDatalist" style="font-size:11.5px; padding:7px" oninput="updateBookingCourtTacticalSpots()" />
           </div>
         </div>
 

@@ -889,8 +889,8 @@ img { display: block; max-width: 100%; }
 .play-match-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  padding: 0 20px;
+  gap: 8px;
+  padding: 0 16px;
   margin-bottom: 24px;
 }
 
@@ -898,25 +898,26 @@ img { display: block; max-width: 100%; }
   background: var(--bg-card);
   border: 1px solid var(--border-card);
   border-radius: var(--radius-lg);
-  padding: 18px 16px;
+  padding: 14px 10px;
   cursor: pointer;
   transition: all var(--ease-smooth);
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  min-height: 130px;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 112px;
   position: relative;
   overflow: hidden;
 }
 
 .action-quick-card:hover {
   border-color: var(--border-gold);
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-gold);
 }
 
 .quick-card-icon {
-  font-size: 28px;
+  font-size: 24px;
   line-height: 1;
 }
 
@@ -925,27 +926,28 @@ img { display: block; max-width: 100%; }
   align-items: flex-end;
   justify-content: space-between;
   margin-top: auto;
+  gap: 4px;
 }
 
 .quick-card-title {
   font-family: 'Outfit', sans-serif;
-  font-size: 14px;
+  font-size: 11.5px;
   font-weight: 800;
   color: var(--text-white);
-  line-height: 1.2;
+  line-height: 1.25;
   letter-spacing: -0.01em;
 }
 
 .quick-card-arrow {
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   border-radius: var(--radius-full);
   background: var(--gradient-btn);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #000;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 900;
   flex-shrink: 0;
 }
@@ -4656,6 +4658,41 @@ body.light-mode #skillsRadarSvg polygon[fill^="rgba(200"] {
   stroke-dashoffset: 565;
   transition: stroke-dashoffset 1.2s cubic-bezier(0.2, 0.9, 0.3, 1);
   filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.5));
+}
+
+/* Aiguille d'horloge et balle de padel mobile */
+#loyaltyClockNeedle {
+  transition: all 1.2s cubic-bezier(0.2, 0.9, 0.3, 1);
+  filter: drop-shadow(0 0 4px rgba(212, 175, 55, 0.7));
+}
+
+#loyaltyPadelBallMarker {
+  transition: transform 1.2s cubic-bezier(0.2, 0.9, 0.3, 1);
+  cursor: pointer;
+  filter: drop-shadow(0 0 8px rgba(223, 255, 0, 0.8));
+}
+
+.pulse-ball-glow {
+  animation: pulseBallGlow 2.5s infinite ease-in-out;
+}
+
+@keyframes pulseBallGlow {
+  0%, 100% { transform: scale(1); opacity: 0.4; }
+  50% { transform: scale(1.3); opacity: 0.85; }
+}
+
+body.light-mode .loyalty-bg-circle {
+  stroke: rgba(15, 23, 42, 0.08) !important;
+}
+body.light-mode .loyalty-center-val {
+  color: #0f172a !important;
+  text-shadow: none !important;
+}
+body.light-mode .loyalty-center-max {
+  color: #64748b !important;
+}
+body.light-mode .loyalty-clock-ticks line {
+  stroke: rgba(15, 23, 42, 0.25) !important;
 }
 
 .loyalty-center-content {

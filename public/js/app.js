@@ -1202,6 +1202,56 @@ function renderLoyaltyRing(user) {
     circleBar.style.strokeDashoffset = targetOffset.toFixed(1);
   }
 
+  // Animation Aiguille d'horloge & Balle de Padel mobile (0 à 60 pts)
+  // L'angle theta part du haut (grâce au CSS transform: rotate(-90deg) sur le SVG)
+  const theta = (points / 60) * 2 * Math.PI;
+  const cx = 110, cy = 110, R = 90;
+  
+  // Position de la balle de padel sur le pourtour du cercle
+  const ballX = (cx + R * Math.cos(theta)).toFixed(1);
+  const ballY = (cy + R * Math.sin(theta)).toFixed(1);
+
+  // Aiguille d'horloge reliant la périphérie du centre à la balle
+  const needleX1 = (cx + 40 * Math.cos(theta)).toFixed(1);
+  const needleY1 = (cy + 40 * Math.sin(theta)).toFixed(1);
+  const needleX2 = (cx + 76 * Math.cos(theta)).toFixed(1);
+  const needleY2 = (cy + 76 * Math.sin(theta)).toFixed(1);
+
+  const needle = document.getElementById('loyaltyClockNeedle');
+  if (needle) {
+    needle.setAttribute('x1', needleX1);
+    needle.setAttribute('y1', needleY1);
+    needle.setAttribute('x2', needleX2);
+    needle.setAttribute('y2', needleY2);
+  }
+
+  const ballMarker = document.getElementById('loyaltyPadelBallMarker');
+  if (ballMarker) {
+    ballMarker.setAttribute('transform', `translate(${ballX}, ${ballY})`);
+    ballMarker.setAttribute('title', `${points} pts sur 60 · Position horloge ${(points / 5).toFixed(1)}h`);
+  }
+
+  // Génération des 12 crans horaires (tous les 5 points : 0, 5, 10, ..., 55 pts)
+  const ticksContainer = document.getElementById('loyaltyClockTicks');
+  if (ticksContainer && !ticksContainer.hasChildNodes()) {
+    let ticksHtml = '';
+    const isLight = document.body.classList.contains('light-mode');
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * 2 * Math.PI;
+      const isQuarter = (i % 3 === 0); // 0, 15, 30, 45 pts
+      const rInner = isQuarter ? 77 : 81;
+      const rOuter = 88;
+      const tx1 = (cx + rInner * Math.cos(a)).toFixed(1);
+      const ty1 = (cy + rInner * Math.sin(a)).toFixed(1);
+      const tx2 = (cx + rOuter * Math.cos(a)).toFixed(1);
+      const ty2 = (cy + rOuter * Math.sin(a)).toFixed(1);
+      const stroke = isQuarter ? 'var(--gold)' : (isLight ? 'rgba(15,23,42,0.25)' : 'rgba(255,255,255,0.18)');
+      const width = isQuarter ? '2' : '1.2';
+      ticksHtml += `<line x1="${tx1}" y1="${ty1}" x2="${tx2}" y2="${ty2}" stroke="${stroke}" stroke-width="${width}" />`;
+    }
+    ticksContainer.innerHTML = ticksHtml;
+  }
+
   const maxSub = document.getElementById('loyaltyMaxSub');
   if (maxSub) {
     if (points >= 60) {
@@ -1386,7 +1436,8 @@ window.submitLoyaltyReferral = function() {
   const user = (DB.players || []).find(p => p.id === DB.currentUser?.id) || DB.currentUser;
   if (!user) return;
 
-  user.loyaltyPoints = Number(((user.loyaltyPoints || 0) + 1.5).toFixed(1));
+  const oldPts = Number(user.loyaltyPoints) || 0;
+  user.loyaltyPoints = Number((oldPts + 1.5).toFixed(1));
   user.loyaltyHistory = user.loyaltyHistory || [];
   user.loyaltyHistory.push({
     type: 'referral',
@@ -1400,6 +1451,8 @@ window.submitLoyaltyReferral = function() {
   if (idx !== -1) DB.players[idx] = { ...DB.players[idx], ...user };
   DB.currentUser = { ...DB.currentUser, ...user };
 
+  checkAndNotifyLoyaltyMilestones(user, oldPts, user.loyaltyPoints);
+
   saveDB(DB, true);
   closeModal('modal-loyalty-referral');
 
@@ -1407,6 +1460,57 @@ window.submitLoyaltyReferral = function() {
   renderProfileScreen();
   renderAdminPlayers();
 };
+
+function checkAndNotifyLoyaltyMilestones(player, oldPts, newPts) {
+  if (!player) return;
+  const oldP = Number(oldPts) || 0;
+  const newP = Number(newPts) || 0;
+  const milestones = [
+    { tier: 15, name: 'Accessoires Padel Pro (1er Palier)', icon: '🎾' },
+    { tier: 30, name: 'Tube de Balles Pro (À Mi-Chemin)', icon: '📦' },
+    { tier: 60, name: 'Raquette Carbone Pro (Graal Ultime)', icon: '🏆' }
+  ];
+
+  milestones.forEach(m => {
+    if (oldP < m.tier && newP >= m.tier) {
+      const playerName = `${player.firstName} ${player.lastName || ''}`.trim();
+      const notifId = `notif_milestone_${m.tier}_${player.id}_${Date.now()}`;
+      const notif = {
+        id: notifId,
+        userId: 'admin',
+        targetRole: 'admin',
+        type: 'loyalty_milestone',
+        tier: m.tier,
+        playerId: player.id,
+        playerName: playerName,
+        reward: m.name,
+        icon: m.icon,
+        title: `🎁 Palier Fidélité ${m.tier} pts atteint !`,
+        body: `${playerName} a atteint ${newP.toFixed(1)} points de fidélité et a débloqué : "${m.name}". Préparer sa dotation au club.`,
+        isRead: false,
+        sentAt: new Date().toISOString()
+      };
+      DB.notifications = DB.notifications || [];
+      DB.notifications.unshift(notif);
+      saveDB(DB, true);
+      if (typeof renderAdminAlerts === 'function') renderAdminAlerts();
+      if (typeof renderAdminKPIs === 'function') renderAdminKPIs();
+    }
+  });
+}
+window.checkAndNotifyLoyaltyMilestones = checkAndNotifyLoyaltyMilestones;
+
+function dismissLoyaltyAlert(notifId) {
+  const notif = (DB.notifications || []).find(n => n.id === notifId);
+  if (notif) {
+    notif.isRead = true;
+    saveDB(DB, true);
+    if (typeof renderAdminAlerts === 'function') renderAdminAlerts();
+    if (typeof renderAdminKPIs === 'function') renderAdminKPIs();
+    showToast(`Dotation "${notif.reward || 'Cadeau'}" marquée comme remise au joueur ✓`, 'success');
+  }
+}
+window.dismissLoyaltyAlert = dismissLoyaltyAlert;
 
 function updateAuthUI() {
   const user = (DB.players || []).find(p => p.id === DB.currentUser?.id) || DB.currentUser;
@@ -2083,13 +2187,16 @@ function renderAdminKPIs() {
   const revenue = todayBookings.reduce((sum, b) => sum + (b.pricePerPlayer * b.players.length), 0);
   const activePlayers = DB.players.filter(p => p.status === 'active').length;
   const alerts = checkMatchAlerts();
+  const loyaltyNotifsCount = (DB.notifications || []).filter(n => (n.userId === 'admin' || n.targetRole === 'admin') && n.type === 'loyalty_milestone' && !n.isRead).length;
+  const pendingPlayersCount = (DB.players || []).filter(p => p.status === 'pending').length;
+  const totalAlerts = alerts.length + loyaltyNotifsCount + pendingPlayersCount;
   const noShows = 0; // Phase 2
 
   document.getElementById('kpiBookingsValue').textContent = `${todayBookings.length} créneaux`;
   document.getElementById('kpiOccupancyValue').textContent = `${occupancy}%`;
   document.getElementById('kpiRevenueValue').textContent = `${revenue} DT`;
   document.getElementById('kpiPlayersValue').textContent = `${activePlayers} actifs`;
-  document.getElementById('kpiAlertsValue').textContent = alerts.length;
+  document.getElementById('kpiAlertsValue').textContent = totalAlerts;
   document.getElementById('kpiNoShowsValue').textContent = `${noShows}`;
 }
 
@@ -2378,16 +2485,66 @@ function renderAdminMatches() {
 
 function renderAdminAlerts() {
   const container = document.getElementById('adminAlertsContainer');
+  if (!container) return;
   const alerts = checkMatchAlerts();
+  const pendingPlayers = (DB.players || []).filter(p => p.status === 'pending');
 
-  const pendingPlayers = DB.players.filter(p => p.status === 'pending');
+  // 1. Notifications de palier de fidélité non lues pour l'admin
+  const loyaltyNotifs = (DB.notifications || []).filter(n =>
+    (n.userId === 'admin' || n.targetRole === 'admin') &&
+    n.type === 'loyalty_milestone' &&
+    !n.isRead
+  );
+
+  // 2. Joueurs actuels ayant franchi un palier (>= 15 pts)
+  const playersWithPalier = (DB.players || []).filter(p => (Number(p.loyaltyPoints) || 0) >= 15);
 
   let html = '';
 
-  if (alerts.length === 0 && pendingPlayers.length === 0) {
+  if (alerts.length === 0 && pendingPlayers.length === 0 && loyaltyNotifs.length === 0 && playersWithPalier.length === 0) {
     html = `<div class="empty-state"><div class="empty-state-icon">✅</div><div class="empty-state-title">Aucune alerte</div><div class="empty-state-desc">Tout est en ordre</div></div>`;
   }
 
+  // A. Notifications officielles de Paliers de Fidélité atteints
+  loyaltyNotifs.forEach(n => {
+    html += `
+    <div class="alert-item" style="border-left:4px solid var(--gold); background:rgba(212,175,55,0.08); border-radius:10px; margin-bottom:10px">
+      <span class="alert-icon" style="font-size:24px">${n.icon || '🎁'}</span>
+      <div class="alert-body">
+        <div class="alert-title" style="color:var(--gold); font-weight:800; font-size:13px">${n.title}</div>
+        <div class="alert-desc" style="color:var(--text-primary); font-size:12px; margin-top:2px">${n.body}</div>
+        <div style="font-size:10px; color:var(--text-muted); margin-top:4px">${timeAgo(n.sentAt)}</div>
+      </div>
+      <button class="alert-action-btn" onclick="dismissLoyaltyAlert('${n.id}')" style="background:var(--gold); color:#000; font-weight:800; font-size:11px; white-space:nowrap">
+        Remis au joueur ✓
+      </button>
+    </div>`;
+  });
+
+  // Si pas de notif spécifique mais des membres du club ont atteint des paliers (ex: Ahmed Horrigue 32 pts)
+  if (loyaltyNotifs.length === 0 && playersWithPalier.length > 0) {
+    playersWithPalier.forEach(p => {
+      const pts = Number(p.loyaltyPoints) || 0;
+      const tier = pts >= 60 ? 60 : (pts >= 30 ? 30 : 15);
+      const gift = tier === 60 ? 'Raquette Carbone Pro (Graal Ultime)' : (tier === 30 ? 'Tube de Balles Pro (À Mi-Chemin)' : 'Accessoires Padel Pro');
+      const icon = tier === 60 ? '🏆' : (tier === 30 ? '📦' : '🎾');
+      html += `
+      <div class="alert-item" style="border-left:4px solid var(--gold); background:rgba(212,175,55,0.08); border-radius:10px; margin-bottom:10px">
+        <span class="alert-icon" style="font-size:24px">${icon}</span>
+        <div class="alert-body">
+          <div class="alert-title" style="color:var(--gold); font-weight:800; font-size:13px">🎁 Palier ${tier} pts atteint — ${p.firstName} ${p.lastName || ''}</div>
+          <div class="alert-desc" style="color:var(--text-primary); font-size:12px; margin-top:2px">
+            Le joueur cumule <strong>${pts.toFixed(1)} points de fidélité</strong>. Dotation débloquée : <strong>${gift}</strong>.
+          </div>
+        </div>
+        <button class="alert-action-btn" onclick="openEditPlayerModal('${p.id}')" style="background:var(--gold); color:#000; font-weight:800; font-size:11px; white-space:nowrap">
+          Voir Fiche
+        </button>
+      </div>`;
+    });
+  }
+
+  // B. Alertes Matchs Incomplets
   alerts.forEach(a => {
     html += `
     <div class="alert-item critical">
@@ -2400,6 +2557,7 @@ function renderAdminAlerts() {
     </div>`;
   });
 
+  // C. Joueurs en attente d'évaluation
   if (pendingPlayers.length > 0) {
     html += `
     <div class="alert-item warning">
@@ -3482,7 +3640,8 @@ async function submitRecordMatch(e) {
       const isOffPeak = currentHour >= 8 && currentHour < 17;
       const loyaltyGain = isOffPeak ? 1.0 : 0.5;
 
-      pl.loyaltyPoints = Number(((pl.loyaltyPoints || 0) + loyaltyGain).toFixed(1));
+      const prevPoints = Number(pl.loyaltyPoints) || 0;
+      pl.loyaltyPoints = Number((prevPoints + loyaltyGain).toFixed(1));
       pl.loyaltyHistory = pl.loyaltyHistory || [];
       pl.loyaltyHistory.push({
         type: 'match',
@@ -3491,6 +3650,7 @@ async function submitRecordMatch(e) {
         slotType: isOffPeak ? 'off_peak' : 'peak',
         note: isOffPeak ? 'Match heures creuses (08h-17h) : +1.0 pt' : 'Match heures de pointe (17h-23h) : +0.5 pt'
       });
+      checkAndNotifyLoyaltyMilestones(pl, prevPoints, pl.loyaltyPoints);
 
       pl.matchHistory = pl.matchHistory || [];
       pl.matchHistory.unshift({
@@ -3591,7 +3751,9 @@ function submitEditPlayer(e) {
   p.email = document.getElementById('editPlayerEmail').value.trim();
   const lvlVal = document.getElementById('editPlayerLevel').value;
   p.level = lvlVal ? parseFloat(lvlVal) : null;
+  const oldPts = Number(p.loyaltyPoints) || 0;
   p.loyaltyPoints = parseFloat(document.getElementById('editPlayerLoyalty').value) || 0;
+  checkAndNotifyLoyaltyMilestones(p, oldPts, p.loyaltyPoints);
   p.preferredSide = document.getElementById('editPlayerSide').value;
   p.playStyle = document.getElementById('editPlayerStyle').value;
 
@@ -3940,6 +4102,41 @@ function populateClubPlayersDatalist() {
 }
 window.populateClubPlayersDatalist = populateClubPlayersDatalist;
 
+function updateBookingCourtTacticalSpots() {
+  const user = (DB.players || []).find(p => p.id === DB.currentUser?.id) || DB.currentUser;
+  const p1Name = `${user?.firstName || 'Vous'}`.trim();
+  const p1Pin = document.getElementById('bookSpotPin1');
+  const p1Label = document.getElementById('bookSpotName1');
+  if (p1Pin) {
+    const p1Init = ((user?.firstName?.[0] || 'V') + (user?.lastName?.[0] || '')).toUpperCase();
+    p1Pin.textContent = p1Init.slice(0, 2);
+  }
+  if (p1Label) p1Label.textContent = p1Name;
+
+  const updateSpot = (spotNum, inputId, defaultLabel) => {
+    const val = document.getElementById(inputId)?.value?.trim();
+    const pin = document.getElementById(`bookSpotPin${spotNum}`);
+    const nameEl = document.getElementById(`bookSpotName${spotNum}`);
+    if (!pin || !nameEl) return;
+    if (val) {
+      const parts = val.split(' ');
+      const initials = (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase();
+      pin.className = 'tactical-pin filled';
+      pin.textContent = initials.slice(0, 2);
+      nameEl.textContent = parts[0];
+    } else {
+      pin.className = 'tactical-pin empty';
+      pin.textContent = '+';
+      nameEl.textContent = defaultLabel;
+    }
+  };
+
+  updateSpot(2, 'bookCoPlayer2', 'Partenaire');
+  updateSpot(3, 'bookCoPlayer3', 'Adversaire 1');
+  updateSpot(4, 'bookCoPlayer4', 'Adversaire 2');
+}
+window.updateBookingCourtTacticalSpots = updateBookingCourtTacticalSpots;
+
 function openModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) {
@@ -3954,6 +4151,7 @@ function openModal(modalId) {
     if (nameEl) {
       nameEl.textContent = `Joueur 1 : ${user?.firstName || 'Joueur'} ${user?.lastName || ''} (Organisateur)`.trim();
     }
+    updateBookingCourtTacticalSpots();
   }
 }
 
