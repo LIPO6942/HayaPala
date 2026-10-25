@@ -322,6 +322,19 @@ const server = http.createServer(async (req, res) => {
   // REST API: CIRCLEPADEL SHARED PERSISTENCE ACROSS SESSIONS
   // ----------------------------------------------------------------
 
+  // GET /api/firebase-config - Dynamic Firebase config endpoint
+  if (method === 'GET' && pathname === '/api/firebase-config') {
+    return jsonResponse({
+      apiKey:            process.env.FIREBASE_API_KEY || "AIzaSyCY5FYBi6-aHk0SQZDLEaqdbv-GpShn9Ds",
+      authDomain:        process.env.FIREBASE_AUTH_DOMAIN || "circlepadel.firebaseapp.com",
+      projectId:         process.env.FIREBASE_PROJECT_ID || "circlepadel",
+      storageBucket:     process.env.FIREBASE_STORAGE_BUCKET || "circlepadel.firebasestorage.app",
+      messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || "1012629930406",
+      appId:             process.env.FIREBASE_APP_ID || "1:1012629930406:web:09b552389262bbd1f24f67",
+      measurementId:     process.env.FIREBASE_MEASUREMENT_ID || "G-2D0BK1Y00K"
+    });
+  }
+
   // GET /api/circlepadel/events - SSE Stream for Instant Real-Time Multi-Admin Collaborative Sync
   if (method === 'GET' && pathname === '/api/circlepadel/events') {
     res.writeHead(200, {

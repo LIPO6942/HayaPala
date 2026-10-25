@@ -189,6 +189,10 @@ window.setAdminPlayerFilter = setAdminPlayerFilter;
  * elle cible automatiquement l'adresse IP du serveur PC sur le réseau local (192.168.1.5:3000).
  */
 function getApiBaseUrl() {
+  // Sur HTTPS (Vercel, production), ne jamais appeler de ressource HTTP non sécurisée (bloqué par Mixed Content)
+  if (window.location.protocol === 'https:') {
+    return '';
+  }
   const custom = localStorage.getItem('circlepadel_server_url');
   if (custom) return custom.replace(/\/$/, '');
   const host = window.location.hostname;

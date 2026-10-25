@@ -1,10 +1,10 @@
 /* ==========================================================================
    HAYAPALA — FIREBASE CONFIG
    Projet : circlepadel · Firebase SDK v10 (CDN ESM)
+   Supporte les variables d'environnement Vercel et locales
    ========================================================================== */
 
-// Config Firebase du projet circlepadel
-export const firebaseConfig = {
+export const firebaseConfig = window.__FIREBASE_CONFIG__ || {
   apiKey:            "AIzaSyCY5FYBi6-aHk0SQZDLEaqdbv-GpShn9Ds",
   authDomain:        "circlepadel.firebaseapp.com",
   projectId:         "circlepadel",
