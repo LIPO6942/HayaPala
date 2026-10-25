@@ -287,6 +287,7 @@ const server = http.createServer(async (req, res) => {
   if (method === 'OPTIONS') {
     res.writeHead(204);
     res.end();
+    return;
   }
 
   // Parse JSON Body Helper
@@ -306,9 +307,14 @@ const server = http.createServer(async (req, res) => {
     });
   };
 
-  // Helper JSON response
+  // Helper JSON response with universal CORS for mobile and cross-origin sync
   const jsonResponse = (data, statusCode = 200) => {
-    res.writeHead(statusCode, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.writeHead(statusCode, {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With'
+    });
     res.end(JSON.stringify(data));
   };
 

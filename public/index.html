@@ -78,6 +78,9 @@
               <span class="home-club-pro-badge" onclick="switchViewMode('backoffice-dashboard')" style="display:none">
                 ⚡ Espace Gérant
               </span>
+              <button onclick="openModal('modal-sync-mobile')" style="background:rgba(200,169,110,0.15); border:1px solid rgba(200,169,110,0.4); color:var(--gold); font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; cursor:pointer" title="Lien de synchronisation multi-appareils">
+                📱 Synchroniser PC
+              </button>
             </div>
             <button class="notif-bell-btn" id="navBtnNotifs" onclick="navigateToScreen('screen-notifications')">
               🔔
@@ -772,7 +775,9 @@
           </select>
         </div>
 
-        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+          <button class="btn-table-action" onclick="openModal('modal-sync-mobile')" style="background:rgba(200,169,110,0.18); border:1px solid var(--gold); color:var(--gold); font-weight:700; padding:6px 12px">📱 Connecter Mobile</button>
+          <button class="btn-table-action" onclick="forceSyncAndClearCache()" style="padding:6px 12px" title="Forcer le rafraîchissement complet et vider le cache">🔄 Vider cache &amp; Sync</button>
           <span style="font-size:13px; color:var(--text-secondary)">Gérant : <strong style="color:var(--text-white)" id="adminManagerName">Admin</strong></span>
           <button class="btn-admin-switch-player" onclick="switchViewMode('player-app')">🎾 App Joueur</button>
           <button class="btn-reset-demo" onclick="switchViewMode('backoffice-login')">Déconnexion</button>
@@ -2144,9 +2149,41 @@
     </div>
   </div>
 
+  <!-- ── Modale : Synchronisation Smartphone ── -->
+  <div class="modal-overlay" id="modal-sync-mobile" role="dialog" aria-modal="true">
+    <div class="modal-sheet" style="max-width:480px">
+      <div class="modal-drag-indicator"></div>
+      <div class="modal-top-bar">
+        <div class="modal-title">📱 Synchroniser votre Smartphone</div>
+        <button class="modal-close-btn" onclick="closeModal('modal-sync-mobile')" aria-label="Fermer">—</button>
+      </div>
+      <div style="text-align:center; padding:12px 4px">
+        <p style="font-size:13px; color:var(--text-secondary); margin-bottom:14px; line-height:1.5">
+          Pour que votre téléphone et votre PC partagent <strong>exactement la même base de données en direct</strong> (créations, suppressions, évaluations) :
+        </p>
+        <div style="background:var(--bg-card-2); border:1px solid var(--gold); border-radius:12px; padding:14px; margin-bottom:14px">
+          <div style="font-size:11px; color:var(--text-muted); margin-bottom:6px">Adresse à ouvrir dans le navigateur de votre smartphone :</div>
+          <div style="font-size:18px; font-weight:900; color:var(--gold); user-select:all; word-break:break-all; letter-spacing:0.02em" id="mobileSyncUrl">
+            http://192.168.1.5:3000
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-bottom:14px">
+          <button class="btn-primary-action" onclick="copyMobileSyncUrl()" style="flex:1; min-width:140px; font-size:13px">📋 Copier l'adresse</button>
+          <button class="btn-primary-action" onclick="forceSyncAndClearCache()" style="flex:1; min-width:140px; font-size:13px; background:var(--bg-card); border:1px solid var(--border-gold-sm)">🔄 Forcer synchronisation</button>
+        </div>
+        <div style="background:rgba(255,255,255,0.04); border-radius:10px; padding:10px 12px; text-align:left; font-size:11px; color:var(--text-secondary); line-height:1.5">
+          <strong style="color:var(--text-white)">Procédure recommandée :</strong><br/>
+          1. Connectez votre smartphone au même réseau Wi-Fi que le PC.<br/>
+          2. Ouvrez <strong style="color:var(--gold)">http://192.168.1.5:3000</strong> dans Safari (iPhone) ou Chrome (Android).<br/>
+          3. Appuyez sur <strong>« Ajouter à l'écran d'accueil »</strong> pour installer la version connectée en direct.
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Toast notifications container ── -->
   <div class="toast-container" id="toastContainer" role="alert" aria-live="polite"></div>
 
-  <script type="module" src="./js/app.js?v=2.2.0"></script>
+  <script type="module" src="./js/app.js?v=2.3.0"></script>
 </body>
 </html>

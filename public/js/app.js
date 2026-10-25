@@ -183,6 +183,22 @@ function setAdminPlayerFilter(filter) {
 }
 window.setAdminPlayerFilter = setAdminPlayerFilter;
 
+/**
+ * Détermine dynamiquement l'URL de l'API serveur CirclePadel.
+ * Si l'application tourne en standalone, file:// ou sur smartphone,
+ * elle cible automatiquement l'adresse IP du serveur PC sur le réseau local (192.168.1.5:3000).
+ */
+function getApiBaseUrl() {
+  const custom = localStorage.getItem('circlepadel_server_url');
+  if (custom) return custom.replace(/\/$/, '');
+  const host = window.location.hostname;
+  if (window.location.protocol === 'file:' || (!host || (host !== 'localhost' && host !== '127.0.0.1' && !host.startsWith('192.168.')))) {
+    return 'http://192.168.1.5:3000';
+  }
+  return '';
+}
+window.getApiBaseUrl = getApiBaseUrl;
+
 function saveDB(data, pushToServer = true, immediate = false) {
   try {
     data._fromFirestore = true;
@@ -190,9 +206,10 @@ function saveDB(data, pushToServer = true, immediate = false) {
   } catch (e) {}
 
   if (pushToServer) {
+    const url = getApiBaseUrl() + '/api/circlepadel/db';
     if (immediate) {
       clearTimeout(_syncDebounceTimer);
-      fetch('/api/circlepadel/db', {
+      fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -201,7 +218,7 @@ function saveDB(data, pushToServer = true, immediate = false) {
       clearTimeout(_syncDebounceTimer);
       _syncDebounceTimer = setTimeout(async () => {
         try {
-          await fetch('/api/circlepadel/db', {
+          await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -216,7 +233,7 @@ let _lastCollaborativeSyncToast = 0;
 
 async function syncFromBackend(isFromRealtimeEvent = false, realtimePayload = null) {
   try {
-    const res = await fetch('/api/circlepadel/db');
+    const res = await fetch(getApiBaseUrl() + '/api/circlepadel/db');
     if (!res.ok) return;
     const remote = await res.json();
     if (remote && Array.isArray(remote.players)) {
@@ -4395,7 +4412,7 @@ function deletePlayer(playerId) {
     DB.lastAction = 'PLAYER_DELETED';
 
     // 4. Appel direct de l'API DELETE pour confirmation atomique serveur
-    fetch(`/api/circlepadel/players/${encodeURIComponent(playerId)}`, { method: 'DELETE' }).catch(() => {});
+    fetch(`${getApiBaseUrl()}/api/circlepadel/players/${encodeURIComponent(playerId)}`, { method: 'DELETE' }).catch(() => {});
 
     // 5. Propagation instantanée serveur & SSE (0ms)
     saveDB(DB, true, true);
@@ -5687,7 +5704,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function initSSE() {
       try {
         if (sse) sse.close();
-        sse = new EventSource('/api/circlepadel/events');
+        sse = new EventSource(getApiBaseUrl() + '/api/circlepadel/events');
         sse.onmessage = (evt) => {
           try {
             const payload = JSON.parse(evt.data);
@@ -5883,5 +5900,46 @@ setInterval(() => {
     }
   } catch (err) {}
 }, 30000);
+
+async function forceSyncAndClearCache() {
+  try {
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      for (const k of keys) await caches.delete(k);
+    }
+    localStorage.removeItem(DB_KEY);
+    await syncFromBackend(true);
+    renderAdminPlayers();
+    renderAdminKPIs();
+    renderAdminAuditLogs();
+    renderHomeScreen();
+    showToast('✓ Cache réinitialisé et synchronisation serveur réussie !', 'success');
+  } catch (e) {
+    showToast('Synchronisation effectuée.', 'info');
+  }
+}
+window.forceSyncAndClearCache = forceSyncAndClearCache;
+
+function copyMobileSyncUrl() {
+  const urlEl = document.getElementById('mobileSyncUrl');
+  const url = urlEl ? urlEl.textContent.trim() : 'http://192.168.1.5:3000';
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(url).then(() => {
+      showToast('✓ Adresse copiée : ' + url, 'success');
+    }).catch(() => {
+      prompt('Copiez l\'adresse ci-dessous :', url);
+    });
+  } else {
+    prompt('Copiez l\'adresse ci-dessous :', url);
+  }
+}
+window.copyMobileSyncUrl = copyMobileSyncUrl;
+
+// Enregistrement du Service Worker avec auto-update
+if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+  navigator.serviceWorker.register('./sw.js').then((reg) => {
+    reg.update().catch(() => {});
+  }).catch(() => {});
+}
 
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hayapala-pwa-v2';
+const CACHE_NAME = 'hayapala-pwa-v3';
 const ASSETS = [
   '/',
   '/index.html',
@@ -9,9 +9,6 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
-  );
   self.skipWaiting();
 });
 
@@ -25,11 +22,20 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  // Let API requests bypass the service worker cache directly
+  // Let API requests and SSE events bypass the service worker cache directly
   if (e.request.url.includes('/api/')) {
     return;
   }
+  // Network-first strategy: always fetch fresh from server, only fallback to cache if offline
   e.respondWith(
-    fetch(e.request).catch(() => caches.match(e.request))
+    fetch(e.request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200 && e.request.method === 'GET') {
+          const resClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, resClone));
+        }
+        return networkResponse;
+      })
+      .catch(() => caches.match(e.request))
   );
 });
