@@ -82,6 +82,20 @@ function calculatePadelRatingUpdate({ playerLevel, playerReliability = 50, partn
 
 const CP_DB_FILE = path.join(__dirname, 'data', 'circlepadel_db.json');
 
+// SSE Connected Clients for Real-Time Collaborative Multi-Admin Synchronization
+const sseClients = new Set();
+
+function broadcastCirclePadelEvent(eventData) {
+  const payload = `data: ${JSON.stringify(eventData)}\n\n`;
+  for (const client of sseClients) {
+    try {
+      client.write(payload);
+    } catch (err) {
+      sseClients.delete(client);
+    }
+  }
+}
+
 function getInitialCirclePadelDB() {
   return {
     appConfig: {
@@ -124,7 +138,6 @@ const server = http.createServer(async (req, res) => {
   if (method === 'OPTIONS') {
     res.writeHead(204);
     res.end();
-    return;
   }
 
   // Parse JSON Body Helper
@@ -154,6 +167,23 @@ const server = http.createServer(async (req, res) => {
   // REST API: CIRCLEPADEL SHARED PERSISTENCE ACROSS SESSIONS
   // ----------------------------------------------------------------
 
+  // GET /api/circlepadel/events - SSE Stream for Instant Real-Time Multi-Admin Collaborative Sync
+  if (method === 'GET' && pathname === '/api/circlepadel/events') {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*'
+    });
+    res.write(`data: ${JSON.stringify({ type: 'connected', timestamp: Date.now() })}\n\n`);
+    sseClients.add(res);
+
+    req.on('close', () => {
+      sseClients.delete(res);
+    });
+    return;
+  }
+
   // GET /api/circlepadel/db - Shared persistent database
   if (method === 'GET' && pathname === '/api/circlepadel/db') {
     try {
@@ -175,13 +205,67 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // POST /api/circlepadel/db - Update and persist shared database
+  // POST /api/circlepadel/db - Update and persist shared database with intelligent collaborative merge
   if (method === 'POST' && pathname === '/api/circlepadel/db') {
     try {
       const body = await parseJsonBody();
       if (body && typeof body === 'object') {
-        fs.writeFileSync(CP_DB_FILE, JSON.stringify(body, null, 2), 'utf-8');
-        return jsonResponse({ success: true, timestamp: Date.now() });
+        let existing = getInitialCirclePadelDB();
+        if (fs.existsSync(CP_DB_FILE)) {
+          try {
+            existing = JSON.parse(fs.readFileSync(CP_DB_FILE, 'utf-8'));
+          } catch (e) {}
+        }
+
+        // 1. Merge Players (by ID, ensuring no newly created player is ever dropped)
+        const playerMap = new Map();
+        (existing.players || []).forEach(p => {
+          if (p && p.id) playerMap.set(p.id, p);
+        });
+        (body.players || []).forEach(p => {
+          if (p && p.id) {
+            const prev = playerMap.get(p.id);
+            playerMap.set(p.id, prev ? { ...prev, ...p } : p);
+          }
+        });
+        const mergedPlayers = Array.from(playerMap.values());
+
+        // 2. Merge Bookings
+        const bookingMap = new Map();
+        (existing.bookings || []).forEach(b => {
+          if (b && b.id) bookingMap.set(b.id, b);
+        });
+        (body.bookings || []).forEach(b => {
+          if (b && b.id) {
+            const prev = bookingMap.get(b.id);
+            bookingMap.set(b.id, prev ? { ...prev, ...b } : b);
+          }
+        });
+        const mergedBookings = Array.from(bookingMap.values());
+
+        const mergedDB = {
+          ...existing,
+          ...body,
+          players: mergedPlayers,
+          bookings: mergedBookings,
+          updatedAt: new Date().toISOString()
+        };
+
+        fs.writeFileSync(CP_DB_FILE, JSON.stringify(mergedDB, null, 2), 'utf-8');
+
+        // Broadcast real-time event to all connected admin and player sessions immediately
+        broadcastCirclePadelEvent({
+          type: 'db_updated',
+          source: body.clientSource || 'admin',
+          timestamp: Date.now(),
+          playersCount: mergedPlayers.length
+        });
+
+        return jsonResponse({
+          success: true,
+          timestamp: Date.now(),
+          playersCount: mergedPlayers.length
+        });
       }
       return jsonResponse({ success: false, error: 'Invalid payload' }, 400);
     } catch (err) {

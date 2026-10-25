@@ -293,8 +293,8 @@
           <!-- FIFA ULTIMATE TEAM (FUT) PADEL CARD (CIRCLE PADEL GREEN EDITION) -->
           <div class="fut-card-container">
             <div class="fut-card green-edition" id="futPlayerCard">
-              <!-- Image de fond IA haute définition : Cercle Padel, verdure, tapis vert et joueur athlétique -->
-              <img src="./images/circlepadel_green_card.jpg" alt="CirclePadel FUT Card" class="fut-card-base-img" />
+              <!-- Image de fond IA haute définition : Homme ou Femme selon le profil du joueur -->
+              <img id="futCardBaseImg" src="./images/circlepadel_green_card.jpg" alt="CirclePadel FUT Card" class="fut-card-base-img" />
 
               <!-- Overlay dynamique interactif avec les données réelles du joueur -->
               <div class="fut-card-overlay-content">
@@ -314,8 +314,11 @@
                   <!-- Ligne 1 : OVR, Position, Drapeau Tunisie & Fiabilité -->
                   <div class="fut-stats-header-row">
                     <div class="fut-stat-chip">
-                      <span class="fut-chip-val" id="futCardRating">6.0</span>
-                      <span class="fut-chip-lbl">NOTE/10</span>
+                      <div style="display:flex; align-items:center; justify-content:center; gap:2px">
+                        <span class="fut-chip-val" id="futCardRating">6.00</span>
+                        <span class="fut-trend-badge" id="futCardTrend"></span>
+                      </div>
+                      <span class="fut-chip-lbl">RATING/10</span>
                     </div>
                     <div class="fut-stat-chip">
                       <span class="fut-chip-val" id="futCardPos">DRT</span>
@@ -390,8 +393,18 @@
                 <div>Matchs joués : <strong id="statMatchesPlayed" style="color:var(--gold)">0</strong></div>
                 <div>Fiabilité pairs : <strong id="statReliability" style="color:var(--gold)">50%</strong></div>
               </div>
+              <!-- Jauge de Fiabilité Glicko-2 dynamique -->
+              <div class="reliability-gauge-container">
+                <div class="reliability-gauge-header">
+                  <span style="color:var(--text-secondary); font-size:11px">Indice de Fiabilité (Elo/Glicko) :</span>
+                  <span id="profileReliabilityPct" style="color:var(--gold); font-weight:800; font-family:'Outfit',sans-serif">50.0%</span>
+                </div>
+                <div class="reliability-gauge-track">
+                  <div class="reliability-gauge-fill" id="profileReliabilityFill" style="width:50%"></div>
+                </div>
+              </div>
               <div id="profileReliabilityDesc" style="font-size:11px; color:var(--text-muted); margin-top:6px; line-height:1.35">
-                Niveau initial coach. Se consolide lors des confrontations avec des pairs de même niveau.
+                Niveau étalonné par le coach. Converge vers 99% après chaque match officiel disputé.
               </div>
               <!-- Hidden compatibility elements required by legacy queries -->
               <div style="display:none">
@@ -406,6 +419,79 @@
                 <span id="profilePeerConfrontationsBadge"></span>
               </div>
             </div>
+          </div>
+
+          <!-- CERCLE DE FIDÉLITÉ CIRCLEPADEL (THE LOYALTY RING) -->
+          <div class="loyalty-ring-card" id="loyaltyRingCard">
+            <div class="loyalty-ring-header">
+              <div class="loyalty-ring-title">
+                <span>🎾</span> CERCLE DE FIDÉLITÉ
+              </div>
+              <span class="info-badge green" id="loyaltyTierBadge" style="font-size:10px; font-weight:800">MEMBRE ACTIF</span>
+            </div>
+
+            <div class="loyalty-stage-wrap">
+              <svg class="loyalty-svg-ring" viewBox="0 0 220 220">
+                <defs>
+                  <linearGradient id="loyaltyGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#2ECC71" />
+                    <stop offset="50%" stop-color="#D4AF37" />
+                    <stop offset="100%" stop-color="#F1C40F" />
+                  </linearGradient>
+                </defs>
+                <!-- Anneau de trajectoire sombre -->
+                <circle class="loyalty-bg-circle" cx="110" cy="110" r="90" />
+                <!-- Anneau de progression illuminé (circonférence = 2 * PI * 90 ~= 565.48) -->
+                <circle class="loyalty-progress-circle" id="loyaltyCircleBar" cx="110" cy="110" r="90" stroke-dasharray="565" stroke-dashoffset="565" />
+              </svg>
+              <div class="loyalty-center-content">
+                <div class="loyalty-center-val" id="loyaltyPointsVal">0.0</div>
+                <div class="loyalty-center-sub">PTS FIDÉLITÉ</div>
+                <div class="loyalty-center-max" id="loyaltyMaxSub">SUR 60 PTS</div>
+              </div>
+            </div>
+
+            <!-- Jalons Récompenses (Dotations aux étapes & à mi-chemin) -->
+            <div class="loyalty-milestones-row">
+              <div class="loyalty-milestone-item" id="milestone15" onclick="checkMilestoneReward(15)">
+                <div class="loyalty-milestone-icon">🎾</div>
+                <div class="loyalty-milestone-pts">15 PTS</div>
+                <div class="loyalty-milestone-label">Accessoires Padel</div>
+                <div class="loyalty-milestone-subtag">1er Palier</div>
+                <div class="loyalty-milestone-status" id="milestoneStatus15" style="font-size:9px; color:var(--text-muted); margin-top:2px">Verrouillé</div>
+              </div>
+              <div class="loyalty-milestone-item midway" id="milestone30" onclick="checkMilestoneReward(30)">
+                <span class="milestone-midway-tag">À MI-CHEMIN ✨</span>
+                <div class="loyalty-milestone-icon">📦</div>
+                <div class="loyalty-milestone-pts">30 PTS</div>
+                <div class="loyalty-milestone-label">Tube Balles Pro</div>
+                <div class="loyalty-milestone-status" id="milestoneStatus30" style="font-size:9px; color:var(--text-muted); margin-top:2px">Verrouillé</div>
+              </div>
+              <div class="loyalty-milestone-item" id="milestone60" onclick="checkMilestoneReward(60)">
+                <div class="loyalty-milestone-icon">🏆</div>
+                <div class="loyalty-milestone-pts">60 PTS</div>
+                <div class="loyalty-milestone-label">Raquette Carbone</div>
+                <div class="loyalty-milestone-subtag">Graal Ultime</div>
+                <div class="loyalty-milestone-status" id="milestoneStatus60" style="font-size:9px; color:var(--text-muted); margin-top:2px">Objectif Final</div>
+              </div>
+            </div>
+
+            <!-- Sous-titre officiel élégant sans dévoiler les formules de points -->
+            <div style="text-align:center; font-size:11px; color:var(--text-muted); margin:4px 0 12px; line-height:1.4">
+              🎁 <em>Vos dotations se débloquent au fil de votre jeu dans le club.</em>
+            </div>
+
+            <!-- Bouton Réclamer Récompense -->
+            <button type="button" class="loyalty-claim-btn disabled" id="btnClaimLoyaltyReward" onclick="triggerLoyaltyClaimModal()">
+              <span>🎁</span> <span id="btnClaimLoyaltyText">Aucun cadeau débloqué</span>
+            </button>
+          </div>
+
+          <!-- Bouton Déclarer un match pour le joueur -->
+          <div style="padding:0 20px; margin-top:16px">
+            <button type="button" class="btn-primary-action" onclick="openRecordMatchModal('player')" style="width:100%; background:linear-gradient(135deg, rgba(212,175,55,0.22), rgba(46,204,113,0.18)); border:1.5px solid var(--gold); font-weight:800; border-radius:12px; padding:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px">
+              <span>⚡</span> Déclarer le Score d'un Match (Rating Elo)
+            </button>
           </div>
 
           <!-- Radar compétences -->
@@ -444,7 +530,7 @@
           <!-- Historique matchs -->
           <div class="section-title-tag" style="margin-top:20px">
             <span class="gold-bullet"></span>
-            <span>Historique des matchs</span>
+            <span>Historique des matchs (Rating Engine)</span>
           </div>
 
           <div class="match-history-list" id="profileHistoryContainer">
@@ -817,9 +903,11 @@
             </div>
           </div>
 
-          <!-- Filtres statut -->
+          <!-- Filtres statut & genre -->
           <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px">
             <button class="filter-chip active" data-player-filter="all">Tous</button>
+            <button class="filter-chip" data-player-filter="male">👨 Hommes</button>
+            <button class="filter-chip" data-player-filter="female">👩 Femmes</button>
             <button class="filter-chip" data-player-filter="active">✔ Actifs (validés)</button>
             <button class="filter-chip" data-player-filter="pending">⏳ En attente de validation</button>
             <button class="filter-chip" data-player-filter="suspended">⛔ Suspendus</button>
@@ -830,6 +918,7 @@
               <thead>
                 <tr>
                   <th>Joueur</th>
+                  <th>Genre</th>
                   <th>Téléphone</th>
                   <th>Niveau officiel</th>
                   <th>Côté / Style</th>
@@ -852,12 +941,17 @@
         <div class="admin-panel-container">
           <div class="panel-header-row">
             <div>
-              <h2 class="panel-title">Supervision des matchs ouverts</h2>
-              <p class="panel-subtitle">Suivi en temps réel des places disponibles et des joueurs inscrits.</p>
+              <h2 class="panel-title">Supervision des matchs &amp; Feuilles de Match</h2>
+              <p class="panel-subtitle">Homologation des scores avec calcul Elo / Glicko-2 instantané pour les 4 joueurs.</p>
             </div>
-            <button class="btn-new-admin-booking" id="btnAdminCreateOpenMatch" onclick="openModal('modal-admin-create-slot')">
-              <span>+</span> Créer un match ouvert
-            </button>
+            <div style="display:flex; gap:10px; flex-wrap:wrap">
+              <button type="button" class="btn-primary-action" id="btnAdminRecordMatchScore" onclick="openRecordMatchModal('admin')" style="background:linear-gradient(135deg, #d4af37, #b8860b); color:#000; font-weight:800; padding:10px 18px; border-radius:10px; border:none; cursor:pointer; display:flex; align-items:center; gap:8px">
+                <span>🏆</span> Enregistrer une Feuille de Match
+              </button>
+              <button type="button" class="btn-new-admin-booking" id="btnAdminCreateOpenMatch" onclick="openModal('modal-admin-create-slot')">
+                <span>+</span> Créer un match ouvert
+              </button>
+            </div>
           </div>
           <div id="adminMatchesListContainer" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px">
             <!-- Peuplé par JS -->
@@ -1237,13 +1331,20 @@
           <input type="email" class="login-field" id="regPlayerEmail" placeholder="joueur@email.com" />
         </div>
         <div class="modal-field-group">
+          <label class="modal-label">Genre</label>
+          <select class="login-field" id="regPlayerGender">
+            <option value="male">👨 Homme</option>
+            <option value="female">👩 Femme</option>
+          </select>
+        </div>
+        <div class="modal-field-group">
           <label class="modal-label">Côté dominant</label>
           <select class="login-field" id="regPlayerSide">
             <option value="right">Droitier</option>
             <option value="left">Gaucher</option>
           </select>
         </div>
-        <div class="modal-field-group">
+        <div class="modal-field-group" style="grid-column:1/-1">
           <label class="modal-label">Style de jeu</label>
           <select class="login-field" id="regPlayerStyle">
             <option value="offensive">Offensif</option>
@@ -1351,16 +1452,25 @@
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
           <div class="modal-field-group">
             <label class="modal-label">Prénom *</label>
-            <input type="text" class="login-field" id="authRegFirstName" placeholder="Ex: Karim" required />
+            <input type="text" class="login-field" id="authRegFirstName" placeholder="Ex: Karim ou Mouna" required />
           </div>
           <div class="modal-field-group">
             <label class="modal-label">Nom</label>
             <input type="text" class="login-field" id="authRegLastName" placeholder="Ex: Benali" />
           </div>
         </div>
-        <div class="modal-field-group">
-          <label class="modal-label">Numéro de téléphone (WhatsApp)</label>
-          <input type="tel" class="login-field" id="authRegPhone" placeholder="+216 20 123 456" />
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+          <div class="modal-field-group">
+            <label class="modal-label">Civilité / Genre</label>
+            <select class="login-field" id="authRegGender">
+              <option value="male">Homme 🎾</option>
+              <option value="female">Femme 🎾</option>
+            </select>
+          </div>
+          <div class="modal-field-group">
+            <label class="modal-label">Numéro de téléphone</label>
+            <input type="tel" class="login-field" id="authRegPhone" placeholder="+216 20 123 456" />
+          </div>
         </div>
         <div class="modal-field-group">
           <label class="modal-label">Email (optionnel)</label>
@@ -1414,6 +1524,123 @@
           Fermer
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- ── Modale : Enregistrement Feuille de Match (Rating Engine Elo / Glicko-2) ── -->
+  <div class="modal-overlay" id="modal-record-match" role="dialog" aria-modal="true">
+    <div class="modal-sheet" style="max-width:580px">
+      <div class="modal-drag-indicator"></div>
+      <div class="modal-top-bar">
+        <div>
+          <div class="modal-title" style="display:flex; align-items:center; gap:8px">
+            <span>🏆 Feuille de Match</span>
+            <span class="info-badge gold" id="matchSheetRoleBadge" style="font-size:10px">OFFICIEL CLUB</span>
+          </div>
+          <div style="font-size:11px; color:var(--text-secondary); margin-top:2px">Calcul dynamique Elo/Glicko-2 (Échelle 1.00 à 10.00)</div>
+        </div>
+        <button class="modal-close-btn" onclick="closeModal('modal-record-match')" aria-label="Fermer">✕</button>
+      </div>
+
+      <form id="formRecordMatch" onsubmit="submitRecordMatch(event)">
+        <!-- ÉQUIPE 1 -->
+        <div class="match-sheet-team-box">
+          <div class="match-sheet-team-title" style="color:#2ecc71">
+            <span>🎾 Équipe 1 (Vainqueur ou Réf.)</span>
+            <span id="team1AverageBadge" style="color:var(--text-white); font-weight:700; font-size:11px">Moyenne : 5.00/10</span>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+            <div class="modal-field-group">
+              <label class="modal-label" style="font-size:11px">Joueur 1 (Équipe 1)</label>
+              <select class="login-field" id="matchTeam1Player1" onchange="updateMatchSimulationPreview()" required>
+                <!-- Peuplé par JS -->
+              </select>
+            </div>
+            <div class="modal-field-group">
+              <label class="modal-label" style="font-size:11px">Joueur 2 (Partenaire)</label>
+              <select class="login-field" id="matchTeam1Player2" onchange="updateMatchSimulationPreview()" required>
+                <!-- Peuplé par JS -->
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- ÉQUIPE 2 -->
+        <div class="match-sheet-team-box">
+          <div class="match-sheet-team-title" style="color:#e67e22">
+            <span>🎾 Équipe 2 (Adversaires)</span>
+            <span id="team2AverageBadge" style="color:var(--text-white); font-weight:700; font-size:11px">Moyenne : 5.00/10</span>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+            <div class="modal-field-group">
+              <label class="modal-label" style="font-size:11px">Joueur 1 (Équipe 2)</label>
+              <select class="login-field" id="matchTeam2Player1" onchange="updateMatchSimulationPreview()" required>
+                <!-- Peuplé par JS -->
+              </select>
+            </div>
+            <div class="modal-field-group">
+              <label class="modal-label" style="font-size:11px">Joueur 2 (Équipe 2)</label>
+              <select class="login-field" id="matchTeam2Player2" onchange="updateMatchSimulationPreview()" required>
+                <!-- Peuplé par JS -->
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- RÉSULTAT EN SETS (Pour Équipe 1) -->
+        <div class="modal-field-group" style="margin-top:14px">
+          <div style="display:flex; justify-content:space-between; align-items:center">
+            <label class="modal-label" style="font-weight:800; color:var(--text-white)">Résultat de l'Équipe 1 (en Sets)</label>
+            <span id="matchScoreLabel" style="font-size:12px; font-weight:800; color:var(--gold)">2 - 1 (Victoire disputée)</span>
+          </div>
+          <div class="match-score-sets-grid">
+            <button type="button" class="match-score-set-btn" data-sets="2-0" onclick="setMatchScoreSets(2, 0)">
+              2 - 0
+              <div style="font-size:9px; font-weight:500; color:var(--text-muted); margin-top:2px">Nette</div>
+            </button>
+            <button type="button" class="match-score-set-btn active" data-sets="2-1" onclick="setMatchScoreSets(2, 1)">
+              2 - 1
+              <div style="font-size:9px; font-weight:500; color:var(--text-muted); margin-top:2px">Disputée</div>
+            </button>
+            <button type="button" class="match-score-set-btn" data-sets="1-2" onclick="setMatchScoreSets(1, 2)">
+              1 - 2
+              <div style="font-size:9px; font-weight:500; color:var(--text-muted); margin-top:2px">Accrochée</div>
+            </button>
+            <button type="button" class="match-score-set-btn" data-sets="0-2" onclick="setMatchScoreSets(0, 2)">
+              0 - 2
+              <div style="font-size:9px; font-weight:500; color:var(--text-muted); margin-top:2px">Nette</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Détail score des jeux (optionnel) -->
+        <div class="modal-field-group">
+          <label class="modal-label" style="font-size:11px">Score détaillé des jeux (optionnel)</label>
+          <input type="text" class="login-field" id="matchScoreGamesDetail" placeholder="Ex: 6-4, 3-6, 7-5" />
+        </div>
+
+        <!-- APERÇU EN DIRECT DU CALCUL ELO / GLICKO -->
+        <div style="background:rgba(212,175,55,0.08); border:1px solid rgba(212,175,55,0.35); border-radius:10px; padding:12px 14px; margin:14px 0">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+            <span style="font-size:11px; font-weight:800; color:var(--gold); text-transform:uppercase">📊 Simulation des Niveaux (Glicko-2)</span>
+            <span id="matchWinProbBadge" style="font-size:11px; color:var(--text-white); font-weight:700">Probabilité Éq 1 : 50.0%</span>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:11.5px">
+            <div>
+              <div style="color:var(--text-secondary); margin-bottom:2px">Équipe 1 :</div>
+              <div id="matchDeltaTeam1Preview" style="font-weight:700; color:#2ecc71">+0.14 pt / joueur</div>
+            </div>
+            <div>
+              <div style="color:var(--text-secondary); margin-bottom:2px">Équipe 2 :</div>
+              <div id="matchDeltaTeam2Preview" style="font-weight:700; color:#ff6b6b">-0.14 pt / joueur</div>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary-action" id="btnSubmitRecordMatch" style="margin-top:6px; background:linear-gradient(135deg, #2ecc71, #27ae60); color:#fff; font-weight:800">
+          ✓ Homologuer le Match &amp; Mettre à Jour les Niveaux 🎾
+        </button>
+      </form>
     </div>
   </div>
 
@@ -1474,6 +1701,65 @@
         <div class="celebration-progress-fill" id="celebrationProgressFill"></div>
       </div>
       <div class="celebration-redirect-hint">Chargement de votre profil officiel en direct...</div>
+    </div>
+  </div>
+
+  <!-- ── Modale : Réclamation de Cadeau Fidélité (Avertissement de réinitialisation) ── -->
+  <div class="modal-overlay" id="modal-loyalty-claim" role="dialog" aria-modal="true" style="display:none">
+    <div class="modal-sheet" style="max-width:390px; text-align:center">
+      <div class="modal-drag-indicator"></div>
+      <div class="modal-top-bar" style="justify-content:center; position:relative">
+        <div class="modal-title" style="color:var(--gold); font-size:16px">🎁 Récupérer votre Cadeau</div>
+        <button class="modal-close-btn" onclick="closeModal('modal-loyalty-claim')" aria-label="Fermer" style="position:absolute; right:0">—</button>
+      </div>
+      <div id="loyaltyClaimGiftIcon" style="font-size:52px; margin:16px 0 6px">🎾</div>
+      <div id="loyaltyClaimGiftTitle" style="font-family:'Outfit',sans-serif; font-size:18px; font-weight:900; color:#fff">Accessoires Padel Pro</div>
+      <div id="loyaltyClaimGiftPts" style="color:var(--gold); font-size:13px; font-weight:700; margin-bottom:14px">Palier 15 points atteint</div>
+
+      <div style="background:rgba(231,76,60,0.12); border:1.5px solid rgba(231,76,60,0.4); border-radius:12px; padding:14px; font-size:12px; color:#ff7675; text-align:left; line-height:1.5; margin-bottom:16px">
+        <strong style="color:#ff5252">⚠️ ATTENTION : RÈGLE DU CERCLE DE FIDÉLITÉ</strong><br/>
+        Si vous récupérez ce cadeau dès maintenant, votre cercle de fidélité sera <strong>immédiatement réinitialisé à 0 pt</strong>.<br/><br/>
+        💡 <em>Conseil :</em> Si vous patientez sans réclamer, vous pourrez atteindre la <strong>Raquette Carbone Pro (60 pts)</strong> !
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:10px">
+        <button class="btn-primary-action" id="btnConfirmLoyaltyClaim" onclick="executeClaimLoyaltyReward()" style="background:linear-gradient(135deg, #e74c3c, #c0392b); border:none; padding:12px">
+          Oui, récupérer mon cadeau et réinitialiser à 0 pt
+        </button>
+        <button type="button" class="btn-table-action" onclick="closeModal('modal-loyalty-claim')" style="padding:10px; font-size:13px; background:rgba(255,255,255,0.06)">
+          Je préfère patienter et viser le palier supérieur
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modale : Parrainage Formation / Académie (+1.5 pt) ── -->
+  <div class="modal-overlay" id="modal-loyalty-referral" role="dialog" aria-modal="true" style="display:none">
+    <div class="modal-sheet" style="max-width:390px">
+      <div class="modal-drag-indicator"></div>
+      <div class="modal-top-bar">
+        <div class="modal-title">🌟 Parrainage Académie Junior / Proche</div>
+        <button class="modal-close-btn" onclick="closeModal('modal-loyalty-referral')" aria-label="Fermer">—</button>
+      </div>
+      <div style="font-size:12px; color:var(--text-secondary); margin-bottom:14px; line-height:1.5; background:rgba(46,204,113,0.08); border:1px solid rgba(46,204,113,0.25); border-radius:10px; padding:12px">
+        Inscrivez votre enfant ou un proche à l'académie CirclePadel.
+        Vous recevrez immédiatement <strong style="color:var(--gold); font-size:13px">+1.5 pt de fidélité</strong> sur votre cercle officiel !
+      </div>
+      <div class="modal-field-group">
+        <label class="modal-label">Prénom & Nom de l'enfant / proche</label>
+        <input type="text" class="login-field" id="referralPersonName" placeholder="Ex: Youssef Jlassi (Junior)" />
+      </div>
+      <div class="modal-field-group">
+        <label class="modal-label">Formule choisie</label>
+        <select class="login-field" id="referralProgram">
+          <option value="junior_academy">École de Padel Junior (Trimestre)</option>
+          <option value="coaching_individual">Pack Coaching Individuel (5 séances)</option>
+          <option value="stage_vacances">Stage Intensif Padel Vacances</option>
+        </select>
+      </div>
+      <button class="btn-primary-action" id="btnConfirmReferral" onclick="submitLoyaltyReferral()" style="margin-top:12px; padding:12px">
+        Valider le parrainage (+1.5 pt fidélité)
+      </button>
     </div>
   </div>
 

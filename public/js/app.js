@@ -164,13 +164,18 @@ function saveDB(data, pushToServer = true) {
   }
 }
 
-async function syncFromBackend() {
+let _lastCollaborativeSyncToast = 0;
+
+async function syncFromBackend(isFromRealtimeEvent = false) {
   try {
     const res = await fetch('/api/circlepadel/db');
     if (!res.ok) return;
     const remote = await res.json();
     if (remote && Array.isArray(remote.players)) {
+      const prevCount = (DB.players || []).length;
       DB.players = mergePlayersLists(DB.players, remote.players);
+      const newCount = DB.players.length;
+
       if (Array.isArray(remote.courts) && remote.courts.length) DB.courts = remote.courts;
       if (Array.isArray(remote.bookings)) DB.bookings = mergeBookingsLists(DB.bookings, remote.bookings);
       if (remote.appConfig) DB.appConfig = { ...DEFAULT_CONFIG, ...remote.appConfig };
@@ -193,6 +198,14 @@ async function syncFromBackend() {
       renderAdminTimetable();
       renderHomeScreen();
       renderMatchesList();
+      renderProfileScreen();
+
+      // Notification collaborative si un nouveau joueur a été créé par un autre compte admin
+      if (newCount > prevCount && prevCount > 0 && (Date.now() - _lastCollaborativeSyncToast > 3500)) {
+        _lastCollaborativeSyncToast = Date.now();
+        const latestPlayer = DB.players[DB.players.length - 1];
+        showToast(`👥 App collaborative : ${latestPlayer?.firstName || 'Nouveau membre'} synchronisé(e) en direct ✓`, 'info');
+      }
     }
   } catch (e) {}
 }
@@ -1020,14 +1033,43 @@ function renderProfileScreen() {
   renderProfileHistory(user);
 
   // ── Populer la Carte FIFA Padel Ultimate Team ──
+  // Sélection dynamique photo Femme / Homme
+  const isFemale = (user.gender === 'female') || /^(mouna|mariem|meriem|sara|sarah|ines|yasmine|nour|lina|amina|selma|rim|leila|fatma|khadija|asma|emna|chaima|siwar)/i.test((user.firstName || '').trim());
+  const futCardBaseImg = document.getElementById('futCardBaseImg');
+  if (futCardBaseImg) {
+    futCardBaseImg.src = isFemale ? './images/circlepadel_green_card_woman.jpg' : './images/circlepadel_green_card.jpg';
+  }
+
+  // Niveau précis à 2 décimales (Format Rating Engine)
   const futRating = document.getElementById('futCardRating');
   if (futRating) {
     if (user.level != null) {
-      futRating.textContent = (user.level % 1 === 0 ? `${user.level}.0` : user.level.toFixed(1));
+      futRating.textContent = Number(user.level).toFixed(2);
     } else if (user.weightedScore != null) {
-      futRating.textContent = user.weightedScore.toFixed(1);
+      futRating.textContent = Number(user.weightedScore).toFixed(2);
     } else {
       futRating.textContent = '--';
+    }
+  }
+
+  // Indicateur de tendance / Forme récente
+  const futTrend = document.getElementById('futCardTrend');
+  if (futTrend) {
+    const delta = typeof user.lastDelta === 'number' ? user.lastDelta : null;
+    if (delta !== null && delta !== 0) {
+      if (delta > 0) {
+        futTrend.className = 'fut-trend-badge up';
+        futTrend.textContent = `▲ +${delta.toFixed(2)}`;
+        futTrend.style.display = 'inline-flex';
+      } else {
+        futTrend.className = 'fut-trend-badge down';
+        futTrend.textContent = `▼ ${delta.toFixed(2)}`;
+        futTrend.style.display = 'inline-flex';
+      }
+    } else {
+      futTrend.className = 'fut-trend-badge neutral';
+      futTrend.textContent = '● STABLE';
+      futTrend.style.display = 'inline-flex';
     }
   }
 
@@ -1058,9 +1100,9 @@ function renderProfileScreen() {
       futVerified.style.background = 'rgba(46, 204, 113, 0.2)';
       futVerified.style.borderColor = 'rgba(46, 204, 113, 0.6)';
       futVerified.style.color = '#2ecc71';
-      futVerifiedText.textContent = `✓ CERTIFIÉ COACH & CLUB · NIV ${user.level}/10`;
+      futVerifiedText.textContent = `✓ CERTIFIÉ COACH & CLUB · NIV ${Number(user.level).toFixed(2)}/10`;
     } else {
-      const selfLvl = (user.selfEstimatedLevel != null ? Number(user.selfEstimatedLevel).toFixed(1) : (user.level != null ? Number(user.level).toFixed(1) : '5.0'));
+      const selfLvl = (user.selfEstimatedLevel != null ? Number(user.selfEstimatedLevel).toFixed(2) : (user.level != null ? Number(user.level).toFixed(2) : '5.00'));
       futVerified.style.display = 'block';
       futVerified.style.background = 'rgba(243, 156, 18, 0.2)';
       futVerified.style.borderColor = 'rgba(243, 156, 18, 0.6)';
@@ -1096,11 +1138,251 @@ function renderProfileScreen() {
   const futMen = document.getElementById('futStatMen'); if (futMen) futMen.textContent = menVal;
 
   const futRel = document.getElementById('futCardReliability');
-  if (futRel) futRel.textContent = `${user.reliabilityScore || 50}%`;
+  const relScore = typeof user.reliabilityScore === 'number' ? user.reliabilityScore : 50.0;
+  if (futRel) futRel.textContent = `${Math.round(relScore)}%`;
+
+  const relPctEl = document.getElementById('profileReliabilityPct');
+  const relFillEl = document.getElementById('profileReliabilityFill');
+  if (relPctEl) relPctEl.textContent = `${relScore.toFixed(1)}%`;
+  if (relFillEl) relFillEl.style.width = `${Math.min(100, Math.max(5, relScore))}%`;
 
   const futLvlNum = document.getElementById('futCardLevelNum');
-  if (futLvlNum) futLvlNum.textContent = (user.level != null ? user.level : '?');
+  if (futLvlNum) futLvlNum.textContent = (user.level != null ? Number(user.level).toFixed(2) : '?');
+
+  // ── CERCLE DE FIDÉLITÉ CIRCLEPADEL (THE LOYALTY RING) ──
+  renderLoyaltyRing(user);
 }
+
+/**
+ * Met à jour dynamiquement l'affichage du Cercle de Fidélité
+ * - Progression circulaire SVG (60 pts max)
+ * - Gains : 1.0 pt (08h-17h), 0.5 pt (17h-23h), 1.5 pt (parrainage académie)
+ * - Réinitialisation à 0 si réclamation anticipée
+ */
+function renderLoyaltyRing(user) {
+  const loyaltyCard = document.getElementById('loyaltyRingCard');
+  if (!loyaltyCard) return;
+
+  const rawPts = typeof user.loyaltyPoints === 'number' ? user.loyaltyPoints : (user.id === 'usr_ahmed' ? 32.0 : (user.id === 'test_player_1' ? 14.5 : (user.id === 'usr_mariem' ? 8.0 : 4.5)));
+  const points = Math.max(0, Math.min(60, Number(rawPts.toFixed(1))));
+
+  const valEl = document.getElementById('loyaltyPointsVal');
+  if (valEl) valEl.textContent = points.toFixed(1);
+
+  // SVG Circular progress : r=90 => circumference = 2 * PI * 90 = 565.48
+  const circleBar = document.getElementById('loyaltyCircleBar');
+  if (circleBar) {
+    const maxOffset = 565;
+    const progressRatio = points / 60;
+    const targetOffset = Math.max(0, maxOffset - (progressRatio * maxOffset));
+    circleBar.style.strokeDashoffset = targetOffset.toFixed(1);
+  }
+
+  const maxSub = document.getElementById('loyaltyMaxSub');
+  if (maxSub) {
+    if (points >= 60) {
+      maxSub.textContent = '🏆 GRAAL DÉBLOQUÉ (60 PTS)';
+    } else if (points >= 30) {
+      maxSub.textContent = '⭐ MI-CHEMIN FRANCHI · OBJECTIF 60 PTS';
+    } else if (points >= 15) {
+      maxSub.textContent = 'PROCHAIN CADEAU : MI-CHEMIN (30 PTS)';
+    } else {
+      maxSub.textContent = 'PROCHAIN CADEAU : 15 PTS';
+    }
+  }
+
+  // Palier 15 : Accessoires Padel
+  const m15 = document.getElementById('milestone15');
+  const s15 = document.getElementById('milestoneStatus15');
+  if (m15 && s15) {
+    if (points >= 15) {
+      m15.classList.add('unlocked');
+      s15.textContent = '✨ Prêt à récupérer';
+      s15.style.color = '#2ecc71';
+    } else {
+      m15.classList.remove('unlocked');
+      s15.textContent = 'Étape 1 · En cours';
+      s15.style.color = 'var(--text-muted)';
+    }
+  }
+
+  // Palier 30 : Tube de balles pro (À Mi-Chemin)
+  const m30 = document.getElementById('milestone30');
+  const s30 = document.getElementById('milestoneStatus30');
+  if (m30 && s30) {
+    if (points >= 30) {
+      m30.classList.add('unlocked');
+      s30.textContent = '✨ Prêt à récupérer';
+      s30.style.color = '#2ecc71';
+    } else {
+      m30.classList.remove('unlocked');
+      s30.textContent = points < 15 ? 'Verrouillé' : 'Mi-chemin · En cours';
+      s30.style.color = 'var(--text-muted)';
+    }
+  }
+
+  // Palier 60 : Raquette Carbone Pro
+  const m60 = document.getElementById('milestone60');
+  const s60 = document.getElementById('milestoneStatus60');
+  if (m60 && s60) {
+    if (points >= 60) {
+      m60.classList.add('unlocked');
+      s60.textContent = '🏆 Prêt à récupérer';
+      s60.style.color = 'var(--gold)';
+    } else {
+      m60.classList.remove('unlocked');
+      s60.textContent = 'Graal final · 60 pts';
+      s60.style.color = 'var(--text-muted)';
+    }
+  }
+
+  // Bouton Récupération
+  const claimBtn = document.getElementById('btnClaimLoyaltyReward');
+  const claimTxt = document.getElementById('btnClaimLoyaltyText');
+  if (claimBtn && claimTxt) {
+    if (points >= 60) {
+      claimBtn.className = 'loyalty-claim-btn active';
+      claimBtn.dataset.tier = '60';
+      claimTxt.textContent = '🎁 Récupérer la Raquette Carbone (60 pts) !';
+    } else if (points >= 30) {
+      claimBtn.className = 'loyalty-claim-btn active';
+      claimBtn.dataset.tier = '30';
+      claimTxt.textContent = '🎁 Récupérer le Tube de Balles Pro (À mi-chemin · 30 pts)';
+    } else if (points >= 15) {
+      claimBtn.className = 'loyalty-claim-btn active';
+      claimBtn.dataset.tier = '15';
+      claimTxt.textContent = '🎁 Récupérer les Accessoires Padel (15 pts)';
+    } else {
+      claimBtn.className = 'loyalty-claim-btn disabled';
+      claimBtn.dataset.tier = '';
+      claimTxt.textContent = '🔒 Palier en cours · Continuez vos matchs au club';
+    }
+  }
+}
+
+let _currentClaimTier = 0;
+
+window.checkMilestoneReward = function(tier) {
+  const user = (DB.players || []).find(p => p.id === DB.currentUser?.id) || DB.currentUser;
+  const pts = Number(user.loyaltyPoints) || 0;
+  if (pts < tier) {
+    showToast(`🔒 Palier ${tier} pts verrouillé (${(tier - pts).toFixed(1)} pt manquant). Continuez à jouer !`, 'info');
+    return;
+  }
+  openLoyaltyClaimModal(tier);
+};
+
+window.triggerLoyaltyClaimModal = function() {
+  const claimBtn = document.getElementById('btnClaimLoyaltyReward');
+  const tier = Number(claimBtn?.dataset.tier);
+  if (!tier) {
+    showToast('Continuez à accumuler des points en jouant en heures creuses ou via parrainage !', 'info');
+    return;
+  }
+  openLoyaltyClaimModal(tier);
+};
+
+function openLoyaltyClaimModal(tier) {
+  _currentClaimTier = tier;
+  const modal = document.getElementById('modal-loyalty-claim');
+  const icon = document.getElementById('loyaltyClaimGiftIcon');
+  const title = document.getElementById('loyaltyClaimGiftTitle');
+  const pts = document.getElementById('loyaltyClaimGiftPts');
+  if (!modal) return;
+
+  if (tier === 60) {
+    if (icon) icon.textContent = '🏆';
+    if (title) title.textContent = 'Raquette Carbone Pro CirclePadel';
+    if (pts) pts.textContent = 'Palier Ultime 60 points atteint !';
+  } else if (tier === 30) {
+    if (icon) icon.textContent = '📦';
+    if (title) title.textContent = 'Tube de Balles Padel Pro (Pressurisé)';
+    if (pts) pts.textContent = 'Palier 30 points atteint';
+  } else {
+    if (icon) icon.textContent = '🎾';
+    if (title) title.textContent = 'Accessoires Padel (Surgrips & Poignets)';
+    if (pts) pts.textContent = 'Palier 15 points atteint';
+  }
+
+  openModal('modal-loyalty-claim');
+}
+window.openLoyaltyClaimModal = openLoyaltyClaimModal;
+
+window.executeClaimLoyaltyReward = function() {
+  const user = (DB.players || []).find(p => p.id === DB.currentUser?.id) || DB.currentUser;
+  if (!user) return;
+
+  const tier = _currentClaimTier || 15;
+  const giftName = tier === 60 ? 'Raquette Carbone Pro' : (tier === 30 ? 'Tube de Balles Pro' : 'Accessoires Padel');
+
+  // Enregistrer l'historique de réclamation
+  user.loyaltyClaims = user.loyaltyClaims || [];
+  user.loyaltyClaims.push({
+    tier,
+    giftName,
+    claimedAt: new Date().toISOString(),
+    pointsAtClaim: user.loyaltyPoints || 0
+  });
+
+  // RÉINITIALISATION À 0 PT (règle officielle du cercle)
+  user.loyaltyPoints = 0;
+
+  const idx = (DB.players || []).findIndex(p => p.id === user.id);
+  if (idx !== -1) DB.players[idx] = { ...DB.players[idx], ...user };
+  DB.currentUser = { ...DB.currentUser, ...user };
+
+  saveDB(DB, true);
+  closeModal('modal-loyalty-claim');
+
+  showCelebrationModal({
+    title: `Félicitations pour votre ${giftName} !`,
+    subtitle: `Votre cadeau a été validé. Votre Cercle de Fidélité a été réinitialisé à 0 point pour une nouvelle aventure.`,
+    badgeText: 'CADEAU FIDÉLITÉ DÉLIVRÉ',
+    icon: tier === 60 ? '🏆' : (tier === 30 ? '📦' : '🎾'),
+    durationMs: 1400
+  });
+
+  renderProfileScreen();
+  renderAdminPlayers();
+};
+
+window.openReferralModal = function() {
+  openModal('modal-loyalty-referral');
+};
+
+window.submitLoyaltyReferral = function() {
+  const name = document.getElementById('referralPersonName')?.value?.trim();
+  const program = document.getElementById('referralProgram')?.value || 'junior_academy';
+
+  if (!name) {
+    showToast('Veuillez saisir le nom de l\'enfant ou proche parrainé.', 'error');
+    return;
+  }
+
+  const user = (DB.players || []).find(p => p.id === DB.currentUser?.id) || DB.currentUser;
+  if (!user) return;
+
+  user.loyaltyPoints = Number(((user.loyaltyPoints || 0) + 1.5).toFixed(1));
+  user.loyaltyHistory = user.loyaltyHistory || [];
+  user.loyaltyHistory.push({
+    type: 'referral',
+    name,
+    program,
+    pointsAwarded: 1.5,
+    date: new Date().toISOString()
+  });
+
+  const idx = (DB.players || []).findIndex(p => p.id === user.id);
+  if (idx !== -1) DB.players[idx] = { ...DB.players[idx], ...user };
+  DB.currentUser = { ...DB.currentUser, ...user };
+
+  saveDB(DB, true);
+  closeModal('modal-loyalty-referral');
+
+  showToast(`🌟 Parrainage de ${name} validé ! +1.5 pt illuminé sur votre cercle ✓`, 'gold');
+  renderProfileScreen();
+  renderAdminPlayers();
+};
 
 function updateAuthUI() {
   const user = (DB.players || []).find(p => p.id === DB.currentUser?.id) || DB.currentUser;
@@ -1259,7 +1541,7 @@ async function handlePlayerLogin(email, password) {
   }
 }
 
-async function handlePlayerRegister({ firstName, lastName, phone, email, password, preferredSide, playStyle, selfEstimatedLevel }) {
+async function handlePlayerRegister({ firstName, lastName, phone, email, password, preferredSide, playStyle, selfEstimatedLevel, gender }) {
   if (!firstName || !firstName.trim()) {
     showToast('Veuillez indiquer au moins votre prénom.', 'error');
     const fInp = document.getElementById('authRegFirstName');
@@ -1273,6 +1555,8 @@ async function handlePlayerRegister({ firstName, lastName, phone, email, passwor
   const cleanSide = preferredSide || 'right';
   const cleanStyle = playStyle || 'all-around';
   const cleanSelfLevel = typeof selfEstimatedLevel === 'number' ? selfEstimatedLevel : (parseFloat(document.getElementById('authRegLevelRange')?.value) || 5.0);
+  const isAutoFemale = /^(mouna|mariem|meriem|sara|sarah|ines|yasmine|nour|lina|amina|selma|rim|leila|fatma|khadija|asma|emna|chaima|siwar)/i.test(cleanFirst);
+  const cleanGender = (gender === 'female' || (!gender && isAutoFemale)) ? 'female' : 'male';
 
   // Email sécurisé (automatique si non renseigné)
   const slug = cleanFirst.toLowerCase().replace(/[^a-z0-9]/g, '') || 'joueur';
@@ -1318,6 +1602,7 @@ async function handlePlayerRegister({ firstName, lastName, phone, email, passwor
     id: finalUid,
     firstName: cleanFirst,
     lastName: cleanLast,
+    gender: cleanGender,
     phone: cleanPhone,
     email: safeEmail,
     role: 'player',
@@ -1569,25 +1854,60 @@ function renderLevelHistory(user) {
 
 function renderProfileHistory(user) {
   const container = document.getElementById('profileHistoryContainer');
-  const myBookings = DB.bookings.filter(b =>
-    b.status === 'confirmed' && b.players.some(p => p.userId === user.id)
-  ).slice(0, 8);
+  if (!container) return;
 
-  if (myBookings.length === 0) {
-    container.innerHTML = '<div class="empty-state" style="padding:24px 0"><div class="empty-state-icon">🎾</div><div class="empty-state-title">Aucun match joué</div></div>';
+  const matches = (user.matchHistory && user.matchHistory.length)
+    ? user.matchHistory
+    : (DB.matchHistory || []).filter(m => [m.team1Player1Id, m.team1Player2Id, m.team2Player1Id, m.team2Player2Id].includes(user.id));
+
+  if (!matches || matches.length === 0) {
+    const myBookings = (DB.bookings || []).filter(b =>
+      b.status === 'confirmed' && (b.players || []).some(p => p.userId === user.id)
+    ).slice(0, 8);
+
+    if (myBookings.length === 0) {
+      container.innerHTML = '<div class="empty-state" style="padding:24px 0"><div class="empty-state-icon">🎾</div><div class="empty-state-title">Aucun match homologué</div><div style="font-size:12px; color:var(--text-secondary); margin-top:4px">Déclarez un match ou demandez au gérant pour faire évoluer votre niveau Elo !</div></div>';
+      return;
+    }
+
+    container.innerHTML = myBookings.map(b => `
+      <div class="history-item">
+        <div class="history-result-dot neutral"></div>
+        <div class="history-info">
+          <div class="history-court">${b.courtName} · ${b.type === 'open' ? 'Match ouvert' : b.type === 'private' ? 'Privée' : 'Cours'}</div>
+          <div class="history-date-level">${b.date === getTodayStr() ? 'Aujourd\'hui' : formatDate(b.date)} · ${b.startTime} · ${(b.players || []).length} joueurs</div>
+        </div>
+        <span style="font-size:11px; color:var(--text-muted)">${b.pricePerPlayer || 25} DT</span>
+      </div>`
+    ).join('');
     return;
   }
 
-  container.innerHTML = myBookings.map(b => `
-    <div class="history-item">
-      <div class="history-result-dot neutral"></div>
-      <div class="history-info">
-        <div class="history-court">${b.courtName} · ${b.type === 'open' ? 'Match ouvert' : b.type === 'private' ? 'Privée' : 'Cours'}</div>
-        <div class="history-date-level">${b.date === getTodayStr() ? 'Aujourd\'hui' : formatDate(b.date)} · ${b.startTime} · ${b.players.length} joueurs</div>
+  container.innerHTML = matches.slice(0, 10).map(m => {
+    const isWin = m.isWin;
+    const delta = typeof m.delta === 'number' ? m.delta : 0;
+    const deltaClass = delta > 0 ? 'positive' : (delta < 0 ? 'negative' : '');
+    const deltaSign = delta > 0 ? `+${delta.toFixed(2)}` : `${delta.toFixed(2)}`;
+    return `
+      <div class="history-item" style="padding:10px 14px; background:var(--bg-card-2); border:1px solid var(--border-card); border-radius:10px; margin-bottom:8px">
+        <div class="history-result-dot ${isWin ? 'win' : 'loss'}" style="background:${isWin ? '#2ecc71' : '#ff6b6b'}; width:10px; height:10px; border-radius:50%"></div>
+        <div class="history-info" style="flex:1; margin-left:10px">
+          <div style="display:flex; justify-content:space-between; align-items:center">
+            <div style="font-weight:700; font-size:13px; color:var(--text-white)">
+              ${isWin ? 'Victoire' : 'Défaite'} · Sets : <strong style="color:var(--gold)">${m.setsWon || 0} - ${m.setsLost || 0}</strong>
+            </div>
+            <div class="match-delta-preview-pill ${deltaClass}">${deltaSign}</div>
+          </div>
+          <div style="font-size:11px; color:var(--text-secondary); margin-top:2px">
+            vs ${m.opponents || 'Paire adverse'} ${m.scoreDetail ? `(${m.scoreDetail})` : ''}
+          </div>
+          <div style="font-size:10px; color:var(--text-muted); margin-top:2px">
+            ${m.date || "Aujourd'hui"} · Nouveau niveau : <strong>${(m.newLevel != null ? Number(m.newLevel).toFixed(2) : '5.00')}</strong> · Fiabilité : <strong>${(m.newReliability != null ? Number(m.newReliability).toFixed(1) : '50.0')}%</strong>
+          </div>
+        </div>
       </div>
-      <span style="font-size:11px; color:var(--text-muted)">${b.pricePerPlayer} DT</span>
-    </div>`
-  ).join('');
+    `;
+  }).join('');
 }
 
 // ============================================================================
@@ -1853,27 +2173,38 @@ function renderAdminPlayers() {
   }
 
   tbody.innerHTML = DB.players.map(p => {
+    const isFem = (p.gender === 'female') || /^(mouna|mariem|meriem|sara|sarah|ines|yasmine|nour|lina|amina|selma|rim|leila|fatma|khadija|asma|emna|chaima|siwar)/i.test((p.firstName || '').trim());
+    const genderKey = isFem ? 'female' : 'male';
+    const genderBadge = isFem
+      ? '<span class="info-badge" style="background:rgba(233,30,99,0.15); color:#ff6b8b; border:1px solid rgba(233,30,99,0.35); font-weight:700">👩 Femme</span>'
+      : '<span class="info-badge" style="background:rgba(52,152,219,0.15); color:#54a0ff; border:1px solid rgba(52,152,219,0.35); font-weight:700">👨 Homme</span>';
+
     const statusBadge = p.status === 'active'
       ? '<span class="info-badge green">✔ Actif</span>'
       : p.status === 'pending'
       ? '<span class="info-badge" style="background:var(--amber-bg); border:1px solid rgba(243,156,18,0.2); color:var(--amber)">⏳ En attente</span>'
       : '<span class="info-badge red">⛔ Suspendu</span>';
 
-    const levelCell = p.level
-      ? `<span class="level-badge">${p.level} <span class="coach-check">✓</span></span>`
+    const lvlNum = p.level != null ? Number(p.level).toFixed(2) : (p.selfEstimatedLevel ? Number(p.selfEstimatedLevel).toFixed(2) : null);
+    const levelCell = lvlNum
+      ? `<span class="level-badge">${lvlNum} ${p.levelValidatedAt ? '<span class="coach-check">✓</span>' : '<span style="font-size:9px; color:var(--amber)">(auto)</span>'}</span>`
       : `<span class="level-badge pending">À évaluer</span>`;
 
     return `
-    <tr>
+    <tr data-gender="${genderKey}" data-status="${p.status || 'pending'}">
       <td>
         <div style="display:flex; align-items:center; gap:10px">
-          <div class="player-table-avatar">🎾</div>
+          <div class="player-table-avatar" style="background:${isFem ? 'rgba(233,30,99,0.2)' : 'rgba(52,152,219,0.2)'}; border:1px solid ${isFem ? 'rgba(233,30,99,0.4)' : 'rgba(52,152,219,0.4)'}">${isFem ? '👩' : '👨'}</div>
           <div>
-            <div class="player-table-name">${p.firstName} ${p.lastName}</div>
-            <div style="font-size:11px; color:var(--text-muted)">${p.email || '—'}</div>
+            <div class="player-table-name">${p.firstName} ${p.lastName || ''}</div>
+            <div style="font-size:11px; color:var(--text-muted); display:flex; gap:6px; align-items:center">
+              <span>${p.email || '—'}</span>
+              <span style="color:var(--gold); font-weight:700">🎾 ${(Number(p.loyaltyPoints) || 0).toFixed(1)} pts</span>
+            </div>
           </div>
         </div>
       </td>
+      <td>${genderBadge}</td>
       <td><span style="font-size:13px">${p.phone || '—'}</span></td>
       <td>${levelCell}</td>
       <td style="font-size:12px; color:var(--text-secondary)">
@@ -1884,7 +2215,7 @@ function renderAdminPlayers() {
           <div style="width:40px; height:4px; background:var(--border-subtle); border-radius:2px; overflow:hidden">
             <div style="width:${p.reliabilityScore || 50}%; height:100%; background:var(--gradient-gold)"></div>
           </div>
-          <span style="font-size:12px; color:var(--text-secondary); font-weight:600">${p.reliabilityScore || 50}%</span>
+          <span style="font-size:12px; color:var(--text-secondary); font-weight:600">${(p.reliabilityScore || 50).toFixed(0)}%</span>
         </div>
         <div style="font-size:10px; color:var(--text-muted); margin-top:2px" title="Niveau éprouvé lors de confrontations face à des pairs de même niveau (±1.0)">
           ${p.peerConfrontationsCount || 0} match(s) pairs
@@ -2063,40 +2394,149 @@ function renderSlotDetail(bookingId) {
   if (titleEl) titleEl.textContent = `${b.courtName} · ${b.startTime}`;
   const contentEl = document.getElementById('slotDetailContent');
   if (!contentEl) return;
+
+  // 4 positions tactiques sur le mini-terrain de padel (Équipe 1 vs Équipe 2)
+  const players = b.players || [];
+  const p1 = players[0] || null;
+  const p2 = players[1] || null;
+  const p3 = players[2] || null;
+  const p4 = players[3] || null;
+
+  const renderSpot = (player, spotIdx) => {
+    if (player) {
+      const parts = (player.name || 'Joueur').trim().split(' ');
+      const initials = (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase();
+      const lvl = player.level != null ? Number(player.level).toFixed(1) : '5.0';
+      return `
+        <div class="court-tactical-spot" title="${player.name} (Niveau ${lvl})">
+          <div class="tactical-pin filled">${initials}</div>
+          <div class="tactical-info">
+            <span class="tactical-name">${parts[0]}</span>
+            <span class="tactical-sub">Niv ${lvl}</span>
+          </div>
+        </div>
+      `;
+    } else {
+      return `
+        <div class="court-tactical-spot" onclick="toggleAddPlayerForm('${b.id}')" title="Ajouter un joueur à cette place">
+          <div class="tactical-pin empty">+</div>
+          <div class="tactical-info">
+            <span class="tactical-name" style="opacity:0.65">Place ${spotIdx + 1}</span>
+            <span class="tactical-sub" style="font-size:8px; opacity:0.85">+ Inviter</span>
+          </div>
+        </div>
+      `;
+    }
+  };
+
   contentEl.innerHTML = `
     <div style="display:flex; flex-direction:column; gap:12px">
-      <div style="display:flex; gap:8px; flex-wrap:wrap">
-        <span class="slot-type-badge ${b.type}" style="font-size:12px; padding:4px 12px">${b.type === 'open' ? 'Match ouvert' : b.type === 'private' ? 'Privée' : b.type === 'course' ? 'Cours' : 'Bloqué'}</span>
-        <span class="match-status-badge ${spots===0?'full':spots===1?'almost-full':'open'}">${b.status === 'cancelled' ? 'Annulé' : spots === 0 ? 'Complet' : `${spots} place${spots>1?'s':''} libre${spots>1?'s':''}`}</span>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center">
+        <span class="slot-type-badge ${b.type}" style="font-size:12px; padding:4px 12px">${b.type === 'open' ? 'Match ouvert' : b.type === 'private' ? 'Partie Privée' : b.type === 'course' ? 'Cours' : 'Bloqué'}</span>
+        <span class="match-status-badge ${spots===0?'full':spots===1?'almost-full':'open'}">${b.status === 'cancelled' ? 'Annulé' : spots === 0 ? 'Complet (4/4)' : `${spots} place${spots>1?'s':''} libre${spots>1?'s':''}`}</span>
       </div>
 
+      <!-- MINI-TERRAIN PADEL COMPACT (AÉRÉ & TACTIQUE) -->
+      <div style="background:var(--bg-card-2); border-radius:var(--radius-md); padding:12px; border:1px solid var(--border-card)">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+          <span style="font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.8px; color:var(--gold)">
+            🏟️ Disposition Tactique du Terrain
+          </span>
+          <span style="font-size:11px; color:var(--text-secondary)">${players.length}/4 Joueurs</span>
+        </div>
+        
+        <div class="mini-padel-court-wrap">
+          <div class="mini-padel-court">
+            <div class="mini-court-glass-border"></div>
+            <div class="mini-court-service-left"></div>
+            <div class="mini-court-center-line"></div>
+            <div class="mini-court-net"></div>
+            <div class="mini-court-service-right"></div>
+            
+            <!-- Équipe 1 (Gauche) -->
+            <div class="mini-court-half">
+              ${renderSpot(p1, 0)}
+              ${renderSpot(p2, 1)}
+            </div>
+
+            <!-- Équipe 2 (Droite) -->
+            <div class="mini-court-half">
+              ${renderSpot(p3, 2)}
+              ${renderSpot(p4, 3)}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Détails Créneau -->
       <div style="background:var(--bg-card-2); border-radius:var(--radius-md); padding:14px; font-size:13px; display:flex; flex-direction:column; gap:6px">
         <div><span style="color:var(--text-muted)">Terrain :</span> <strong>${b.courtName}</strong></div>
         <div><span style="color:var(--text-muted)">Date :</span> <strong>${b.date === today ? 'Aujourd\'hui' : formatDate(b.date)}</strong></div>
         <div><span style="color:var(--text-muted)">Créneau :</span> <strong>${b.startTime} – ${b.endTime}</strong></div>
         ${b.minLevel ? `<div><span style="color:var(--text-muted)">Niveau requis :</span> <strong>${b.minLevel}–${b.maxLevel}</strong></div>` : ''}
-        <div><span style="color:var(--text-muted)">Prix par joueur :</span> <strong style="color:var(--gold)">${b.pricePerPlayer} DT</strong> <span style="font-size:11px; color:var(--text-muted)">(paiement sur place)</span></div>
+        <div><span style="color:var(--text-muted)">Prix par joueur :</span> <strong style="color:var(--gold)">${b.pricePerPlayer || 25} DT</strong> <span style="font-size:11px; color:var(--text-muted)">(sur place)</span></div>
         ${b.notes ? `<div><span style="color:var(--text-muted)">Notes :</span> ${b.notes}</div>` : ''}
       </div>
 
+      <!-- Liste Joueurs Inscrits & Actions Gérant -->
       <div>
-        <div style="font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:8px">
-          Joueurs (${b.players.length}/4)
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+          <span style="font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted)">
+            Joueurs participants (${b.players.length}/4)
+          </span>
+          ${spots > 0 ? `
+            <button type="button" class="btn-table-action" onclick="toggleAddPlayerForm('${b.id}')" style="font-size:11px; padding:3px 10px; border-color:var(--gold); color:var(--gold)">
+              + Ajouter un co-joueur
+            </button>` : ''}
         </div>
+
         ${b.players.map(p => `
-          <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:8px">
             <div class="player-avatar-sm filled">🎾</div>
             <div style="flex:1">
               <div style="font-size:13px; font-weight:700; color:var(--text-primary)">${p.name}</div>
-              <div style="font-size:11px; color:var(--text-muted)">Niveau ${p.level} ${p.isOrganizer ? '· Organisateur' : ''}</div>
+              <div style="font-size:11px; color:var(--text-muted)">Niveau ${p.level || '5.0'} ${p.isOrganizer ? '· Organisateur' : ''}</div>
             </div>
             ${currentMode === 'backoffice-dashboard' ? `<button class="btn-table-action danger" onclick="removePlayerFromBooking('${b.id}','${p.userId}')">Retirer</button>` : ''}
           </div>`).join('')}
-        ${Array(spots).fill(0).map(() => `
-          <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px; opacity:0.4">
-            <div class="player-avatar-sm empty">+</div>
-            <span style="font-size:12px; color:var(--text-muted)">Place libre</span>
-          </div>`).join('')}
+
+        <!-- FORMULAIRE AJOUT CO-JOUEUR (ENRICHISSEMENT BDD CLUB) -->
+        <div id="addPlayerToSlotDrawer_${b.id}" style="display:none; background:rgba(212,175,55,0.08); border:1.5px solid rgba(212,175,55,0.35); border-radius:10px; padding:12px; margin-top:10px">
+          <div style="font-size:12px; font-weight:800; color:var(--gold); margin-bottom:8px">
+            👤 Ajouter un joueur au créneau &amp; intégrer à la base de données
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px">
+            <div>
+              <label class="modal-label" style="font-size:10px">Prénom &amp; Nom *</label>
+              <input type="text" class="login-field" id="slotNewPlayerName" placeholder="Ex: Sami Trabelsi" style="font-size:12px; padding:8px" required />
+            </div>
+            <div>
+              <label class="modal-label" style="font-size:10px">Téléphone (WhatsApp)</label>
+              <input type="tel" class="login-field" id="slotNewPlayerPhone" placeholder="+216 98 123 456" style="font-size:12px; padding:8px" />
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px">
+            <div>
+              <label class="modal-label" style="font-size:10px">Genre</label>
+              <select class="login-field" id="slotNewPlayerGender" style="font-size:12px; padding:8px">
+                <option value="male">Homme 👨</option>
+                <option value="female">Femme 👩</option>
+              </select>
+            </div>
+            <div>
+              <label class="modal-label" style="font-size:10px">Niveau estimé (1–10)</label>
+              <input type="number" class="login-field" id="slotNewPlayerLevel" min="1" max="10" step="0.5" value="5.0" style="font-size:12px; padding:8px" />
+            </div>
+          </div>
+          <div style="display:flex; gap:8px">
+            <button type="button" class="btn-primary-action" onclick="submitAddPlayerToBooking('${b.id}')" style="flex:1; font-size:12px; padding:8px; background:linear-gradient(135deg, #2ecc71, #27ae60)">
+              ✓ Enregistrer dans le match &amp; la BDD
+            </button>
+            <button type="button" class="btn-table-action" onclick="toggleAddPlayerForm('${b.id}')" style="font-size:12px">
+              Annuler
+            </button>
+          </div>
+        </div>
       </div>
 
       ${currentMode === 'backoffice-dashboard' ? `
@@ -2113,6 +2553,103 @@ function renderSlotDetail(bookingId) {
         </div>`}
     </div>`;
 }
+
+function toggleAddPlayerForm(bookingId) {
+  const drawer = document.getElementById(`addPlayerToSlotDrawer_${bookingId}`);
+  if (drawer) {
+    drawer.style.display = drawer.style.display === 'none' ? 'block' : 'none';
+  }
+}
+
+function submitAddPlayerToBooking(bookingId) {
+  const booking = DB.bookings.find(b => b.id === bookingId);
+  if (!booking) return;
+
+  const nameInput = document.getElementById('slotNewPlayerName')?.value?.trim();
+  if (!nameInput) {
+    showToast('Veuillez indiquer le nom du joueur.', 'error');
+    return;
+  }
+
+  const phoneInput = document.getElementById('slotNewPlayerPhone')?.value?.trim() || '';
+  const genderInput = document.getElementById('slotNewPlayerGender')?.value || 'male';
+  const levelInput = parseFloat(document.getElementById('slotNewPlayerLevel')?.value) || 5.0;
+
+  const parts = nameInput.split(' ');
+  const firstName = parts[0];
+  const lastName = parts.slice(1).join(' ');
+
+  // Vérifier si le joueur existe déjà dans la base du club
+  let existingPlayer = (DB.players || []).find(p =>
+    (p.phone && phoneInput && p.phone === phoneInput) ||
+    `${p.firstName} ${p.lastName}`.toLowerCase().trim() === nameInput.toLowerCase().trim()
+  );
+
+  if (!existingPlayer) {
+    // Créer un nouveau joueur dans la base de données du club (pour évaluation et notation future !)
+    existingPlayer = {
+      id: 'usr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      firstName: firstName,
+      lastName: lastName,
+      phone: phoneInput,
+      gender: genderInput,
+      email: `${firstName.toLowerCase().replace(/[^a-z0-9]/g, '')}.${Date.now().toString().slice(-4)}@circlepadel.tn`,
+      role: 'player',
+      status: 'pending', // en attente d'évaluation coach
+      selfEstimatedLevel: levelInput,
+      level: levelInput,
+      reliabilityScore: 50,
+      totalMatchesPlayed: 0,
+      peerConfrontationsCount: 0,
+      skills: {},
+      levelHistory: [{
+        date: getTodayStr(),
+        level: levelInput,
+        note: `Inscrit via réservation terrain ${booking.courtName}`
+      }],
+      createdAt: new Date().toISOString()
+    };
+    DB.players = DB.players || [];
+    DB.players.push(existingPlayer);
+
+    // Notification au coach
+    DB.notifications = DB.notifications || [];
+    DB.notifications.unshift({
+      id: 'notif_new_player_' + Date.now(),
+      userId: 'admin',
+      type: 'coach_eval_needed',
+      title: 'Nouveau joueur ajouté via créneau',
+      message: `${nameInput} (${genderInput === 'female' ? 'Femme' : 'Homme'}) a été ajouté au créneau ${booking.courtName}. Évaluation coach en attente.`,
+      playerId: existingPlayer.id,
+      read: false,
+      createdAt: new Date().toISOString()
+    });
+  }
+
+  // Ajouter le joueur à la réservation s'il n'y est pas déjà
+  booking.players = booking.players || [];
+  if (booking.players.some(p => p.userId === existingPlayer.id)) {
+    showToast('Ce joueur est déjà inscrit dans ce match.', 'info');
+    return;
+  }
+
+  booking.players.push({
+    userId: existingPlayer.id,
+    name: `${existingPlayer.firstName} ${existingPlayer.lastName || ''}`.trim(),
+    level: existingPlayer.level || levelInput,
+    isOrganizer: false
+  });
+
+  saveDB(DB, true);
+  showToast(`✓ ${nameInput} ajouté au match et enregistré dans la base des membres !`, 'success');
+  renderSlotDetail(bookingId);
+  renderAdminDashboard();
+  renderAdminPlayers();
+}
+
+// Exposer globalement pour HTML onclick
+window.toggleAddPlayerForm = toggleAddPlayerForm;
+window.submitAddPlayerToBooking = submitAddPlayerToBooking;
 
 function removePlayerFromBooking(bookingId, userId) {
   const booking = DB.bookings.find(b => b.id === bookingId);
@@ -2366,6 +2903,375 @@ async function saveEvaluation(e) {
     }
   }
 }
+
+// ============================================================================
+// PADEL RATING ENGINE (HYBRID ELO / GLICKO-2 · SCALE 1.00 TO 10.00)
+// ============================================================================
+
+let currentMatchSheetScore = { setsWon: 2, setsLost: 1 };
+let currentMatchSheetMode = 'admin';
+
+/**
+ * Calcule l'ajustement dynamique de niveau et de fiabilité selon le modèle hybride Elo/Glicko-2
+ * adapté au Padel sur l'échelle 1.00 à 10.00 (Standard YallaPlay / Playtomic étendu).
+ */
+function calculatePadelRatingUpdate({ playerLevel, playerReliability, partnerLevel, opponent1Level, opponent2Level, setsWon, setsLost }) {
+  const pLevel = Math.max(1.0, Math.min(10.0, Number(playerLevel) || 5.0));
+  const pReliability = Math.max(0, Math.min(99.0, Number(playerReliability) || 50.0));
+  const partLevel = Math.max(1.0, Math.min(10.0, Number(partnerLevel) || pLevel));
+  const opp1 = Math.max(1.0, Math.min(10.0, Number(opponent1Level) || 5.0));
+  const opp2 = Math.max(1.0, Math.min(10.0, Number(opponent2Level) || 5.0));
+
+  // Étape A : Moyennes des paires
+  const teamAverage = (pLevel + partLevel) / 2;
+  const opponentAverage = (opp1 + opp2) / 2;
+
+  // Étape B : Probabilité attendue de victoire (E) - Courbe logistique calibrée pour l'échelle 1-10
+  // Le diviseur est 0.85 * (9/7) ≈ 1.09 pour conserver l'exact même ratio 10:1 de probabilité
+  const exponent = (opponentAverage - teamAverage) / 1.09;
+  const expectedWinRate = 1 / (1 + Math.pow(10, exponent));
+
+  // Étape C : Résultat réel pondéré par les sets (2-0, 2-1, 1-2, 0-2)
+  let actualOutcome = 0;
+  if (setsWon > setsLost) {
+    actualOutcome = setsLost === 0 ? 1.00 : 0.85; // 2-0 net ou 2-1 disputé
+  } else {
+    actualOutcome = setsWon === 0 ? 0.00 : 0.25; // 0-2 net ou 1-2 disputé
+  }
+
+  // Étape D : Facteur K dynamique (Glicko-2) basé sur la fiabilité (0% à 99%)
+  const reliabilityFraction = Math.max(0, Math.min(1, pReliability / 100));
+  const kFactor = 0.42 - (0.34 * reliabilityFraction);
+
+  // Étape E : Variation nette (Delta) avec clamping de sécurité [-0.55, +0.55]
+  let delta = kFactor * (actualOutcome - expectedWinRate);
+  delta = Math.max(-0.55, Math.min(0.55, delta));
+  const deltaRounded = Number(delta.toFixed(2));
+
+  // Étape F : Nouveau niveau borné [1.00, 10.00]
+  const newLevel = Math.max(1.00, Math.min(10.00, Number((pLevel + deltaRounded).toFixed(2))));
+
+  // Étape G : Progression de la fiabilité vers 99%
+  const newReliability = Math.min(99.0, Number((pReliability + (100 - pReliability) * 0.035).toFixed(2)));
+
+  return {
+    newLevel,
+    delta: deltaRounded,
+    newReliability,
+    expectedWinRate: Number((expectedWinRate * 100).toFixed(1)),
+    teamAverage: Number(teamAverage.toFixed(2)),
+    opponentAverage: Number(opponentAverage.toFixed(2)),
+    kFactor: Number(kFactor.toFixed(3))
+  };
+}
+
+function ensureDemoPlayersAvailable() {
+  DB.players = DB.players || [];
+  const existingNames = new Set(DB.players.map(p => `${p.firstName} ${p.lastName}`.toLowerCase().trim()));
+
+  const demos = [
+    { id: 'usr_ahmed', firstName: 'Ahmed', lastName: 'Horrigue', gender: 'male', level: 5.20, selfEstimatedLevel: 5.0, reliabilityScore: 62.0, totalMatchesPlayed: 14, peerConfrontationsCount: 14, status: 'active', preferredSide: 'right', playStyle: 'all-around' },
+    { id: 'usr_bilel', firstName: 'Bilel', lastName: 'Krima', gender: 'male', level: 7.50, selfEstimatedLevel: 7.0, reliabilityScore: 84.0, totalMatchesPlayed: 28, peerConfrontationsCount: 28, status: 'active', preferredSide: 'left', playStyle: 'offensive' },
+    { id: 'usr_mariem', firstName: 'Mariem', lastName: 'Snoussi', gender: 'female', level: 4.80, selfEstimatedLevel: 5.0, reliabilityScore: 48.0, totalMatchesPlayed: 8, peerConfrontationsCount: 8, status: 'active', preferredSide: 'right', playStyle: 'defensive' }
+  ];
+
+  demos.forEach(d => {
+    const fullName = `${d.firstName} ${d.lastName}`.toLowerCase().trim();
+    if (!existingNames.has(fullName) && !DB.players.some(p => p.id === d.id)) {
+      DB.players.push(d);
+    }
+  });
+}
+
+function openRecordMatchModal(mode = 'admin') {
+  currentMatchSheetMode = mode;
+  const badge = document.getElementById('matchSheetRoleBadge');
+  if (badge) {
+    badge.textContent = mode === 'admin' ? 'OFFICIEL CLUB / GÉRANT' : 'DÉCLARATION JOUEUR';
+    badge.className = mode === 'admin' ? 'info-badge gold' : 'info-badge green';
+  }
+
+  ensureDemoPlayersAvailable();
+
+  const players = DB.players || [];
+  const buildOptions = (selectedId) => {
+    return players.map(p => {
+      const lvl = (p.level != null ? Number(p.level).toFixed(2) : (p.selfEstimatedLevel ? Number(p.selfEstimatedLevel).toFixed(2) : '5.00'));
+      const isSel = p.id === selectedId ? 'selected' : '';
+      return `<option value="${p.id}" ${isSel}>${p.firstName} ${p.lastName || ''} (Niv ${lvl} · Fiab ${(p.reliabilityScore || 50).toFixed(0)}%)</option>`;
+    }).join('');
+  };
+
+  const selT1P1 = document.getElementById('matchTeam1Player1');
+  const selT1P2 = document.getElementById('matchTeam1Player2');
+  const selT2P1 = document.getElementById('matchTeam2Player1');
+  const selT2P2 = document.getElementById('matchTeam2Player2');
+
+  const p1Id = (mode === 'player' && DB.currentUser?.id && DB.currentUser.id !== 'guest') ? DB.currentUser.id : (players[0]?.id || '');
+  const p2Id = players.find(p => p.id !== p1Id)?.id || (players[1]?.id || '');
+  const p3Id = players.find(p => p.id !== p1Id && p.id !== p2Id)?.id || (players[2]?.id || '');
+  const p4Id = players.find(p => p.id !== p1Id && p.id !== p2Id && p.id !== p3Id)?.id || (players[3]?.id || '');
+
+  if (selT1P1) {
+    selT1P1.innerHTML = buildOptions(p1Id);
+    if (mode === 'player' && DB.currentUser?.id !== 'guest') {
+      selT1P1.disabled = true;
+    } else {
+      selT1P1.disabled = false;
+    }
+  }
+  if (selT1P2) selT1P2.innerHTML = buildOptions(p2Id);
+  if (selT2P1) selT2P1.innerHTML = buildOptions(p3Id);
+  if (selT2P2) selT2P2.innerHTML = buildOptions(p4Id);
+
+  setMatchScoreSets(2, 1);
+  openModal('modal-record-match');
+}
+
+function setMatchScoreSets(setsWon, setsLost) {
+  currentMatchSheetScore = { setsWon, setsLost };
+  document.querySelectorAll('.match-score-set-btn').forEach(btn => {
+    const isTarget = btn.dataset.sets === `${setsWon}-${setsLost}`;
+    btn.classList.toggle('active', isTarget);
+  });
+
+  const lbl = document.getElementById('matchScoreLabel');
+  if (lbl) {
+    const desc = setsWon > setsLost
+      ? (setsLost === 0 ? '2 - 0 (Victoire nette)' : '2 - 1 (Victoire disputée)')
+      : (setsWon === 0 ? '0 - 2 (Défaite nette)' : '1 - 2 (Défaite accrochée)');
+    lbl.textContent = desc;
+  }
+
+  updateMatchSimulationPreview();
+}
+
+function updateMatchSimulationPreview() {
+  const p1Id = document.getElementById('matchTeam1Player1')?.value;
+  const p2Id = document.getElementById('matchTeam1Player2')?.value;
+  const p3Id = document.getElementById('matchTeam2Player1')?.value;
+  const p4Id = document.getElementById('matchTeam2Player2')?.value;
+
+  const players = DB.players || [];
+  const p1 = players.find(p => p.id === p1Id) || { level: 5.0, reliabilityScore: 50 };
+  const p2 = players.find(p => p.id === p2Id) || { level: 5.0, reliabilityScore: 50 };
+  const p3 = players.find(p => p.id === p3Id) || { level: 5.0, reliabilityScore: 50 };
+  const p4 = players.find(p => p.id === p4Id) || { level: 5.0, reliabilityScore: 50 };
+
+  const p1Level = Number(p1.level || p1.selfEstimatedLevel || 5.0);
+  const p2Level = Number(p2.level || p2.selfEstimatedLevel || 5.0);
+  const p3Level = Number(p3.level || p3.selfEstimatedLevel || 5.0);
+  const p4Level = Number(p4.level || p4.selfEstimatedLevel || 5.0);
+
+  const t1Avg = (p1Level + p2Level) / 2;
+  const t2Avg = (p3Level + p4Level) / 2;
+
+  const t1AvgEl = document.getElementById('team1AverageBadge');
+  if (t1AvgEl) t1AvgEl.textContent = `Moyenne : ${t1Avg.toFixed(2)} / 10`;
+  const t2AvgEl = document.getElementById('team2AverageBadge');
+  if (t2AvgEl) t2AvgEl.textContent = `Moyenne : ${t2Avg.toFixed(2)} / 10`;
+
+  const simT1 = calculatePadelRatingUpdate({
+    playerLevel: t1Avg,
+    playerReliability: ((p1.reliabilityScore || 50) + (p2.reliabilityScore || 50)) / 2,
+    partnerLevel: t1Avg,
+    opponent1Level: p3Level,
+    opponent2Level: p4Level,
+    setsWon: currentMatchSheetScore.setsWon,
+    setsLost: currentMatchSheetScore.setsLost
+  });
+
+  const simT2 = calculatePadelRatingUpdate({
+    playerLevel: t2Avg,
+    playerReliability: ((p3.reliabilityScore || 50) + (p4.reliabilityScore || 50)) / 2,
+    partnerLevel: t2Avg,
+    opponent1Level: p1Level,
+    opponent2Level: p2Level,
+    setsWon: currentMatchSheetScore.setsLost,
+    setsLost: currentMatchSheetScore.setsWon
+  });
+
+  const probEl = document.getElementById('matchWinProbBadge');
+  if (probEl) probEl.textContent = `Probabilité Éq 1 : ${simT1.expectedWinRate}%`;
+
+  const prevT1 = document.getElementById('matchDeltaTeam1Preview');
+  if (prevT1) {
+    const sign = simT1.delta >= 0 ? `+${simT1.delta.toFixed(2)}` : `${simT1.delta.toFixed(2)}`;
+    prevT1.textContent = `${sign} pt (Niv estimé : ${(t1Avg + simT1.delta).toFixed(2)})`;
+    prevT1.style.color = simT1.delta >= 0 ? '#2ecc71' : '#ff6b6b';
+  }
+
+  const prevT2 = document.getElementById('matchDeltaTeam2Preview');
+  if (prevT2) {
+    const sign = simT2.delta >= 0 ? `+${simT2.delta.toFixed(2)}` : `${simT2.delta.toFixed(2)}`;
+    prevT2.textContent = `${sign} pt (Niv estimé : ${(t2Avg + simT2.delta).toFixed(2)})`;
+    prevT2.style.color = simT2.delta >= 0 ? '#2ecc71' : '#ff6b6b';
+  }
+}
+
+async function submitRecordMatch(e) {
+  if (e && e.preventDefault) e.preventDefault();
+
+  const p1Id = document.getElementById('matchTeam1Player1')?.value;
+  const p2Id = document.getElementById('matchTeam1Player2')?.value;
+  const p3Id = document.getElementById('matchTeam2Player1')?.value;
+  const p4Id = document.getElementById('matchTeam2Player2')?.value;
+
+  const playerIds = [p1Id, p2Id, p3Id, p4Id];
+  const uniqueIds = new Set(playerIds);
+  if (uniqueIds.size < 4) {
+    showToast('Veuillez sélectionner 4 joueurs distincts pour ce match de double.', 'error');
+    return;
+  }
+
+  const players = DB.players || [];
+  const p1 = players.find(p => p.id === p1Id);
+  const p2 = players.find(p => p.id === p2Id);
+  const p3 = players.find(p => p.id === p3Id);
+  const p4 = players.find(p => p.id === p4Id);
+
+  if (!p1 || !p2 || !p3 || !p4) {
+    showToast('Un ou plusieurs joueurs sont introuvables.', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btnSubmitRecordMatch');
+  if (btn) { btn.disabled = true; btn.textContent = 'Calcul du Rating Elo...'; }
+
+  try {
+    const setsWon = currentMatchSheetScore.setsWon;
+    const setsLost = currentMatchSheetScore.setsLost;
+    const scoreDetail = document.getElementById('matchScoreGamesDetail')?.value?.trim() || '';
+
+    // Calcul individuel pour chaque joueur selon son propre niveau et sa propre fiabilité !
+    const p1Level = Number(p1.level || p1.selfEstimatedLevel || 5.0);
+    const p2Level = Number(p2.level || p2.selfEstimatedLevel || 5.0);
+    const p3Level = Number(p3.level || p3.selfEstimatedLevel || 5.0);
+    const p4Level = Number(p4.level || p4.selfEstimatedLevel || 5.0);
+
+    const calc1 = calculatePadelRatingUpdate({
+      playerLevel: p1Level, playerReliability: p1.reliabilityScore || 50,
+      partnerLevel: p2Level, opponent1Level: p3Level, opponent2Level: p4Level,
+      setsWon: setsWon, setsLost: setsLost
+    });
+
+    const calc2 = calculatePadelRatingUpdate({
+      playerLevel: p2Level, playerReliability: p2.reliabilityScore || 50,
+      partnerLevel: p1Level, opponent1Level: p3Level, opponent2Level: p4Level,
+      setsWon: setsWon, setsLost: setsLost
+    });
+
+    const calc3 = calculatePadelRatingUpdate({
+      playerLevel: p3Level, playerReliability: p3.reliabilityScore || 50,
+      partnerLevel: p4Level, opponent1Level: p1Level, opponent2Level: p2Level,
+      setsWon: setsLost, setsLost: setsWon
+    });
+
+    const calc4 = calculatePadelRatingUpdate({
+      playerLevel: p4Level, playerReliability: p4.reliabilityScore || 50,
+      partnerLevel: p3Level, opponent1Level: p1Level, opponent2Level: p2Level,
+      setsWon: setsLost, setsLost: setsWon
+    });
+
+    const updates = [
+      { player: p1, calc: calc1, isWin: setsWon > setsLost, setsWon, setsLost, partner: p2, opps: `${p3.firstName} & ${p4.firstName}` },
+      { player: p2, calc: calc2, isWin: setsWon > setsLost, setsWon, setsLost, partner: p1, opps: `${p3.firstName} & ${p4.firstName}` },
+      { player: p3, calc: calc3, isWin: setsLost > setsWon, setsWon: setsLost, setsLost: setsWon, partner: p4, opps: `${p1.firstName} & ${p2.firstName}` },
+      { player: p4, calc: calc4, isWin: setsLost > setsWon, setsWon: setsLost, setsLost: setsWon, partner: p3, opps: `${p1.firstName} & ${p2.firstName}` }
+    ];
+
+    const todayStr = getTodayStr();
+
+    updates.forEach(u => {
+      const pl = u.player;
+      pl.level = u.calc.newLevel;
+      pl.reliabilityScore = u.calc.newReliability;
+      pl.lastDelta = u.calc.delta;
+      pl.totalMatchesPlayed = (pl.totalMatchesPlayed || 0) + 1;
+      pl.peerConfrontationsCount = (pl.peerConfrontationsCount || 0) + 1;
+      pl.status = 'active';
+
+      // Attribution des points fidélité (1.0 pt heures creuses 08h-17h, 0.5 pt heures de pointe 17h-23h)
+      const currentHour = new Date().getHours();
+      const isOffPeak = currentHour >= 8 && currentHour < 17;
+      const loyaltyGain = isOffPeak ? 1.0 : 0.5;
+
+      pl.loyaltyPoints = Number(((pl.loyaltyPoints || 0) + loyaltyGain).toFixed(1));
+      pl.loyaltyHistory = pl.loyaltyHistory || [];
+      pl.loyaltyHistory.push({
+        type: 'match',
+        date: todayStr,
+        points: loyaltyGain,
+        slotType: isOffPeak ? 'off_peak' : 'peak',
+        note: isOffPeak ? 'Match heures creuses (08h-17h) : +1.0 pt' : 'Match heures de pointe (17h-23h) : +0.5 pt'
+      });
+
+      pl.matchHistory = pl.matchHistory || [];
+      pl.matchHistory.unshift({
+        id: 'match_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        date: todayStr,
+        isWin: u.isWin,
+        setsWon: u.setsWon,
+        setsLost: u.setsLost,
+        scoreDetail: scoreDetail,
+        opponents: u.opps,
+        delta: u.calc.delta,
+        newLevel: u.calc.newLevel,
+        newReliability: u.calc.newReliability
+      });
+
+      // Notification au joueur
+      DB.notifications = DB.notifications || [];
+      DB.notifications.unshift({
+        id: 'notif_match_' + Date.now() + '_' + pl.id,
+        userId: pl.id,
+        type: 'match_alert',
+        title: u.isWin ? 'Victoire homologuée 🎾' : 'Match homologué 🎾',
+        body: `${u.isWin ? 'Victoire' : 'Défaite'} ${u.setsWon}-${u.setsLost} vs ${u.opps}. Nouveau niveau : ${u.calc.newLevel.toFixed(2)} (${u.calc.delta >= 0 ? '+' : ''}${u.calc.delta.toFixed(2)}). +${loyaltyGain} pt fidélité ajouté au cercle ! 🎾`,
+        createdAt: new Date().toISOString()
+      });
+
+      if (typeof fbSavePlayer === 'function') fbSavePlayer(pl).catch(() => {});
+    });
+
+    // Enregistrement dans l'historique global
+    DB.matchHistory = DB.matchHistory || [];
+    DB.matchHistory.unshift({
+      id: 'match_doc_' + Date.now(),
+      date: todayStr,
+      team1: `${p1.firstName} ${p1.lastName || ''} & ${p2.firstName} ${p2.lastName || ''}`,
+      team2: `${p3.firstName} ${p3.lastName || ''} & ${p4.firstName} ${p4.lastName || ''}`,
+      team1Player1Id: p1.id, team1Player2Id: p2.id,
+      team2Player1Id: p3.id, team2Player2Id: p4.id,
+      setsTeam1: setsWon,
+      setsTeam2: setsLost,
+      scoreDetail: scoreDetail,
+      recordedBy: currentMatchSheetMode
+    });
+
+    saveDB(DB, true);
+    closeAllModals();
+
+    // Actualiser toutes les vues
+    renderProfileScreen();
+    renderHomeScreen();
+    if (typeof renderAdminPlayers === 'function') renderAdminPlayers();
+    if (typeof renderAdminKPIs === 'function') renderAdminKPIs();
+
+    showToast(`✓ Match homologué ! Nouveaux niveaux calculés selon le Rating Engine 🎾`, 'success');
+  } catch (err) {
+    console.error('submitRecordMatch error:', err);
+    showToast('Erreur lors de l\'enregistrement du match.', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '✓ Homologuer le Match & Mettre à Jour les Niveaux 🎾'; }
+  }
+}
+
+// Exposer globalement pour HTML onclick / onchange
+window.openRecordMatchModal = openRecordMatchModal;
+window.setMatchScoreSets = setMatchScoreSets;
+window.updateMatchSimulationPreview = updateMatchSimulationPreview;
+window.submitRecordMatch = submitRecordMatch;
 
 // ============================================================================
 // ADMIN SLOT CREATION
@@ -2664,14 +3570,35 @@ function openModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) {
     modal.classList.add('active');
+    modal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
   }
 }
 
-function closeAllModals() {
-  document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+function closeModal(modalId) {
+  if (modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+      modal.classList.remove('active');
+      modal.style.display = 'none';
+    }
+  } else {
+    closeAllModals();
+  }
   document.body.style.overflow = '';
 }
+
+function closeAllModals() {
+  document.querySelectorAll('.modal-overlay').forEach(m => {
+    m.classList.remove('active');
+    m.style.display = 'none';
+  });
+  document.body.style.overflow = '';
+}
+
+window.openModal = openModal;
+window.closeModal = closeModal;
+window.closeAllModals = closeAllModals;
 
 /**
  * Affiche l'animation de célébration interactive (Style EA Sports FC / Nike)
@@ -2912,7 +3839,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // ── Admin player filter chips ──
+  // ── Admin player filter chips (Statut & Genre Homme / Femme) ──
   document.querySelectorAll('[data-player-filter]').forEach(chip => {
     chip.addEventListener('click', () => {
       document.querySelectorAll('[data-player-filter]').forEach(c => c.classList.remove('active'));
@@ -2920,9 +3847,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const filter = chip.dataset.playerFilter;
       document.querySelectorAll('#adminPlayersTableBody tr').forEach(row => {
         if (filter === 'all') { row.style.display = ''; return; }
-        row.style.display = row.textContent.toLowerCase().includes(
-          filter === 'active' ? 'actif' : filter === 'pending' ? 'attente' : 'suspendu'
-        ) ? '' : 'none';
+        if (filter === 'male') { row.style.display = (row.dataset.gender === 'male') ? '' : 'none'; return; }
+        if (filter === 'female') { row.style.display = (row.dataset.gender === 'female') ? '' : 'none'; return; }
+        if (filter === 'active') { row.style.display = (row.dataset.status === 'active') ? '' : 'none'; return; }
+        if (filter === 'pending') { row.style.display = (row.dataset.status === 'pending') ? '' : 'none'; return; }
+        if (filter === 'suspended') { row.style.display = (row.dataset.status === 'suspended') ? '' : 'none'; return; }
       });
     });
   });
@@ -3084,6 +4013,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const name = document.getElementById('regPlayerName')?.value?.trim();
       const phone = document.getElementById('regPlayerPhone')?.value?.trim();
       const email = document.getElementById('regPlayerEmail')?.value?.trim() || '';
+      const gender = document.getElementById('regPlayerGender')?.value || 'male';
       const side = document.getElementById('regPlayerSide')?.value || 'right';
       const style = document.getElementById('regPlayerStyle')?.value || 'offensive';
       if (!name || !phone) { showToast('Nom et téléphone obligatoires.', 'error'); return; }
@@ -3091,13 +4021,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const newPlayer = {
         id: `player_${Date.now()}`,
         firstName, lastName: lastParts.join(' ') || '', phone, email,
+        gender,
         avatar: null, role: 'player', status: 'pending', level: null,
         preferredSide: side, playStyle: style, reliabilityScore: 50,
         totalMatchesPlayed: 0, skills: {}, levelHistory: [],
+        loyaltyPoints: 0, loyaltyHistory: [],
         consentSignedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
       };
       DB.players.push(newPlayer);
-      saveDB(DB);
+      saveDB(DB, true);
       closeAllModals();
       renderAdminPlayers();
       renderAdminKPIs();
@@ -3230,9 +4162,43 @@ document.addEventListener('DOMContentLoaded', () => {
       renderAdminKPIs();
     } catch (e) {}
 
-    // Polling régulier pour synchronisation en direct entre onglets et sessions
-    setInterval(syncFromBackend, 5000);
-    window.addEventListener('focus', syncFromBackend);
+    // Polling régulier pour synchronisation en direct entre onglets et sessions (2s)
+    setInterval(syncFromBackend, 2000);
+    window.addEventListener('focus', () => syncFromBackend(true));
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) syncFromBackend(true); });
+
+    // Synchronisation inter-onglets instantanée (0ms) via LocalStorage event
+    window.addEventListener('storage', (e) => {
+      if (e.key === DB_KEY && e.newValue) {
+        try {
+          const cached = JSON.parse(e.newValue);
+          if (cached && Array.isArray(cached.players)) {
+            DB.players = mergePlayersLists(DB.players, cached.players);
+            if (Array.isArray(cached.bookings)) DB.bookings = mergeBookingsLists(DB.bookings, cached.bookings);
+            renderAdminPlayers();
+            renderAdminKPIs();
+            renderAdminAlerts();
+            renderAdminTimetable();
+            renderCourtsGrid();
+            renderHomeScreen();
+            renderProfileScreen();
+          }
+        } catch (err) {}
+      }
+    });
+
+    // Connexion SSE temps-réel instantanée (50ms multi-admin collaboratif)
+    try {
+      const sse = new EventSource('/api/circlepadel/events');
+      sse.onmessage = (evt) => {
+        try {
+          const payload = JSON.parse(evt.data);
+          if (payload && payload.type === 'db_updated') {
+            syncFromBackend(true);
+          }
+        } catch (err) {}
+      };
+    } catch (sseErr) {}
 
     // Synchronisation Firestore en tâche de fond si en ligne
     try {
@@ -3320,7 +4286,8 @@ window.submitAuthRegister = async function() {
   const preferredSide = document.getElementById('authRegSide')?.value || 'right';
   const playStyle = document.getElementById('authRegStyle')?.value || 'all-around';
   const selfEstimatedLevel = parseFloat(document.getElementById('authRegLevelRange')?.value) || 5.0;
-  await handlePlayerRegister({ firstName, lastName, phone, email, password, preferredSide, playStyle, selfEstimatedLevel });
+  const gender = document.getElementById('authRegGender')?.value || 'male';
+  await handlePlayerRegister({ firstName, lastName, phone, email, password, preferredSide, playStyle, selfEstimatedLevel, gender });
 };
 
 // Brancher immédiatement les clics des onglets de connexion

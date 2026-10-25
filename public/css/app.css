@@ -80,37 +80,157 @@
    MODE CLAIR — surcharge des variables (body.light-mode)
    ========================================================================== */
 body.light-mode {
-  --bg-canvas:      #F0F2F7;
-  --bg-frame:       #FFFFFF;
+  --bg-canvas:      #EEF2F6;
+  --bg-frame:       #F8FAFC;
   --bg-card:        #FFFFFF;
-  --bg-card-2:      #F5F6FA;
-  --bg-card-hover:  #EDF0F8;
-  --bg-input:       #F0F2F7;
-  --bg-overlay:     rgba(240, 242, 247, 0.96);
+  --bg-card-2:      #F1F5F9;
+  --bg-card-hover:  #E2E8F0;
+  --bg-input:       #F1F5F9;
+  --bg-overlay:     rgba(15, 23, 42, 0.45);
 
-  --border-subtle:  rgba(0, 0, 0, 0.08);
-  --border-card:    rgba(0, 0, 0, 0.10);
-  --border-gold:    rgba(180, 140, 60, 0.40);
-  --border-gold-sm: rgba(180, 140, 60, 0.22);
+  --border-subtle:  rgba(15, 23, 42, 0.08);
+  --border-card:    rgba(15, 23, 42, 0.10);
+  --border-gold:    rgba(180, 140, 60, 0.45);
+  --border-gold-sm: rgba(180, 140, 60, 0.25);
 
-  --text-white:     #0D1117;
-  --text-primary:   #1A1F2E;
-  --text-secondary: #5A6478;
-  --text-muted:     #9AA3B2;
-  --text-dark:      #F0F2F7;
+  --text-white:     #0F172A;
+  --text-primary:   #1E293B;
+  --text-secondary: #475569;
+  --text-muted:     #64748B;
+  --text-dark:      #F8FAFC;
 
   --green-bg:   rgba(46, 204, 113, 0.12);
   --red-bg:     rgba(231, 76, 60, 0.10);
   --amber-bg:   rgba(243, 156, 18, 0.12);
   --blue-bg:    rgba(52, 152, 219, 0.10);
 
-  --gradient-card:  linear-gradient(160deg, rgba(255,255,255,0.95) 0%, rgba(240,242,247,0.98) 100%);
-  --gradient-hero:  linear-gradient(180deg, rgba(240,242,247,0) 0%, rgba(240,242,247,0.97) 100%);
+  --gradient-card:  linear-gradient(160deg, #FFFFFF 0%, #F1F5F9 100%);
+  --gradient-hero:  linear-gradient(180deg, rgba(238,242,246,0) 0%, rgba(238,242,246,0.98) 100%);
 
-  --shadow-sm:  0 2px 12px rgba(0, 0, 0, 0.08);
-  --shadow-md:  0 8px 28px rgba(0, 0, 0, 0.12);
-  --shadow-lg:  0 20px 60px rgba(0, 0, 0, 0.18);
-  --shadow-gold: 0 4px 24px rgba(200, 169, 110, 0.20);
+  --shadow-sm:  0 2px 10px rgba(15, 23, 42, 0.04);
+  --shadow-md:  0 8px 24px rgba(15, 23, 42, 0.08);
+  --shadow-lg:  0 16px 40px rgba(15, 23, 42, 0.12);
+  --shadow-gold: 0 4px 20px rgba(212, 175, 55, 0.20);
+}
+
+/* ── MODE CLAIR : EN-TÊTE SWITCHER (PLATFORM CONTROL BAR) ── */
+body.light-mode .platform-control-bar {
+  background: rgba(241, 245, 249, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.24);
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+}
+body.light-mode .view-mode-tabs {
+  background: rgba(226, 232, 240, 0.75);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: var(--radius-full);
+}
+body.light-mode .view-tab-btn {
+  color: #475569;
+}
+body.light-mode .view-tab-btn.active {
+  background: #FFFFFF;
+  color: #0F172A;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+}
+body.light-mode .brand-tag {
+  background: rgba(212, 175, 55, 0.12);
+  color: #996500;
+  border-color: rgba(212, 175, 55, 0.3);
+}
+
+/* ── MODE CLAIR : EN-TÊTE ÉCRANS (SCREEN HEADER BAR) ── */
+body.light-mode .screen-header-bar {
+  background: rgba(241, 245, 249, 0.90);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.20);
+  box-shadow: 0 2px 14px rgba(15, 23, 42, 0.03);
+}
+body.light-mode .screen-header-title {
+  color: #0F172A;
+}
+body.light-mode .back-btn-icon,
+body.light-mode .filter-btn-icon {
+  background: #FFFFFF;
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  color: #0F172A;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+}
+
+/* ── MODE CLAIR : BARRE DE NAVIGATION BASSE (BOTTOM NAV) ── */
+body.light-mode .app-bottom-nav {
+  background: rgba(241, 245, 249, 0.92);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-top: 1px solid rgba(212, 175, 55, 0.25);
+  box-shadow: 0 -4px 24px rgba(15, 23, 42, 0.06);
+}
+body.light-mode .nav-item-btn {
+  color: #64748B;
+}
+body.light-mode .nav-item-btn:hover {
+  color: #0F172A;
+}
+body.light-mode .nav-item-btn.active {
+  color: #996500;
+  background: rgba(212, 175, 55, 0.14);
+}
+body.light-mode .nav-center-action-btn {
+  filter: drop-shadow(0 6px 16px rgba(212, 175, 55, 0.38));
+}
+
+/* ── MODE CLAIR : EN-TÊTE GÉRANT (ADMIN TOP NAV) ── */
+body.light-mode .admin-top-nav {
+  background: rgba(241, 245, 249, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.24);
+  box-shadow: 0 2px 14px rgba(15, 23, 42, 0.04);
+}
+body.light-mode .admin-club-select-dropdown {
+  background: #FFFFFF;
+  border-color: rgba(15, 23, 42, 0.12);
+  color: #0F172A;
+}
+body.light-mode .btn-admin-switch-player {
+  background: #FFFFFF;
+  border-color: rgba(15, 23, 42, 0.12);
+  color: #0F172A;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+}
+
+/* ── MODE CLAIR : CERCLE DE FIDÉLITÉ ── */
+body.light-mode .loyalty-ring-card {
+  background: linear-gradient(145deg, #FFFFFF 0%, #F1F5F9 100%);
+  border: 1.5px solid rgba(212, 175, 55, 0.35);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06), 0 0 14px rgba(212, 175, 55, 0.10);
+}
+body.light-mode .loyalty-ring-title {
+  color: #996500;
+}
+body.light-mode .loyalty-bg-circle {
+  stroke: rgba(15, 23, 42, 0.08);
+}
+body.light-mode .loyalty-center-val {
+  color: #0F172A;
+  text-shadow: none;
+}
+body.light-mode .loyalty-center-sub {
+  color: #996500;
+}
+body.light-mode .loyalty-milestone-item {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+body.light-mode .loyalty-milestone-item.unlocked {
+  background: rgba(212, 175, 55, 0.14);
+  border-color: var(--gold);
+}
+body.light-mode .loyalty-milestone-pts {
+  color: #996500;
 }
 
 /* Transition fluide lors du changement de thème */
@@ -4028,6 +4148,511 @@ button:active:not(:disabled), .btn-primary-action:active:not(:disabled) {
   border: 1px solid rgba(46, 204, 113, 0.3) !important;
   font-weight: 700 !important;
 }
+
+/* ==========================================================================
+   RATING ENGINE & GLICKO-2 TREND BADGES & RELIABILITY GAUGE
+   ========================================================================== */
+.fut-trend-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Outfit', sans-serif;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+.fut-trend-badge.up {
+  background: rgba(46, 204, 113, 0.25);
+  color: #2ecc71;
+  border: 1px solid rgba(46, 204, 113, 0.5);
+  box-shadow: 0 0 8px rgba(46, 204, 113, 0.3);
+}
+.fut-trend-badge.down {
+  background: rgba(231, 76, 60, 0.25);
+  color: #ff6b6b;
+  border: 1px solid rgba(231, 76, 60, 0.5);
+  box-shadow: 0 0 8px rgba(231, 76, 60, 0.3);
+}
+.fut-trend-badge.neutral {
+  background: rgba(212, 175, 55, 0.18);
+  color: var(--gold);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+}
+
+/* Jauge de Fiabilité Glicko */
+.reliability-gauge-container {
+  margin-top: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.reliability-gauge-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  margin-bottom: 5px;
+}
+.reliability-gauge-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+.reliability-gauge-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #d4af37, #2ecc71);
+  border-radius: 3px;
+  transition: width 0.8s cubic-bezier(0.2, 0.9, 0.3, 1);
+  box-shadow: 0 0 10px rgba(46, 204, 113, 0.4);
+}
+
+/* Modale Feuille de Match (Rating Engine) */
+.match-sheet-team-box {
+  background: rgba(18, 22, 30, 0.7);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.match-sheet-team-title {
+  font-size: 11.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.match-score-sets-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 12px 0;
+}
+.match-score-set-btn {
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-white);
+  padding: 10px 4px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  font-size: 15px;
+}
+.match-score-set-btn:hover {
+  border-color: var(--gold);
+  background: rgba(212, 175, 55, 0.1);
+}
+.match-score-set-btn.active {
+  border-color: var(--gold);
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.25), rgba(46, 204, 113, 0.2));
+  color: #fff;
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.35);
+}
+.match-delta-preview-pill {
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+.match-delta-preview-pill.positive {
+  background: rgba(46, 204, 113, 0.18);
+  color: #2ecc71;
+  border: 1px solid rgba(46, 204, 113, 0.4);
+}
+.match-delta-preview-pill.negative {
+  background: rgba(231, 76, 60, 0.18);
+  color: #ff6b6b;
+  border: 1px solid rgba(231, 76, 60, 0.4);
+}
+
+/* ==========================================================================
+   MINI-TERRAIN PADEL COMPACT (MODÉLISATION 4 PLACES AÉRÉE)
+   ========================================================================== */
+.mini-padel-court-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 10px 0 16px;
+  width: 100%;
+}
+
+.mini-padel-court {
+  position: relative;
+  width: 100%;
+  max-width: 290px;
+  height: 140px;
+  background: linear-gradient(180deg, #0e2f1d 0%, #081d11 100%);
+  border: 1.5px solid rgba(46, 204, 113, 0.45);
+  border-radius: 12px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45), inset 0 0 20px rgba(46, 204, 113, 0.12);
+  display: flex;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Lignes officielles du terrain de padel (calibrées et aérées) */
+.mini-court-glass-border {
+  position: absolute;
+  inset: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 9px;
+  pointer-events: none;
+}
+
+/* Filet central */
+.mini-court-net {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+  z-index: 2;
+  transform: translateX(-50%);
+}
+.mini-court-net::before, .mini-court-net::after {
+  content: '';
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: #fff;
+  border-radius: 50%;
+  left: -2px;
+}
+.mini-court-net::before { top: 2px; }
+.mini-court-net::after { bottom: 2px; }
+
+/* Lignes de service */
+.mini-court-service-left {
+  position: absolute;
+  top: 15px;
+  bottom: 15px;
+  left: 24%;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.35);
+}
+.mini-court-service-right {
+  position: absolute;
+  top: 15px;
+  bottom: 15px;
+  right: 24%;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.35);
+}
+.mini-court-center-line {
+  position: absolute;
+  top: 50%;
+  left: 24%;
+  right: 24%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-50%);
+}
+
+/* Deux moitiés de terrain (Side 1 et Side 2) */
+.mini-court-half {
+  flex: 1;
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr 1fr;
+  padding: 10px 12px;
+  z-index: 3;
+}
+
+/* Emplacements joueurs tactiques sur le terrain */
+.court-tactical-spot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+.court-tactical-spot:hover {
+  transform: scale(1.05);
+}
+
+.tactical-pin {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  font-size: 11px;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.tactical-pin.filled {
+  background: linear-gradient(135deg, #16a085, #2ecc71);
+  color: #fff;
+  border: 1.5px solid #2ecc71;
+  box-shadow: 0 0 10px rgba(46, 204, 113, 0.5);
+}
+
+.tactical-pin.empty {
+  background: rgba(0, 0, 0, 0.5);
+  color: var(--gold);
+  border: 1.5px dashed rgba(212, 175, 55, 0.6);
+  font-size: 16px;
+  line-height: 1;
+  animation: pulseSlotBorder 2.5s infinite ease-in-out;
+}
+.tactical-pin.empty:hover {
+  border-color: #fff;
+  color: #fff;
+  background: rgba(212, 175, 55, 0.25);
+}
+
+.tactical-info {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-width: 80px;
+}
+.tactical-name {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-white);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+.tactical-sub {
+  font-size: 9px;
+  color: var(--gold);
+  font-weight: 700;
+}
+
+@keyframes pulseSlotBorder {
+  0% { border-color: rgba(212, 175, 55, 0.4); box-shadow: 0 0 0 rgba(212, 175, 55, 0); }
+  50% { border-color: rgba(212, 175, 55, 0.85); box-shadow: 0 0 8px rgba(212, 175, 55, 0.35); }
+  100% { border-color: rgba(212, 175, 55, 0.4); box-shadow: 0 0 0 rgba(212, 175, 55, 0); }
+}
+
+/* ==========================================================================
+   CERCLE DE FIDÉLITÉ CIRCLEPADEL (THE LOYALTY RING)
+   ========================================================================== */
+.loyalty-ring-card {
+  width: 100%;
+  max-width: 360px;
+  margin: 16px auto;
+  background: linear-gradient(135deg, rgba(21, 26, 36, 0.95) 0%, rgba(10, 14, 20, 0.98) 100%);
+  border: 1.5px solid rgba(212, 175, 55, 0.35);
+  border-radius: var(--radius-lg);
+  padding: 18px 16px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55), 0 0 16px rgba(212, 175, 55, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.loyalty-ring-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.loyalty-ring-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--gold);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.loyalty-stage-wrap {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loyalty-svg-ring {
+  transform: rotate(-90deg);
+  width: 220px;
+  height: 220px;
+}
+
+.loyalty-bg-circle {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 10;
+}
+
+.loyalty-progress-circle {
+  fill: none;
+  stroke: url(#loyaltyGoldGrad);
+  stroke-width: 10;
+  stroke-linecap: round;
+  stroke-dasharray: 565;
+  stroke-dashoffset: 565;
+  transition: stroke-dashoffset 1.2s cubic-bezier(0.2, 0.9, 0.3, 1);
+  filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.5));
+}
+
+.loyalty-center-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+.loyalty-center-val {
+  font-family: 'Outfit', sans-serif;
+  font-size: 34px;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1;
+  text-shadow: 0 0 12px rgba(212, 175, 55, 0.4);
+}
+.loyalty-center-sub {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--gold);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+.loyalty-center-max {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+/* Jalons Récompenses (Badges Milestone) */
+.loyalty-milestones-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 16px 0 12px;
+}
+.loyalty-milestone-item {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 8px 6px;
+  text-align: center;
+  transition: all 0.25s ease;
+  position: relative;
+}
+.loyalty-milestone-item.midway {
+  border: 1.5px solid rgba(212, 175, 55, 0.55);
+  background: rgba(212, 175, 55, 0.08);
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.15);
+}
+.milestone-midway-tag {
+  display: inline-block;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.35), rgba(46, 204, 113, 0.25));
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  font-size: 7.5px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+.loyalty-milestone-subtag {
+  font-size: 8.5px;
+  color: var(--gold);
+  font-weight: 700;
+  margin-top: 2px;
+}
+.loyalty-milestone-item.unlocked {
+  border-color: var(--gold);
+  background: rgba(212, 175, 55, 0.12);
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+}
+.loyalty-milestone-icon {
+  font-size: 20px;
+  margin-bottom: 2px;
+}
+.loyalty-milestone-pts {
+  font-family: 'Outfit', sans-serif;
+  font-size: 11.5px;
+  font-weight: 900;
+  color: var(--gold);
+}
+.loyalty-milestone-label {
+  font-size: 10px;
+  color: var(--text-secondary);
+  line-height: 1.2;
+  margin-top: 2px;
+}
+
+/* Règles de gains de points */
+.loyalty-rules-box {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+.loyalty-rules-box strong {
+  color: var(--text-white);
+}
+
+.loyalty-claim-btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+.loyalty-claim-btn.active {
+  background: linear-gradient(135deg, #d4af37, #b8860b);
+  color: #000;
+  box-shadow: 0 4px 14px rgba(212, 175, 55, 0.4);
+}
+.loyalty-claim-btn.disabled {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+
+
 
 
 
