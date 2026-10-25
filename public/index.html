@@ -1326,7 +1326,7 @@
                   <span class="tactical-sub">Équipe 1</span>
                 </div>
               </div>
-              <div class="court-tactical-spot" id="bookSpot2" onclick="document.getElementById('bookCoPlayer2').focus()" title="Cliquer pour renseigner le partenaire">
+              <div class="court-tactical-spot" id="bookSpot2" onclick="focusCoPlayerSlot(2)" title="Cliquer pour renseigner le partenaire">
                 <div class="tactical-pin empty" id="bookSpotPin2">+</div>
                 <div class="tactical-info">
                   <span class="tactical-name" id="bookSpotName2">Place 2</span>
@@ -1337,14 +1337,14 @@
 
             <!-- Équipe 2 (Droite) -->
             <div class="mini-court-half">
-              <div class="court-tactical-spot" id="bookSpot3" onclick="document.getElementById('bookCoPlayer3').focus()" title="Cliquer pour renseigner l'adversaire 1">
+              <div class="court-tactical-spot" id="bookSpot3" onclick="focusCoPlayerSlot(3)" title="Cliquer pour renseigner l'adversaire 1">
                 <div class="tactical-pin empty" id="bookSpotPin3">+</div>
                 <div class="tactical-info">
                   <span class="tactical-name" id="bookSpotName3">Place 3</span>
                   <span class="tactical-sub">Adversaire 1</span>
                 </div>
               </div>
-              <div class="court-tactical-spot" id="bookSpot4" onclick="document.getElementById('bookCoPlayer4').focus()" title="Cliquer pour renseigner l'adversaire 2">
+              <div class="court-tactical-spot" id="bookSpot4" onclick="focusCoPlayerSlot(4)" title="Cliquer pour renseigner l'adversaire 2">
                 <div class="tactical-pin empty" id="bookSpotPin4">+</div>
                 <div class="tactical-info">
                   <span class="tactical-name" id="bookSpotName4">Place 4</span>
@@ -1363,17 +1363,26 @@
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
             <div>
               <label class="modal-label" style="font-size:10px">Joueur 2 (Partenaire)</label>
-              <input type="text" class="login-field" id="bookCoPlayer2" placeholder="Nom ou invité..." list="clubPlayersDatalist" style="font-size:11.5px; padding:7px" oninput="updateBookingCourtTacticalSpots()" />
+              <select class="login-field" id="bookCoPlayerSelect2" style="font-size:11.5px; padding:7px" onchange="handleCoPlayerSelectChange(2)">
+                <option value="">-- Choisir un joueur --</option>
+              </select>
+              <input type="text" class="login-field" id="bookCoPlayerInput2" placeholder="Nom de l'invité (ex: Sami)..." style="font-size:11px; padding:6px; margin-top:4px; display:none" oninput="updateBookingCourtTacticalSpots()" />
             </div>
             <div>
               <label class="modal-label" style="font-size:10px">Joueur 3 (Adversaire 1)</label>
-              <input type="text" class="login-field" id="bookCoPlayer3" placeholder="Nom ou invité..." list="clubPlayersDatalist" style="font-size:11.5px; padding:7px" oninput="updateBookingCourtTacticalSpots()" />
+              <select class="login-field" id="bookCoPlayerSelect3" style="font-size:11.5px; padding:7px" onchange="handleCoPlayerSelectChange(3)">
+                <option value="">-- Choisir un joueur --</option>
+              </select>
+              <input type="text" class="login-field" id="bookCoPlayerInput3" placeholder="Nom de l'invité (ex: Karim)..." style="font-size:11px; padding:6px; margin-top:4px; display:none" oninput="updateBookingCourtTacticalSpots()" />
             </div>
           </div>
 
           <div>
             <label class="modal-label" style="font-size:10px">Joueur 4 (Adversaire 2)</label>
-            <input type="text" class="login-field" id="bookCoPlayer4" placeholder="Nom ou invité..." list="clubPlayersDatalist" style="font-size:11.5px; padding:7px" oninput="updateBookingCourtTacticalSpots()" />
+            <select class="login-field" id="bookCoPlayerSelect4" style="font-size:11.5px; padding:7px" onchange="handleCoPlayerSelectChange(4)">
+              <option value="">-- Choisir un joueur --</option>
+            </select>
+            <input type="text" class="login-field" id="bookCoPlayerInput4" placeholder="Nom de l'invité (ex: Yassine)..." style="font-size:11px; padding:6px; margin-top:4px; display:none" oninput="updateBookingCourtTacticalSpots()" />
           </div>
         </div>
 
@@ -1383,6 +1392,31 @@
       </div>
 
       <button class="btn-primary-action" id="btnConfirmBooking">Confirmer la réservation</button>
+    </div>
+  </div>
+
+  <!-- ── Modale : Invitation Saisie du Score Match Terminé (Créateur) ── -->
+  <div class="modal-overlay" id="modal-match-score-prompt" role="dialog" aria-modal="true">
+    <div class="modal-sheet" style="max-width:440px; text-align:center; padding:24px 20px">
+      <div class="modal-drag-indicator"></div>
+      <div style="font-size:46px; margin-bottom:8px">🎾</div>
+      <div class="modal-title" style="font-size:18px; font-weight:800; color:var(--gold); margin-bottom:6px">
+        Match Terminé · Score à Enregistrer
+      </div>
+      <div id="scorePromptMatchDetails" style="font-size:12.5px; color:var(--text-secondary); line-height:1.5; margin-bottom:14px; background:rgba(212,175,55,0.08); padding:12px; border-radius:12px; border:1px solid rgba(212,175,55,0.25)">
+        <!-- Rempli dynamiquement -->
+      </div>
+      <p style="font-size:12px; color:var(--text-muted); margin-bottom:18px; line-height:1.4">
+        Le créneau de votre match est arrivé à son terme. En tant que créateur du match, enregistrez le résultat officiel pour mettre à jour les niveaux et créditer vos points de fidélité !
+      </p>
+      <div style="display:flex; flex-direction:column; gap:10px">
+        <button class="btn-primary-action" id="btnScorePromptRecordNow" onclick="confirmOpenMatchRecordFromPrompt()" style="background:linear-gradient(135deg, #f59e0b, #d97706); font-weight:800; padding:13px; font-size:14px; border:none; box-shadow:0 4px 15px rgba(245,158,11,0.3)">
+          🏆 Saisir le score maintenant
+        </button>
+        <button class="btn-secondary-action" id="btnScorePromptLater" style="font-size:12px; padding:10px" onclick="dismissFinishedMatchScorePrompt()">
+          Plus tard
+        </button>
+      </div>
     </div>
   </div>
 

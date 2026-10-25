@@ -80,6 +80,23 @@ try {
   }
 } catch (e) { localStorage.removeItem(DB_KEY); }
 
+/**
+ * Assure l'intégrité de la structure DB pour immuniser l'interface contre tout bug d'incohérence
+ */
+function sanitizeDB(db) {
+  if (!db || typeof db !== 'object') return;
+  if (!Array.isArray(db.players)) db.players = [];
+  if (!Array.isArray(db.courts) || db.courts.length === 0) db.courts = [...COURTS_SEED];
+  if (!Array.isArray(db.bookings)) db.bookings = [];
+  if (!Array.isArray(db.notifications)) db.notifications = [];
+  if (!Array.isArray(db.matchReviews)) db.matchReviews = [];
+  if (!Array.isArray(db.transactions)) db.transactions = [];
+  db.bookings.forEach(b => {
+    if (b && !Array.isArray(b.players)) b.players = [];
+  });
+}
+sanitizeDB(DB);
+
 let _syncDebounceTimer = null;
 
 /**
@@ -214,6 +231,7 @@ async function syncFromBackend(isFromRealtimeEvent = false) {
         }
       }
 
+      sanitizeDB(DB);
       saveDB(DB, false);
       renderAdminPlayers();
       renderAdminKPIs();
@@ -566,6 +584,11 @@ function renderHomeScreen() {
   const unread = (DB.notifications || []).filter(n => !n.isRead && n.userId === user.id);
   const notifDot = document.getElementById('notifDot');
   if (notifDot) notifDot.style.display = unread.length > 0 ? '' : 'none';
+
+  // Vérifier si un match terminé attend la saisie du score par son créateur
+  if (typeof checkFinishedMatchesScorePrompt === 'function') {
+    setTimeout(checkFinishedMatchesScorePrompt, 500);
+  }
 }
 
 function renderHomeOpenMatches(user) {
@@ -2054,43 +2077,46 @@ function renderProfileHistory(user) {
 
 function renderMyBookings() {
   const container = document.getElementById('myBookingsContainer');
+  if (!container) return;
   const today = getTodayStr();
-  const user = DB.currentUser;
-  const myBookings = DB.bookings.filter(b =>
-    b.players.some(p => p.userId === user.id)
+  const user = (DB.players || []).find(p => p.id === DB.currentUser?.id) || DB.currentUser || {};
+  const myBookings = (DB.bookings || []).filter(b =>
+    b && b.status !== 'cancelled' && Array.isArray(b.players) && b.players.some(p => p && p.userId === user.id)
   ).sort((a, b) => (b.date + b.startTime).localeCompare(a.date + a.startTime));
 
   if (myBookings.length === 0) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-title">Aucune réservation</div></div>`;
+    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-title">Aucune réservation</div><div class="empty-state-desc">Vous n'avez aucun match ou créneau réservé actuellement.</div></div>`;
     return;
   }
 
   container.innerHTML = myBookings.map(b => {
     const isPast = b.date < today;
-    const spots = DB.appConfig.maxPlayersPerMatch - b.players.length;
+    const spots = (DB.appConfig?.maxPlayersPerMatch || 4) - (b.players || []).length;
+    const hasRecorded = b.scoreRecorded === true;
     return `
-    <div class="match-list-card" style="${isPast ? 'opacity:0.6' : ''}">
+    <div class="match-list-card" style="${isPast ? 'opacity:0.85; border-color:rgba(255,255,255,0.08)' : ''}">
       <div class="match-list-top">
         <div>
           <div class="match-list-court">${b.courtName}</div>
           <div class="match-list-date">${b.date === today ? 'Aujourd\'hui' : formatDate(b.date)} · ${b.startTime} – ${b.endTime}</div>
         </div>
-        <span class="match-status-badge ${isPast ? '' : 'open'}">${isPast ? 'Terminé' : 'Confirmé'}</span>
+        <span class="match-status-badge ${isPast ? '' : 'open'}">${isPast ? (hasRecorded ? '✓ Terminé & Homologué' : 'Match Terminé') : 'Confirmé'}</span>
       </div>
       <div class="match-list-info-row">
         <div class="match-info-chip">
           <span class="chip-icon">${b.type === 'open' ? '🎾' : b.type === 'private' ? '🔒' : '🎓'}</span>
           <span>${b.type === 'open' ? `Match ouvert · Niv. ${b.minLevel||'?'}–${b.maxLevel||'?'}` : b.type === 'private' ? 'Privée' : 'Cours coach'}</span>
         </div>
+        ${hasRecorded ? `<div class="match-info-chip" style="color:var(--green); border-color:rgba(46,204,113,0.3)"><span class="chip-icon">🏆</span><span>Score Enregistré</span></div>` : ''}
       </div>
       <div class="match-list-bottom">
-        <span class="match-price-tag">${b.pricePerPlayer} DT <span>/joueur</span></span>
+        <span class="match-price-tag">${b.pricePerPlayer || 25} DT <span>/joueur</span></span>
         <div style="display:flex; gap:8px; align-items:center">
-          <button type="button" onclick="openRecordMatchForBooking('${b.id}', 'player')" style="padding:6px 12px; border-radius:var(--radius-full); border:1px solid var(--gold); background:rgba(212,175,55,0.15); color:var(--gold); font-size:11px; font-weight:800; cursor:pointer" title="Enregistrer le score et mettre à jour le classement">
-            🏆 Saisir le score
+          <button type="button" onclick="openRecordMatchForBooking('${b.id}', 'player')" style="padding:6px 12px; border-radius:var(--radius-full); border:1px solid var(--gold); background:rgba(212,175,55,0.15); color:var(--gold); font-size:11px; font-weight:800; cursor:pointer" title="Enregistrer ou modifier le score">
+            ${hasRecorded ? '🏆 Modifier le score' : '🏆 Saisir le score'}
           </button>
-          ${!isPast && b.players.find(p => p.userId === user.id) ? `
-            <button onclick="cancelMyBooking('${b.id}')" style="padding:6px 14px; border-radius:var(--radius-full); border:1px solid rgba(231,76,60,0.3); background:transparent; color:var(--red); font-size:11px; font-weight:700;">
+          ${!isPast && (b.players || []).some(p => p.userId === user.id) ? `
+            <button onclick="cancelMyBooking('${b.id}')" style="padding:6px 14px; border-radius:var(--radius-full); border:1px solid rgba(231,76,60,0.3); background:transparent; color:var(--red); font-size:11px; font-weight:700; cursor:pointer">
               Annuler
             </button>` : ''}
         </div>
@@ -2102,31 +2128,79 @@ function renderMyBookings() {
 }
 
 function cancelMyBooking(bookingId) {
-  const booking = DB.bookings.find(b => b.id === bookingId);
+  const booking = (DB.bookings || []).find(b => b.id === bookingId);
   if (!booking) return;
 
-  const [h, m] = booking.startTime.split(':').map(Number);
+  const [h, m] = (booking.startTime || '08:00').split(':').map(Number);
   const matchDate = new Date(booking.date);
   matchDate.setHours(h, m, 0, 0);
   const diffHours = (matchDate - new Date()) / 3600000;
 
-  if (diffHours < DB.appConfig.cancelDeadlineHours) {
-    showToast(`Annulation impossible : le délai de ${DB.appConfig.cancelDeadlineHours}h avant match est dépassé.`, 'error');
+  if (diffHours < (DB.appConfig?.cancelDeadlineHours || 2)) {
+    showToast(`Annulation impossible : le délai de ${DB.appConfig?.cancelDeadlineHours || 2}h avant match est dépassé.`, 'error');
     return;
   }
 
-  // Remove player
-  booking.players = booking.players.filter(p => p.userId !== DB.currentUser.id);
+  const user = (DB.players || []).find(p => p.id === DB.currentUser?.id) || DB.currentUser;
+  const userName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'Un joueur';
+  const court = (DB.courts || []).find(c => c.id === booking.courtId);
+  const courtName = court ? court.name : (booking.courtName || 'Court');
 
-  // If organizer and no players left → cancel
-  if (booking.players.length === 0 && booking.type === 'open') {
+  const isOrganizer = (booking.players || []).some(p => p.userId === user.id && p.isOrganizer) ||
+                      (booking.players || [])[0]?.userId === user.id ||
+                      booking.type === 'private';
+
+  if (isOrganizer) {
+    // Si l'organisateur annule -> le match/créneau est retiré complètement
     booking.status = 'cancelled';
+    booking.cancelledAt = new Date().toISOString();
+    booking.cancelledBy = userName;
+  } else {
+    // Participant dans un match ouvert
+    booking.players = (booking.players || []).filter(p => p.userId !== user.id);
+    if (booking.players.length === 0) {
+      booking.status = 'cancelled';
+      booking.cancelledAt = new Date().toISOString();
+      booking.cancelledBy = userName;
+    }
   }
 
-  saveDB(DB);
-  showToast('Réservation annulée.', 'info');
+  // Notification prioritaire envoyée au gérant (Alertes)
+  DB.notifications = DB.notifications || [];
+  DB.notifications.unshift({
+    id: `notif_cancel_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+    userId: 'admin',
+    targetRole: 'admin',
+    type: 'booking_cancelled',
+    title: '❌ Réservation annulée par un joueur',
+    body: `${userName} a annulé sa réservation sur le ${courtName} le ${formatDate(booking.date)} à ${booking.startTime}. Le créneau a été retiré et libéré sur votre planning.`,
+    bookingId: booking.id,
+    courtName: courtName,
+    courtId: booking.courtId,
+    date: booking.date,
+    startTime: booking.startTime,
+    cancelledBy: userName,
+    sentAt: new Date().toISOString(),
+    isRead: false
+  });
+
+  // Sauvegarde et propagation multi-admin temps-réel (SSE 50ms)
+  saveDB(DB, true);
+
+  if (typeof fbCancelBooking === 'function') {
+    fbCancelBooking(booking.id).catch(() => {});
+  }
+
+  showToast(`Réservation annulée. Le créneau a été retiré du tableau du gérant.`, 'info');
+
   renderMyBookings();
+  renderHomeScreen();
+  if (typeof renderCourtsGrid === 'function') renderCourtsGrid();
+  if (typeof renderAdminTimetable === 'function') renderAdminTimetable();
+  if (typeof renderAdminAlerts === 'function') renderAdminAlerts();
+  if (typeof renderAdminKPIs === 'function') renderAdminKPIs();
 }
+window.cancelMyBooking = cancelMyBooking;
 
 // ============================================================================
 // NOTIFICATIONS
@@ -2181,23 +2255,30 @@ function renderAdminDashboard() {
 }
 
 function renderAdminKPIs() {
-  const todayBookings = DB.bookings.filter(b => b.date === getTodayStr() && b.status === 'confirmed');
-  const totalSlots = DB.courts.length * SLOT_TIMES.length;
+  const todayBookings = (DB.bookings || []).filter(b => b.date === getTodayStr() && b.status === 'confirmed');
+  const totalSlots = (DB.courts || []).length * SLOT_TIMES.length;
   const occupancy = totalSlots > 0 ? Math.round((todayBookings.length / totalSlots) * 100) : 0;
-  const revenue = todayBookings.reduce((sum, b) => sum + (b.pricePerPlayer * b.players.length), 0);
-  const activePlayers = DB.players.filter(p => p.status === 'active').length;
+  const revenue = todayBookings.reduce((sum, b) => sum + ((b.pricePerPlayer || 25) * (b.players || []).length), 0);
+  const activePlayers = (DB.players || []).filter(p => p.status === 'active').length;
   const alerts = checkMatchAlerts();
   const loyaltyNotifsCount = (DB.notifications || []).filter(n => (n.userId === 'admin' || n.targetRole === 'admin') && n.type === 'loyalty_milestone' && !n.isRead).length;
+  const cancelNotifsCount = (DB.notifications || []).filter(n => (n.userId === 'admin' || n.targetRole === 'admin') && n.type === 'booking_cancelled' && !n.isRead).length;
   const pendingPlayersCount = (DB.players || []).filter(p => p.status === 'pending').length;
-  const totalAlerts = alerts.length + loyaltyNotifsCount + pendingPlayersCount;
+  const totalAlerts = alerts.length + loyaltyNotifsCount + cancelNotifsCount + pendingPlayersCount;
   const noShows = 0; // Phase 2
 
-  document.getElementById('kpiBookingsValue').textContent = `${todayBookings.length} créneaux`;
-  document.getElementById('kpiOccupancyValue').textContent = `${occupancy}%`;
-  document.getElementById('kpiRevenueValue').textContent = `${revenue} DT`;
-  document.getElementById('kpiPlayersValue').textContent = `${activePlayers} actifs`;
-  document.getElementById('kpiAlertsValue').textContent = totalAlerts;
-  document.getElementById('kpiNoShowsValue').textContent = `${noShows}`;
+  const bEl = document.getElementById('kpiBookingsValue');
+  if (bEl) bEl.textContent = `${todayBookings.length} créneaux`;
+  const oEl = document.getElementById('kpiOccupancyValue');
+  if (oEl) oEl.textContent = `${occupancy}%`;
+  const rEl = document.getElementById('kpiRevenueValue');
+  if (rEl) rEl.textContent = `${revenue} DT`;
+  const pEl = document.getElementById('kpiPlayersValue');
+  if (pEl) pEl.textContent = `${activePlayers} actifs`;
+  const aEl = document.getElementById('kpiAlertsValue');
+  if (aEl) aEl.textContent = totalAlerts;
+  const nEl = document.getElementById('kpiNoShowsValue');
+  if (nEl) nEl.textContent = `${noShows}`;
 }
 
 function renderAdminTimetable() {
@@ -2496,16 +2577,39 @@ function renderAdminAlerts() {
     !n.isRead
   );
 
-  // 2. Joueurs actuels ayant franchi un palier (>= 15 pts)
+  // 2. Notifications d'annulation de créneaux par des joueurs
+  const cancelNotifs = (DB.notifications || []).filter(n =>
+    (n.userId === 'admin' || n.targetRole === 'admin') &&
+    n.type === 'booking_cancelled' &&
+    !n.isRead
+  );
+
+  // 3. Joueurs actuels ayant franchi un palier (>= 15 pts)
   const playersWithPalier = (DB.players || []).filter(p => (Number(p.loyaltyPoints) || 0) >= 15);
 
   let html = '';
 
-  if (alerts.length === 0 && pendingPlayers.length === 0 && loyaltyNotifs.length === 0 && playersWithPalier.length === 0) {
+  if (alerts.length === 0 && pendingPlayers.length === 0 && loyaltyNotifs.length === 0 && cancelNotifs.length === 0 && playersWithPalier.length === 0) {
     html = `<div class="empty-state"><div class="empty-state-icon">✅</div><div class="empty-state-title">Aucune alerte</div><div class="empty-state-desc">Tout est en ordre</div></div>`;
   }
 
-  // A. Notifications officielles de Paliers de Fidélité atteints
+  // A. Notifications d'annulation de créneau par un joueur (Priorité Gérant)
+  cancelNotifs.forEach(n => {
+    html += `
+    <div class="alert-item critical" style="border-left:4px solid var(--red); background:rgba(231,76,60,0.08); border-radius:10px; margin-bottom:10px">
+      <span class="alert-icon" style="font-size:24px">❌</span>
+      <div class="alert-body">
+        <div class="alert-title" style="color:var(--red); font-weight:800; font-size:13px">${n.title}</div>
+        <div class="alert-desc" style="color:var(--text-primary); font-size:12px; margin-top:2px">${n.body}</div>
+        <div style="font-size:10px; color:var(--text-muted); margin-top:4px">${timeAgo(n.sentAt)}</div>
+      </div>
+      <button class="alert-action-btn" onclick="dismissCancelAlert('${n.id}')" style="background:var(--red); color:#fff; font-weight:800; font-size:11px; white-space:nowrap; cursor:pointer">
+        Vu ✓
+      </button>
+    </div>`;
+  });
+
+  // B. Notifications officielles de Paliers de Fidélité atteints
   loyaltyNotifs.forEach(n => {
     html += `
     <div class="alert-item" style="border-left:4px solid var(--gold); background:rgba(212,175,55,0.08); border-radius:10px; margin-bottom:10px">
@@ -2544,7 +2648,7 @@ function renderAdminAlerts() {
     });
   }
 
-  // B. Alertes Matchs Incomplets
+  // C. Alertes Matchs Incomplets
   alerts.forEach(a => {
     html += `
     <div class="alert-item critical">
@@ -2557,7 +2661,7 @@ function renderAdminAlerts() {
     </div>`;
   });
 
-  // C. Joueurs en attente d'évaluation
+  // D. Joueurs en attente d'évaluation
   if (pendingPlayers.length > 0) {
     html += `
     <div class="alert-item warning">
@@ -2572,6 +2676,18 @@ function renderAdminAlerts() {
 
   container.innerHTML = html;
 }
+
+function dismissCancelAlert(notifId) {
+  const notif = (DB.notifications || []).find(n => n.id === notifId);
+  if (notif) {
+    notif.isRead = true;
+    saveDB(DB, true);
+    renderAdminAlerts();
+    renderAdminKPIs();
+    showToast('Alerte d\'annulation archivée ✓', 'info');
+  }
+}
+window.dismissCancelAlert = dismissCancelAlert;
 
 function renderAdminStats() {
   // KPI cards
@@ -3385,7 +3501,79 @@ function setupSlotPicker(slotId, targetPlayerId, manualFallback = null) {
   handleMatchPlayerSelectChange(slotId);
 }
 
+let currentRecordingBookingId = null;
+let _activeScorePromptBookingId = null;
+
+function checkFinishedMatchesScorePrompt() {
+  const user = (DB.players || []).find(p => p.id === DB.currentUser?.id) || DB.currentUser;
+  if (!user || !user.id || user.id === 'guest' || currentMode === 'backoffice-dashboard') return;
+
+  const todayStr = getTodayStr();
+  const now = new Date();
+  const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+  // Chercher un match confirmé, créé par ce joueur, dont l'horaire de fin est dépassé, et sans score saisi
+  const pendingMatch = (DB.bookings || []).find(b => {
+    if (!b || b.status !== 'confirmed' || b.scoreRecorded === true) return false;
+
+    // Doit être l'organisateur / créateur du match
+    const isCreator = (b.players || []).some(p => p.userId === user.id && p.isOrganizer) ||
+                      (b.players || [])[0]?.userId === user.id ||
+                      b.type === 'private';
+    if (!isCreator) return false;
+
+    // Ignoré pour cette session ?
+    if (sessionStorage.getItem('dismissed_score_prompt_' + b.id)) return false;
+
+    // Vérifier si le créneau est dépassé
+    const endTime = b.endTime || addMinutes(b.startTime || '10:00', 90);
+    const isPast = (b.date < todayStr) || (b.date === todayStr && currentHHMM >= endTime);
+    return isPast;
+  });
+
+  if (!pendingMatch) return;
+
+  _activeScorePromptBookingId = pendingMatch.id;
+
+  const detailsEl = document.getElementById('scorePromptMatchDetails');
+  if (detailsEl) {
+    const coPlayers = (pendingMatch.players || []).filter(p => p.userId !== user.id).map(p => p.name).filter(Boolean);
+    const coText = coPlayers.length > 0 ? `<br><span style="color:var(--text-white); font-weight:600">Joueurs : ${coPlayers.join(', ')}</span>` : '';
+    detailsEl.innerHTML = `
+      <div style="font-weight:700; color:var(--gold); font-size:14px; margin-bottom:4px">
+        🎾 ${pendingMatch.courtName} · ${pendingMatch.startTime} – ${pendingMatch.endTime}
+      </div>
+      <div>Date : <strong>${pendingMatch.date === todayStr ? "Aujourd'hui" : formatDate(pendingMatch.date)}</strong>${coText}</div>
+    `;
+  }
+
+  // N'afficher que si aucune autre modale n'est ouverte
+  const anyModalActive = document.querySelector('.modal-overlay.active');
+  if (!anyModalActive) {
+    openModal('modal-match-score-prompt');
+  }
+}
+window.checkFinishedMatchesScorePrompt = checkFinishedMatchesScorePrompt;
+
+function confirmOpenMatchRecordFromPrompt() {
+  const bId = _activeScorePromptBookingId;
+  closeModal('modal-match-score-prompt');
+  if (bId) {
+    openRecordMatchForBooking(bId, 'player');
+  }
+}
+window.confirmOpenMatchRecordFromPrompt = confirmOpenMatchRecordFromPrompt;
+
+function dismissFinishedMatchScorePrompt() {
+  if (_activeScorePromptBookingId) {
+    sessionStorage.setItem('dismissed_score_prompt_' + _activeScorePromptBookingId, 'true');
+  }
+  closeModal('modal-match-score-prompt');
+}
+window.dismissFinishedMatchScorePrompt = dismissFinishedMatchScorePrompt;
+
 function openRecordMatchForBooking(bookingId, role) {
+  currentRecordingBookingId = bookingId || null;
   const b = (DB.bookings || []).find(bk => bk.id === bookingId);
   const mode = role || (currentMode === 'backoffice-dashboard' ? 'admin' : 'player');
   openRecordMatchModal(mode, b);
@@ -3694,6 +3882,16 @@ async function submitRecordMatch(e) {
       scoreDetail: scoreDetail,
       recordedBy: currentMatchSheetMode
     });
+
+    if (currentRecordingBookingId) {
+      const bk = (DB.bookings || []).find(b => b.id === currentRecordingBookingId);
+      if (bk) {
+        bk.scoreRecorded = true;
+        bk.matchRecorded = true;
+        bk.scoreDetail = scoreDetail;
+      }
+    }
+    currentRecordingBookingId = null;
 
     saveDB(DB, true);
     closeAllModals();
@@ -4085,22 +4283,81 @@ function switchAdminTab(tabName) {
 // MODAL SYSTEM
 // ============================================================================
 
-function populateClubPlayersDatalist() {
-  const datalist = document.getElementById('clubPlayersDatalist');
-  if (!datalist) return;
+function populateBookingCoPlayerPickers() {
   const currentId = DB.currentUser?.id;
   const players = (DB.players || []).filter(p => p && p.id !== currentId);
-  datalist.innerHTML = players.map(p => {
-    const fn = (p.firstName || '').trim();
-    const ln = (p.lastName || '').trim();
-    const fullName = `${fn} ${ln}`.trim();
-    if (!fullName) return '';
-    const isGuest = p.status === 'guest' || !p.gender;
-    const lvl = p.level != null ? Number(p.level).toFixed(1) : (p.selfEstimatedLevel ? Number(p.selfEstimatedLevel).toFixed(1) : '5.0');
-    return `<option value="${fullName}">${isGuest ? `${fullName} (Invité)` : `${fullName} · Niv.${lvl}`}</option>`;
-  }).join('');
+  // Trier les joueurs par prénom alphabétique
+  players.sort((a, b) => (a.firstName || '').localeCompare(b.firstName || ''));
+
+  const datalist = document.getElementById('clubPlayersDatalist');
+  if (datalist) {
+    datalist.innerHTML = players.map(p => {
+      const fn = (p.firstName || '').trim();
+      const ln = (p.lastName || '').trim();
+      const fullName = `${fn} ${ln}`.trim();
+      if (!fullName) return '';
+      const isGuest = p.status === 'guest' || !p.gender;
+      const lvl = p.level != null ? Number(p.level).toFixed(1) : (p.selfEstimatedLevel ? Number(p.selfEstimatedLevel).toFixed(1) : '5.0');
+      return `<option value="${fullName}">${isGuest ? `${fullName} (Invité)` : `${fullName} · Niv.${lvl}`}</option>`;
+    }).join('');
+  }
+
+  [2, 3, 4].forEach(spotNum => {
+    const sel = document.getElementById(`bookCoPlayerSelect${spotNum}`);
+    if (!sel) return;
+    const currentVal = sel.value;
+    
+    let html = `<option value="">-- Choisir un joueur du club ou invité --</option>`;
+    html += `<optgroup label="⭐ Joueurs de l'application">`;
+    players.forEach(p => {
+      const fn = (p.firstName || '').trim();
+      const ln = (p.lastName || '').trim();
+      const fullName = `${fn} ${ln}`.trim();
+      if (!fullName) return;
+      const isGuest = p.status === 'guest' || !p.gender;
+      const lvl = p.level != null ? Number(p.level).toFixed(1) : (p.selfEstimatedLevel ? Number(p.selfEstimatedLevel).toFixed(1) : '5.0');
+      html += `<option value="${p.id}" ${currentVal === p.id ? 'selected' : ''}>${fullName} (${isGuest ? 'Invité' : 'Niv. ' + lvl})</option>`;
+    });
+    html += `</optgroup>`;
+    html += `<optgroup label="➕ Invité non inscrit">`;
+    html += `<option value="__manual__" ${currentVal === '__manual__' ? 'selected' : ''}>✏️ Invité non inscrit (Saisie libre)...</option>`;
+    html += `</optgroup>`;
+
+    sel.innerHTML = html;
+  });
 }
-window.populateClubPlayersDatalist = populateClubPlayersDatalist;
+window.populateBookingCoPlayerPickers = populateBookingCoPlayerPickers;
+window.populateClubPlayersDatalist = populateBookingCoPlayerPickers;
+
+function handleCoPlayerSelectChange(spotNum) {
+  const sel = document.getElementById(`bookCoPlayerSelect${spotNum}`);
+  const inp = document.getElementById(`bookCoPlayerInput${spotNum}`);
+  if (!sel) return;
+  if (sel.value === '__manual__') {
+    if (inp) {
+      inp.style.display = 'block';
+      inp.focus();
+    }
+  } else {
+    if (inp) {
+      inp.style.display = 'none';
+      inp.value = '';
+    }
+  }
+  updateBookingCourtTacticalSpots();
+}
+window.handleCoPlayerSelectChange = handleCoPlayerSelectChange;
+
+function focusCoPlayerSlot(spotNum) {
+  const sel = document.getElementById(`bookCoPlayerSelect${spotNum}`);
+  const inp = document.getElementById(`bookCoPlayerInput${spotNum}`);
+  if (sel && sel.value === '__manual__' && inp && inp.style.display !== 'none') {
+    inp.focus();
+  } else if (sel) {
+    sel.focus();
+  }
+}
+window.focusCoPlayerSlot = focusCoPlayerSlot;
 
 function updateBookingCourtTacticalSpots() {
   const user = (DB.players || []).find(p => p.id === DB.currentUser?.id) || DB.currentUser;
@@ -4113,17 +4370,33 @@ function updateBookingCourtTacticalSpots() {
   }
   if (p1Label) p1Label.textContent = p1Name;
 
-  const updateSpot = (spotNum, inputId, defaultLabel) => {
-    const val = document.getElementById(inputId)?.value?.trim();
+  const updateSpot = (spotNum, defaultLabel) => {
+    const sel = document.getElementById(`bookCoPlayerSelect${spotNum}`);
+    const inp = document.getElementById(`bookCoPlayerInput${spotNum}`);
     const pin = document.getElementById(`bookSpotPin${spotNum}`);
     const nameEl = document.getElementById(`bookSpotName${spotNum}`);
     if (!pin || !nameEl) return;
-    if (val) {
+
+    let displayName = '';
+    let initials = '';
+
+    if (sel && sel.value && sel.value !== '__manual__') {
+      const p = (DB.players || []).find(x => x.id === sel.value);
+      if (p) {
+        displayName = p.firstName || '';
+        initials = ((p.firstName?.[0] || '') + (p.lastName?.[0] || '')).toUpperCase();
+      }
+    } else if (sel && sel.value === '__manual__' && inp && inp.value.trim()) {
+      const val = inp.value.trim();
       const parts = val.split(' ');
-      const initials = (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase();
+      displayName = parts[0];
+      initials = ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase();
+    }
+
+    if (displayName) {
       pin.className = 'tactical-pin filled';
-      pin.textContent = initials.slice(0, 2);
-      nameEl.textContent = parts[0];
+      pin.textContent = initials.slice(0, 2) || '🎾';
+      nameEl.textContent = displayName;
     } else {
       pin.className = 'tactical-pin empty';
       pin.textContent = '+';
@@ -4131,9 +4404,9 @@ function updateBookingCourtTacticalSpots() {
     }
   };
 
-  updateSpot(2, 'bookCoPlayer2', 'Partenaire');
-  updateSpot(3, 'bookCoPlayer3', 'Adversaire 1');
-  updateSpot(4, 'bookCoPlayer4', 'Adversaire 2');
+  updateSpot(2, 'Partenaire');
+  updateSpot(3, 'Adversaire 1');
+  updateSpot(4, 'Adversaire 2');
 }
 window.updateBookingCourtTacticalSpots = updateBookingCourtTacticalSpots;
 
@@ -4145,7 +4418,7 @@ function openModal(modalId) {
     document.body.style.overflow = 'hidden';
   }
   if (modalId === 'modal-book-court') {
-    populateClubPlayersDatalist();
+    populateBookingCoPlayerPickers();
     const user = (DB.players || []).find(p => p.id === DB.currentUser?.id) || DB.currentUser;
     const nameEl = document.getElementById('bookPlayer1NameDisplay');
     if (nameEl) {
@@ -4516,17 +4789,33 @@ document.addEventListener('DOMContentLoaded', () => {
           { userId: DB.currentUser?.id || 'guest', name: currentUserName, level: user?.level || 5.0, isOrganizer: true }
         ];
 
-        // Co-joueurs précisés par le joueur (enregistrés et ajoutés en BDD en tant qu'invités sans sexe)
-        const coPlayerInputs = [
-          document.getElementById('bookCoPlayer2')?.value?.trim(),
-          document.getElementById('bookCoPlayer3')?.value?.trim(),
-          document.getElementById('bookCoPlayer4')?.value?.trim()
-        ];
+        // Co-joueurs sélectionnés (piochés dans l'application ou créés en tant qu'invités sans sexe)
+        [2, 3, 4].forEach((spotNum, idx) => {
+          const sel = document.getElementById(`bookCoPlayerSelect${spotNum}`);
+          const inp = document.getElementById(`bookCoPlayerInput${spotNum}`);
+          const selVal = sel?.value;
+          const manualVal = inp?.value?.trim();
 
-        coPlayerInputs.forEach((coName, idx) => {
-          if (!coName) return;
-          // Chercher si ce nom correspond déjà à un joueur dans DB.players
-          let match = (DB.players || []).find(p => `${p.firstName} ${p.lastName || ''}`.toLowerCase().trim() === coName.toLowerCase());
+          if (selVal && selVal !== '__manual__') {
+            // Choisi directement parmi les joueurs déjà existants dans l'application !
+            const match = (DB.players || []).find(p => p.id === selVal);
+            if (match) {
+              bookingPlayers.push({
+                userId: match.id,
+                name: `${match.firstName} ${match.lastName || ''}`.trim(),
+                level: match.level || 5.0,
+                isGuest: match.status === 'guest'
+              });
+              return;
+            }
+          }
+
+          // Cas saisie manuelle / invité non présent
+          const candidateName = manualVal || (selVal === '__manual__' ? '' : selVal);
+          if (!candidateName) return;
+
+          // Vérifier si par hasard le nom saisi correspond à un joueur existant (évite les doublons)
+          let match = (DB.players || []).find(p => `${p.firstName} ${p.lastName || ''}`.toLowerCase().trim() === candidateName.toLowerCase());
           if (match) {
             bookingPlayers.push({
               userId: match.id,
@@ -4536,7 +4825,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
           } else {
             // Création en tant qu'invité dans la base de données sans sexe ("donc les enregistrer sans sexe")
-            const parts = coName.split(/\s+/);
+            const parts = candidateName.split(/\s+/);
             const fn = parts[0];
             const ln = parts.slice(1).join(' ') || '';
             const guestPlayer = {
@@ -4578,13 +4867,17 @@ document.addEventListener('DOMContentLoaded', () => {
           createdAt: new Date().toISOString(),
         };
         DB.bookings.push(newBooking);
-        saveDB(DB);
+        saveDB(DB, true);
         closeAllModals();
         renderCourtsGrid();
         renderHomeScreen();
-        showToast('Réservation confirmée ✓ Paiement sur place.', 'success');
-        fbAddBooking(newBooking).catch(err => console.warn('fbAddBooking async error:', err));
-        fbTrack('booking_created', { courtId, type });
+        renderMyBookings();
+        if (typeof renderAdminTimetable === 'function') renderAdminTimetable();
+        if (typeof renderAdminPlayers === 'function') renderAdminPlayers();
+        if (typeof renderAdminKPIs === 'function') renderAdminKPIs();
+        showToast('Réservation confirmée ✓ Créneau inscrit sur le planning.', 'success');
+        if (typeof fbAddBooking === 'function') fbAddBooking(newBooking).catch(err => console.warn('fbAddBooking async error:', err));
+        if (typeof fbTrack === 'function') fbTrack('booking_created', { courtId, type });
       } catch (err) {
         showToast('Erreur lors de la réservation.', 'error');
       } finally {
@@ -4996,4 +5289,21 @@ applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
 // Brancher le bouton
 document.getElementById('btnToggleTheme')?.addEventListener('click', toggleTheme);
 window.toggleTheme = toggleTheme;
+
+// Sécurité UX : Touche Échap pour fermer toute modale active (évite les blocages d'interface)
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' || e.key === 'Esc') {
+    closeAllModals();
+  }
+});
+
+// Vérification périodique (toutes les 30s) des créneaux terminés pour inviter le créateur à saisir le score
+setInterval(() => {
+  try {
+    if (typeof checkFinishedMatchesScorePrompt === 'function') {
+      checkFinishedMatchesScorePrompt();
+    }
+  } catch (err) {}
+}, 30000);
+
 
