@@ -147,8 +147,11 @@
             <div class="action-quick-card" id="quickCardJoinMatch" onclick="navigateToScreen('screen-join-match')">
               <div class="quick-card-icon">🎾</div>
               <div class="quick-card-bottom">
-                <div class="quick-card-title">Rejoindre<br>un match</div>
-                <div class="quick-card-arrow">›</div>
+            <div class="action-quick-card" id="quickCardRecordMatch" onclick="openRecordMatchModal('player')" style="background:linear-gradient(135deg, rgba(212,175,55,0.12), rgba(46,204,113,0.08)); border-color:rgba(212,175,55,0.35)">
+              <div class="quick-card-icon">🏆</div>
+              <div class="quick-card-bottom">
+                <div class="quick-card-title">Enregistrer<br>un score</div>
+                <div class="quick-card-arrow" style="color:var(--gold)">›</div>
               </div>
             </div>
           </div>
@@ -905,12 +908,13 @@
 
           <!-- Filtres statut & genre -->
           <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px">
-            <button class="filter-chip active" data-player-filter="all">Tous</button>
-            <button class="filter-chip" data-player-filter="male">👨 Hommes</button>
-            <button class="filter-chip" data-player-filter="female">👩 Femmes</button>
-            <button class="filter-chip" data-player-filter="active">✔ Actifs (validés)</button>
-            <button class="filter-chip" data-player-filter="pending">⏳ En attente de validation</button>
-            <button class="filter-chip" data-player-filter="suspended">⛔ Suspendus</button>
+            <button class="filter-chip active" data-player-filter="all" onclick="setAdminPlayerFilter('all')">Tous</button>
+            <button class="filter-chip" data-player-filter="male" onclick="setAdminPlayerFilter('male')">👨 Hommes</button>
+            <button class="filter-chip" data-player-filter="female" onclick="setAdminPlayerFilter('female')">👩 Femmes</button>
+            <button class="filter-chip" data-player-filter="active" onclick="setAdminPlayerFilter('active')">✔ Actifs (validés)</button>
+            <button class="filter-chip" data-player-filter="pending" onclick="setAdminPlayerFilter('pending')">⏳ En attente de validation</button>
+            <button class="filter-chip" data-player-filter="guest" onclick="setAdminPlayerFilter('guest')">👤 Invités (sans compte)</button>
+            <button class="filter-chip" data-player-filter="suspended" onclick="setAdminPlayerFilter('suspended')">⛔ Suspendus</button>
           </div>
 
           <div class="admin-table-responsive-wrap">
@@ -923,7 +927,8 @@
                   <th>Niveau officiel</th>
                   <th>Côté / Style</th>
                   <th>Fiabilité</th>
-                  <th>Matchs</th>
+                  <th>Matchs Joués</th>
+                  <th>Points Fidélité</th>
                   <th>Statut</th>
                   <th>Actions</th>
                 </tr>
@@ -1265,6 +1270,45 @@
           <option value="open_match">Match ouvert (matchmaking)</option>
         </select>
       </div>
+
+      <!-- Co-joueurs / Invités accompagnateurs (Padel 4 joueurs) -->
+      <div style="background:rgba(212,175,55,0.06); border:1px solid rgba(212,175,55,0.25); border-radius:10px; padding:12px; margin-bottom:14px">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
+          <span style="font-size:11.5px; font-weight:800; color:var(--gold); text-transform:uppercase">👥 Joueurs du match (Optionnel)</span>
+          <span style="font-size:10px; color:var(--text-muted)">4 joueurs</span>
+        </div>
+        <div style="font-size:11px; color:var(--text-secondary); margin-bottom:10px; line-height:1.4">
+          Précisez avec qui vous allez jouer. Ils apparaîtront sur votre créneau dans le planning du gérant et seront enregistrés comme <strong>Invités</strong> dans la base de données.
+        </div>
+        
+        <div style="display:flex; flex-direction:column; gap:8px">
+          <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-white); background:rgba(255,255,255,0.04); padding:6px 10px; border-radius:6px">
+            <span>🎾</span>
+            <span style="font-weight:700" id="bookPlayer1NameDisplay">Joueur 1 : Vous (Organisateur)</span>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+            <div>
+              <label class="modal-label" style="font-size:10px">Joueur 2 (Partenaire)</label>
+              <input type="text" class="login-field" id="bookCoPlayer2" placeholder="Nom ou invité..." list="clubPlayersDatalist" style="font-size:11.5px; padding:7px" />
+            </div>
+            <div>
+              <label class="modal-label" style="font-size:10px">Joueur 3 (Adversaire 1)</label>
+              <input type="text" class="login-field" id="bookCoPlayer3" placeholder="Nom ou invité..." list="clubPlayersDatalist" style="font-size:11.5px; padding:7px" />
+            </div>
+          </div>
+
+          <div>
+            <label class="modal-label" style="font-size:10px">Joueur 4 (Adversaire 2)</label>
+            <input type="text" class="login-field" id="bookCoPlayer4" placeholder="Nom ou invité..." list="clubPlayersDatalist" style="font-size:11.5px; padding:7px" />
+          </div>
+        </div>
+
+        <datalist id="clubPlayersDatalist">
+          <!-- Peuplé dynamiquement par JS -->
+        </datalist>
+      </div>
+
       <button class="btn-primary-action" id="btnConfirmBooking">Confirmer la réservation</button>
     </div>
   </div>
@@ -1524,6 +1568,99 @@
           Fermer
         </button>
       </div>
+  <!-- ── Modale : Modification / Gestion Fiche Joueur (Gérant) ── -->
+  <div class="modal-overlay" id="modal-edit-player" role="dialog" aria-modal="true">
+    <div class="modal-sheet" style="max-width:540px">
+      <div class="modal-drag-indicator"></div>
+      <div class="modal-top-bar">
+        <div class="modal-title">✏️ Fiche Joueur &amp; Paramètres Club</div>
+        <button class="modal-close-btn" onclick="closeModal('modal-edit-player')" aria-label="Fermer">✕</button>
+      </div>
+
+      <form id="formEditPlayer" onsubmit="submitEditPlayer(event)">
+        <input type="hidden" id="editPlayerId" />
+        
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px">
+          <div class="modal-field-group">
+            <label class="modal-label">Prénom *</label>
+            <input type="text" class="login-field" id="editPlayerFirstName" required />
+          </div>
+          <div class="modal-field-group">
+            <label class="modal-label">Nom</label>
+            <input type="text" class="login-field" id="editPlayerLastName" />
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px">
+          <div class="modal-field-group">
+            <label class="modal-label">Genre</label>
+            <select class="login-field" id="editPlayerGender">
+              <option value="male">👨 Homme</option>
+              <option value="female">👩 Femme</option>
+              <option value="">👤 Non spécifié (Invité)</option>
+            </select>
+          </div>
+          <div class="modal-field-group">
+            <label class="modal-label">Statut</label>
+            <select class="login-field" id="editPlayerStatus">
+              <option value="active">✔ Actif (validé)</option>
+              <option value="pending">⏳ En attente d'évaluation</option>
+              <option value="guest">👤 Invité (sans compte)</option>
+              <option value="suspended">⛔ Suspendu</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px">
+          <div class="modal-field-group">
+            <label class="modal-label">Téléphone</label>
+            <input type="tel" class="login-field" id="editPlayerPhone" placeholder="+216 ..." />
+          </div>
+          <div class="modal-field-group">
+            <label class="modal-label">Email</label>
+            <input type="email" class="login-field" id="editPlayerEmail" placeholder="joueur@..." />
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px">
+          <div class="modal-field-group">
+            <label class="modal-label">Niveau officiel (1.00 à 10.00)</label>
+            <input type="number" class="login-field" id="editPlayerLevel" min="1" max="10" step="0.05" />
+          </div>
+          <div class="modal-field-group">
+            <label class="modal-label">Points Fidélité</label>
+            <input type="number" class="login-field" id="editPlayerLoyalty" min="0" max="60" step="0.5" />
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px">
+          <div class="modal-field-group">
+            <label class="modal-label">Côté de jeu préféré</label>
+            <select class="login-field" id="editPlayerSide">
+              <option value="right">Droite</option>
+              <option value="left">Gauche</option>
+              <option value="both">Polyvalent</option>
+            </select>
+          </div>
+          <div class="modal-field-group">
+            <label class="modal-label">Style de jeu</label>
+            <select class="login-field" id="editPlayerStyle">
+              <option value="offensive">Offensif</option>
+              <option value="defensive">Défensif</option>
+              <option value="all-around">Polyvalent</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:8px">
+          <button type="submit" class="btn-primary-action" style="flex:2">
+            ✓ Enregistrer les modifications
+          </button>
+          <button type="button" class="btn-table-action danger" onclick="confirmDeleteFromEditModal()" style="flex:1; border-color:var(--red); color:var(--red)">
+            🗑️ Supprimer
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -1550,17 +1687,60 @@
             <span id="team1AverageBadge" style="color:var(--text-white); font-weight:700; font-size:11px">Moyenne : 5.00/10</span>
           </div>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
-            <div class="modal-field-group">
-              <label class="modal-label" style="font-size:11px">Joueur 1 (Équipe 1)</label>
-              <select class="login-field" id="matchTeam1Player1" onchange="updateMatchSimulationPreview()" required>
+            <div class="modal-field-group match-slot-group">
+              <label class="modal-label" style="font-size:11px; display:flex; justify-content:space-between; align-items:center">
+                <span>Joueur 1 (Équipe 1)</span>
+                <span id="badge_matchTeam1Player1" style="font-size:9.5px; color:var(--gold); font-weight:700"></span>
+              </label>
+              <select class="login-field match-player-select" id="matchTeam1Player1" onchange="handleMatchPlayerSelectChange('matchTeam1Player1')" required>
                 <!-- Peuplé par JS -->
               </select>
+              <div class="match-player-card-preview" id="card_matchTeam1Player1"></div>
+              <div class="match-player-manual-box" id="manual_matchTeam1Player1" style="display:none">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px">
+                  <span style="font-size:10px; font-weight:800; color:var(--gold)">✍️ Saisie libre</span>
+                  <span style="font-size:9px; color:var(--text-muted)">Nouveau joueur</span>
+                </div>
+                <div style="display:grid; grid-template-columns:1.2fr 0.8fr; gap:5px; margin-bottom:5px">
+                  <input type="text" class="login-field" id="manualName_matchTeam1Player1" placeholder="Nom & Prénom" style="font-size:11px; padding:6px" oninput="updateMatchSimulationPreview()" />
+                  <select class="login-field" id="manualGender_matchTeam1Player1" style="font-size:11px; padding:6px" onchange="updateMatchSimulationPreview()">
+                    <option value="male">👨 Homme</option>
+                    <option value="female">👩 Femme</option>
+                  </select>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px">
+                  <span style="font-size:9.5px; color:var(--text-secondary)">Niv (1–10) :</span>
+                  <input type="number" class="login-field" id="manualLevel_matchTeam1Player1" min="1.0" max="10.0" step="0.25" value="5.0" style="font-size:11px; padding:4px 6px; width:70px" oninput="updateMatchSimulationPreview()" />
+                </div>
+              </div>
             </div>
-            <div class="modal-field-group">
-              <label class="modal-label" style="font-size:11px">Joueur 2 (Partenaire)</label>
-              <select class="login-field" id="matchTeam1Player2" onchange="updateMatchSimulationPreview()" required>
+
+            <div class="modal-field-group match-slot-group">
+              <label class="modal-label" style="font-size:11px; display:flex; justify-content:space-between; align-items:center">
+                <span>Joueur 2 (Partenaire)</span>
+                <span id="badge_matchTeam1Player2" style="font-size:9.5px; color:var(--gold); font-weight:700"></span>
+              </label>
+              <select class="login-field match-player-select" id="matchTeam1Player2" onchange="handleMatchPlayerSelectChange('matchTeam1Player2')" required>
                 <!-- Peuplé par JS -->
               </select>
+              <div class="match-player-card-preview" id="card_matchTeam1Player2"></div>
+              <div class="match-player-manual-box" id="manual_matchTeam1Player2" style="display:none">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px">
+                  <span style="font-size:10px; font-weight:800; color:var(--gold)">✍️ Saisie libre</span>
+                  <span style="font-size:9px; color:var(--text-muted)">Nouveau joueur</span>
+                </div>
+                <div style="display:grid; grid-template-columns:1.2fr 0.8fr; gap:5px; margin-bottom:5px">
+                  <input type="text" class="login-field" id="manualName_matchTeam1Player2" placeholder="Nom & Prénom" style="font-size:11px; padding:6px" oninput="updateMatchSimulationPreview()" />
+                  <select class="login-field" id="manualGender_matchTeam1Player2" style="font-size:11px; padding:6px" onchange="updateMatchSimulationPreview()">
+                    <option value="male">👨 Homme</option>
+                    <option value="female">👩 Femme</option>
+                  </select>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px">
+                  <span style="font-size:9.5px; color:var(--text-secondary)">Niv (1–10) :</span>
+                  <input type="number" class="login-field" id="manualLevel_matchTeam1Player2" min="1.0" max="10.0" step="0.25" value="5.0" style="font-size:11px; padding:4px 6px; width:70px" oninput="updateMatchSimulationPreview()" />
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1572,17 +1752,60 @@
             <span id="team2AverageBadge" style="color:var(--text-white); font-weight:700; font-size:11px">Moyenne : 5.00/10</span>
           </div>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
-            <div class="modal-field-group">
-              <label class="modal-label" style="font-size:11px">Joueur 1 (Équipe 2)</label>
-              <select class="login-field" id="matchTeam2Player1" onchange="updateMatchSimulationPreview()" required>
+            <div class="modal-field-group match-slot-group">
+              <label class="modal-label" style="font-size:11px; display:flex; justify-content:space-between; align-items:center">
+                <span>Joueur 1 (Équipe 2)</span>
+                <span id="badge_matchTeam2Player1" style="font-size:9.5px; color:var(--gold); font-weight:700"></span>
+              </label>
+              <select class="login-field match-player-select" id="matchTeam2Player1" onchange="handleMatchPlayerSelectChange('matchTeam2Player1')" required>
                 <!-- Peuplé par JS -->
               </select>
+              <div class="match-player-card-preview" id="card_matchTeam2Player1"></div>
+              <div class="match-player-manual-box" id="manual_matchTeam2Player1" style="display:none">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px">
+                  <span style="font-size:10px; font-weight:800; color:var(--gold)">✍️ Saisie libre</span>
+                  <span style="font-size:9px; color:var(--text-muted)">Nouveau joueur</span>
+                </div>
+                <div style="display:grid; grid-template-columns:1.2fr 0.8fr; gap:5px; margin-bottom:5px">
+                  <input type="text" class="login-field" id="manualName_matchTeam2Player1" placeholder="Nom & Prénom" style="font-size:11px; padding:6px" oninput="updateMatchSimulationPreview()" />
+                  <select class="login-field" id="manualGender_matchTeam2Player1" style="font-size:11px; padding:6px" onchange="updateMatchSimulationPreview()">
+                    <option value="male">👨 Homme</option>
+                    <option value="female">👩 Femme</option>
+                  </select>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px">
+                  <span style="font-size:9.5px; color:var(--text-secondary)">Niv (1–10) :</span>
+                  <input type="number" class="login-field" id="manualLevel_matchTeam2Player1" min="1.0" max="10.0" step="0.25" value="5.0" style="font-size:11px; padding:4px 6px; width:70px" oninput="updateMatchSimulationPreview()" />
+                </div>
+              </div>
             </div>
-            <div class="modal-field-group">
-              <label class="modal-label" style="font-size:11px">Joueur 2 (Équipe 2)</label>
-              <select class="login-field" id="matchTeam2Player2" onchange="updateMatchSimulationPreview()" required>
+
+            <div class="modal-field-group match-slot-group">
+              <label class="modal-label" style="font-size:11px; display:flex; justify-content:space-between; align-items:center">
+                <span>Joueur 2 (Équipe 2)</span>
+                <span id="badge_matchTeam2Player2" style="font-size:9.5px; color:var(--gold); font-weight:700"></span>
+              </label>
+              <select class="login-field match-player-select" id="matchTeam2Player2" onchange="handleMatchPlayerSelectChange('matchTeam2Player2')" required>
                 <!-- Peuplé par JS -->
               </select>
+              <div class="match-player-card-preview" id="card_matchTeam2Player2"></div>
+              <div class="match-player-manual-box" id="manual_matchTeam2Player2" style="display:none">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px">
+                  <span style="font-size:10px; font-weight:800; color:var(--gold)">✍️ Saisie libre</span>
+                  <span style="font-size:9px; color:var(--text-muted)">Nouveau joueur</span>
+                </div>
+                <div style="display:grid; grid-template-columns:1.2fr 0.8fr; gap:5px; margin-bottom:5px">
+                  <input type="text" class="login-field" id="manualName_matchTeam2Player2" placeholder="Nom & Prénom" style="font-size:11px; padding:6px" oninput="updateMatchSimulationPreview()" />
+                  <select class="login-field" id="manualGender_matchTeam2Player2" style="font-size:11px; padding:6px" onchange="updateMatchSimulationPreview()">
+                    <option value="male">👨 Homme</option>
+                    <option value="female">👩 Femme</option>
+                  </select>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px">
+                  <span style="font-size:9.5px; color:var(--text-secondary)">Niv (1–10) :</span>
+                  <input type="number" class="login-field" id="manualLevel_matchTeam2Player2" min="1.0" max="10.0" step="0.25" value="5.0" style="font-size:11px; padding:4px 6px; width:70px" oninput="updateMatchSimulationPreview()" />
+                </div>
+              </div>
             </div>
           </div>
         </div>

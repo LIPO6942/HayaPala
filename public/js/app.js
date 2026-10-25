@@ -144,6 +144,30 @@ function mergeBookingsLists(currentList, incomingList) {
   return Array.from(map.values());
 }
 
+// ============================================================================
+// DÉTECTION DU GENRE & FILTRAGE HOMME / FEMME ROBUSTE
+// ============================================================================
+function isPlayerFemale(p) {
+  if (!p) return false;
+  const g = String(p.gender || '').trim().toLowerCase();
+  if (g === 'female' || g === 'femme' || g === 'f' || g === 'woman' || g === 'girl') return true;
+  if (g === 'male' || g === 'homme' || g === 'm' || g === 'man') return false;
+  const fn = String(p.firstName || '').trim().toLowerCase();
+  return /^(mouna|mariem|meriem|myriam|sara|sarah|ines|yasmine|yasmina|nour|lina|amina|selma|salma|rim|ryme|leila|layla|fatma|fatima|khadija|asma|emna|chaima|shayma|siwar|syrine|sirine|hela|olfa|dora|dorra|manel|marwa|sabrine|hadil|aya|asmaa|soumaya|rania|rawaa|amal|amel|sonia|nadia|samia|hanen|imen|chahinez|wiem|wided|nesrine|raoudha|maha|farah|claire|sophie|camille|emma|lea|chloe|julie|marie|laura|celine|kenza|donia|zeineb|zaineb|chiraz|arwa|manar)/i.test(fn);
+}
+window.isPlayerFemale = isPlayerFemale;
+window.currentAdminPlayerFilter = 'all';
+window.currentAdminPlayerSearch = '';
+
+function setAdminPlayerFilter(filter) {
+  window.currentAdminPlayerFilter = filter || 'all';
+  document.querySelectorAll('[data-player-filter]').forEach(c => {
+    c.classList.toggle('active', c.dataset.playerFilter === window.currentAdminPlayerFilter);
+  });
+  renderAdminPlayers();
+}
+window.setAdminPlayerFilter = setAdminPlayerFilter;
+
 function saveDB(data, pushToServer = true) {
   try {
     data._fromFirestore = true;
@@ -1034,7 +1058,7 @@ function renderProfileScreen() {
 
   // ── Populer la Carte FIFA Padel Ultimate Team ──
   // Sélection dynamique photo Femme / Homme
-  const isFemale = (user.gender === 'female') || /^(mouna|mariem|meriem|sara|sarah|ines|yasmine|nour|lina|amina|selma|rim|leila|fatma|khadija|asma|emna|chaima|siwar)/i.test((user.firstName || '').trim());
+  const isFemale = isPlayerFemale(user);
   const futCardBaseImg = document.getElementById('futCardBaseImg');
   if (futCardBaseImg) {
     futCardBaseImg.src = isFemale ? './images/circlepadel_green_card_woman.jpg' : './images/circlepadel_green_card.jpg';
@@ -1742,52 +1766,62 @@ function switchAuthTab(tab) {
 
 function renderRadarChart(skills) {
   const svg = document.getElementById('skillsRadarSvg');
+  if (!svg) return;
   const keys = Object.keys(SKILL_LABELS);
   const n = keys.length;
-  const cx = 130, cy = 110, R = 90;
+  const cx = 130, cy = 110, R = 85;
   const levels = 5;
 
-  if (!skills || Object.keys(skills).length === 0) {
-    svg.innerHTML = `<text x="130" y="110" text-anchor="middle" fill="var(--text-muted)" font-size="13">Pas encore évalué</text>`;
-    return;
-  }
+  const isLight = document.body.classList.contains('light-mode');
+  const gridStroke = isLight ? '#64748b' : 'rgba(255, 255, 255, 0.18)';
+  const outerStroke = isLight ? '#1e293b' : 'rgba(255, 255, 255, 0.35)';
+  const axisStroke = isLight ? '#475569' : 'rgba(255, 255, 255, 0.22)';
+  const labelFill = isLight ? '#0f172a' : 'var(--text-secondary)';
+  const dotStroke = isLight ? '#ffffff' : 'var(--bg-canvas)';
 
   let html = '';
 
-  // Grid polygons
+  // Grid polygons (les petits traits concentriques du radar)
   for (let l = 1; l <= levels; l++) {
     const r = (R * l) / levels;
     const pts = keys.map((_, i) => {
       const angle = (2 * Math.PI * i / n) - Math.PI / 2;
-      return `${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`;
+      return `${(cx + r * Math.cos(angle)).toFixed(1)},${(cy + r * Math.sin(angle)).toFixed(1)}`;
     }).join(' ');
-    html += `<polygon points="${pts}" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>`;
+    const isOuter = l === levels;
+    html += `<polygon points="${pts}" fill="none" stroke="${isOuter ? outerStroke : gridStroke}" stroke-width="${isOuter ? '1.8' : '1.3'}" stroke-dasharray="${isOuter ? 'none' : '3 3'}" opacity="${isLight ? (isOuter ? '1' : '0.85') : '0.7'}"/>`;
   }
 
-  // Axes
+  // Axes (rayons)
   keys.forEach((_, i) => {
     const angle = (2 * Math.PI * i / n) - Math.PI / 2;
-    const x = cx + R * Math.cos(angle);
-    const y = cy + R * Math.sin(angle);
-    html += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>`;
+    const x = (cx + R * Math.cos(angle)).toFixed(1);
+    const y = (cy + R * Math.sin(angle)).toFixed(1);
+    html += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${axisStroke}" stroke-width="1.3" opacity="${isLight ? '0.75' : '0.6'}"/>`;
   });
 
-  // Data polygon
-  const pts = keys.map((k, i) => {
-    const val = (skills[k] || 0) / 10;
-    const angle = (2 * Math.PI * i / n) - Math.PI / 2;
-    return `${cx + R * val * Math.cos(angle)},${cy + R * val * Math.sin(angle)}`;
-  }).join(' ');
-  html += `<polygon points="${pts}" fill="rgba(200,169,110,0.2)" stroke="var(--gold)" stroke-width="2" stroke-linejoin="round"/>`;
+  const hasSkills = skills && Object.keys(skills).length > 0;
+  if (hasSkills) {
+    // Data polygon
+    const pts = keys.map((k, i) => {
+      const val = Math.max(0, Math.min(10, skills[k] || 0)) / 10;
+      const angle = (2 * Math.PI * i / n) - Math.PI / 2;
+      return `${(cx + R * val * Math.cos(angle)).toFixed(1)},${(cy + R * val * Math.sin(angle)).toFixed(1)}`;
+    }).join(' ');
+    html += `<polygon points="${pts}" fill="${isLight ? 'rgba(212,175,55,0.35)' : 'rgba(200,169,110,0.25)'}" stroke="var(--gold)" stroke-width="2.5" stroke-linejoin="round"/>`;
 
-  // Dots
-  keys.forEach((k, i) => {
-    const val = (skills[k] || 0) / 10;
-    const angle = (2 * Math.PI * i / n) - Math.PI / 2;
-    const x = cx + R * val * Math.cos(angle);
-    const y = cy + R * val * Math.sin(angle);
-    html += `<circle cx="${x}" cy="${y}" r="4" fill="var(--gold)" stroke="var(--bg-canvas)" stroke-width="2"/>`;
-  });
+    // Dots
+    keys.forEach((k, i) => {
+      const val = Math.max(0, Math.min(10, skills[k] || 0)) / 10;
+      const angle = (2 * Math.PI * i / n) - Math.PI / 2;
+      const x = (cx + R * val * Math.cos(angle)).toFixed(1);
+      const y = (cy + R * val * Math.sin(angle)).toFixed(1);
+      html += `<circle cx="${x}" cy="${y}" r="4" fill="var(--gold)" stroke="${dotStroke}" stroke-width="2"/>`;
+    });
+  } else {
+    // Subtle indicator in center when not evaluated yet, while keeping full radar grid visible
+    html += `<text x="${cx}" y="${cy + 4}" text-anchor="middle" fill="${isLight ? '#475569' : 'var(--text-muted)'}" font-size="11" font-weight="700">Évaluation coach en attente</text>`;
+  }
 
   // Labels
   keys.forEach((k, i) => {
@@ -1795,7 +1829,7 @@ function renderRadarChart(skills) {
     const lx = cx + (R + 18) * Math.cos(angle);
     const ly = cy + (R + 18) * Math.sin(angle);
     const anchor = lx < cx - 5 ? 'end' : lx > cx + 5 ? 'start' : 'middle';
-    html += `<text x="${lx}" y="${ly + 4}" text-anchor="${anchor}" fill="var(--text-secondary)" font-size="10" font-family="Plus Jakarta Sans, sans-serif" font-weight="600">${SKILL_LABELS[k]}</text>`;
+    html += `<text x="${lx.toFixed(1)}" y="${(ly + 4).toFixed(1)}" text-anchor="${anchor}" fill="${labelFill}" font-size="10.5" font-family="'Plus Jakarta Sans', sans-serif" font-weight="800">${SKILL_LABELS[k]}</text>`;
   });
 
   svg.innerHTML = html;
@@ -1947,10 +1981,15 @@ function renderMyBookings() {
       </div>
       <div class="match-list-bottom">
         <span class="match-price-tag">${b.pricePerPlayer} DT <span>/joueur</span></span>
-        ${!isPast && b.players.find(p => p.userId === user.id) ? `
-          <button onclick="cancelMyBooking('${b.id}')" style="padding:6px 14px; border-radius:var(--radius-full); border:1px solid rgba(231,76,60,0.3); background:transparent; color:var(--red); font-size:11px; font-weight:700;">
-            Annuler
-          </button>` : ''}
+        <div style="display:flex; gap:8px; align-items:center">
+          <button type="button" onclick="openRecordMatchForBooking('${b.id}', 'player')" style="padding:6px 12px; border-radius:var(--radius-full); border:1px solid var(--gold); background:rgba(212,175,55,0.15); color:var(--gold); font-size:11px; font-weight:800; cursor:pointer" title="Enregistrer le score et mettre à jour le classement">
+            🏆 Saisir le score
+          </button>
+          ${!isPast && b.players.find(p => p.userId === user.id) ? `
+            <button onclick="cancelMyBooking('${b.id}')" style="padding:6px 14px; border-radius:var(--radius-full); border:1px solid rgba(231,76,60,0.3); background:transparent; color:var(--red); font-size:11px; font-weight:700;">
+              Annuler
+            </button>` : ''}
+        </div>
       </div>
       ${b.type === 'open' && !isPast && spots > 0 ? `
         <div style="font-size:11px; color:var(--amber); margin-top:4px">⚡ ${spots} place${spots>1?'s':''} encore libre${spots>1?'s':''} — partagez le match !</div>` : ''}
@@ -2078,16 +2117,19 @@ function renderAdminTimetable() {
 
       const typeClass = { private:'type-private', open:'type-open', course:'type-course', blocked:'type-blocked' }[booking.type] || '';
       const playerCount = (booking.players || []).length;
+      const organizer = (booking.players || []).find(p => p.isOrganizer);
+      const displayName = organizer ? organizer.name : (booking.players?.[0]?.name || booking.notes || '—');
+      const coPlayers = (booking.players || []).filter(p => !p.isOrganizer);
+      const coNames = coPlayers.map(p => (p.name || '').trim().split(' ')[0]).filter(Boolean).join(', ');
+      
       const subLabel = booking.type === 'open'
         ? `${playerCount}/4 joueurs · Niv.${booking.minLevel}–${booking.maxLevel}`
-        : booking.type === 'private' ? `${playerCount} joueurs`
-        : booking.notes || booking.type;
-
-      const organizer = booking.players.find(p => p.isOrganizer);
-      const displayName = organizer ? organizer.name : booking.notes || '—';
+        : coNames
+        ? `Avec: ${coNames}`
+        : `${playerCount} joueur${playerCount > 1 ? 's' : ''}`;
 
       return `<td>
-        <div class="cell-booking ${typeClass}" onclick="renderSlotDetail('${booking.id}'); openModal('modal-slot-detail')" style="cursor:pointer" title="Cliquer pour gérer">
+        <div class="cell-booking ${typeClass}" onclick="renderSlotDetail('${booking.id}'); openModal('modal-slot-detail')" style="cursor:pointer" title="Cliquer pour voir les joueurs et gérer ce créneau">
           <div class="cell-booking-name">${displayName}</div>
           <div class="cell-booking-sub">${subLabel}</div>
         </div>
@@ -2140,22 +2182,42 @@ function renderAdminPlayers() {
   const tbody = document.getElementById('adminPlayersTableBody');
   if (!tbody) return;
 
-  // Bannière d'attente d'évaluation coach
+  const activeFilter = window.currentAdminPlayerFilter || 'all';
+  const searchQuery = (window.currentAdminPlayerSearch || '').trim().toLowerCase();
+
+  // Bannière d'attente d'évaluation coach (filtrée par genre / statut / recherche)
   const pendingSection = document.getElementById('adminPendingEvalSection');
   const pendingContainer = document.getElementById('adminPendingPlayersCards');
   const pendingBadge = document.getElementById('adminPendingCountBadge');
-  const pendingPlayers = (DB.players || []).filter(p => p.status === 'pending' || !p.level);
+  
+  const allPending = (DB.players || []).filter(p => p.status === 'pending' || !p.level);
+  const filteredPending = allPending.filter(p => {
+    const isFem = isPlayerFemale(p);
+    if (activeFilter === 'female' && !isFem) return false;
+    if (activeFilter === 'male' && isFem) return false;
+    if (searchQuery) {
+      const q = `${p.firstName || ''} ${p.lastName || ''} ${p.phone || ''} ${p.email || ''}`.toLowerCase();
+      if (!q.includes(searchQuery)) return false;
+    }
+    return true;
+  });
 
-  if (pendingBadge) pendingBadge.textContent = pendingPlayers.length;
-  if (pendingSection) pendingSection.style.display = pendingPlayers.length > 0 ? 'block' : 'none';
+  if (pendingBadge) pendingBadge.textContent = filteredPending.length;
+  if (pendingSection) pendingSection.style.display = (allPending.length > 0) ? 'block' : 'none';
   if (pendingContainer) {
-    if (pendingPlayers.length === 0) {
-      pendingContainer.innerHTML = `<div style="color:var(--text-muted); font-size:13px; grid-column:1/-1">Tous les membres inscrits ont été évalués par le coach ✓</div>`;
+    if (filteredPending.length === 0) {
+      const label = activeFilter === 'female' ? 'de joueuse femme' : activeFilter === 'male' ? 'de joueur homme' : 'de membre';
+      pendingContainer.innerHTML = `<div style="color:var(--text-muted); font-size:13px; grid-column:1/-1">Aucun nouveau membre en attente d'évaluation (${label}).</div>`;
     } else {
-      pendingContainer.innerHTML = pendingPlayers.map(p => `
+      pendingContainer.innerHTML = filteredPending.map(p => {
+        const isFem = isPlayerFemale(p);
+        return `
         <div style="background:var(--bg-card); border:1px solid rgba(243,156,18,0.35); border-radius:var(--radius-md); padding:12px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px">
           <div>
-            <div style="font-weight:700; color:var(--text-white); font-size:14px">${p.firstName} ${p.lastName || ''}</div>
+            <div style="font-weight:700; color:var(--text-white); font-size:14px; display:flex; align-items:center; gap:6px">
+              <span>${p.firstName} ${p.lastName || ''}</span>
+              <span style="font-size:11px">${isFem ? '👩' : '👨'}</span>
+            </div>
             <div style="font-size:11px; color:var(--text-secondary); margin-top:2px">📞 ${p.phone || p.email || '—'}</div>
             <div style="font-size:11px; color:var(--amber); font-weight:600; margin-top:3px">⏳ Inscrit · En attente d'évaluation</div>
           </div>
@@ -2163,23 +2225,47 @@ function renderAdminPlayers() {
             📋 Évaluer
           </button>
         </div>
-      `).join('');
+      `}).join('');
     }
   }
 
-  if (!DB.players || DB.players.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:32px; color:var(--text-muted)">Aucun joueur inscrit dans la base de données.</td></tr>`;
+  // Filtrage des joueurs de la table selon le filtre actif et la recherche
+  const filteredPlayers = (DB.players || []).filter(p => {
+    const isFem = isPlayerFemale(p);
+    const isGuest = p.status === 'guest' || p.role === 'guest';
+    if (activeFilter === 'female' && (!isFem || isGuest)) return false;
+    if (activeFilter === 'male' && (isFem || isGuest)) return false;
+    if (activeFilter === 'guest' && !isGuest) return false;
+    if (activeFilter === 'active' && p.status !== 'active') return false;
+    if (activeFilter === 'pending' && p.status !== 'pending' && !!p.level) return false;
+    if (activeFilter === 'suspended' && p.status !== 'suspended') return false;
+
+    if (searchQuery) {
+      const q = `${p.firstName || ''} ${p.lastName || ''} ${p.phone || ''} ${p.email || ''}`.toLowerCase();
+      if (!q.includes(searchQuery)) return false;
+    }
+    return true;
+  });
+
+  if (filteredPlayers.length === 0) {
+    const filterLabel = activeFilter === 'female' ? 'de joueuse femme' : activeFilter === 'male' ? 'de joueur homme' : activeFilter === 'guest' ? 'd\'invité' : 'de joueur inscrit';
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:32px; color:var(--text-muted)">Aucun enregistrement trouvé (${filterLabel}).</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = DB.players.map(p => {
-    const isFem = (p.gender === 'female') || /^(mouna|mariem|meriem|sara|sarah|ines|yasmine|nour|lina|amina|selma|rim|leila|fatma|khadija|asma|emna|chaima|siwar)/i.test((p.firstName || '').trim());
-    const genderKey = isFem ? 'female' : 'male';
-    const genderBadge = isFem
+  tbody.innerHTML = filteredPlayers.map(p => {
+    const isFem = isPlayerFemale(p);
+    const isGuest = p.status === 'guest' || p.role === 'guest';
+    const genderKey = isGuest ? 'guest' : isFem ? 'female' : 'male';
+    const genderBadge = isGuest
+      ? '<span class="info-badge" style="background:rgba(255,255,255,0.06); color:var(--text-secondary); border:1px solid var(--border-subtle)">👤 Invité</span>'
+      : isFem
       ? '<span class="info-badge" style="background:rgba(233,30,99,0.15); color:#ff6b8b; border:1px solid rgba(233,30,99,0.35); font-weight:700">👩 Femme</span>'
       : '<span class="info-badge" style="background:rgba(52,152,219,0.15); color:#54a0ff; border:1px solid rgba(52,152,219,0.35); font-weight:700">👨 Homme</span>';
 
-    const statusBadge = p.status === 'active'
+    const statusBadge = isGuest
+      ? '<span class="info-badge" style="background:rgba(200,169,110,0.12); border:1px solid rgba(200,169,110,0.3); color:var(--gold)">👤 Invité</span>'
+      : p.status === 'active'
       ? '<span class="info-badge green">✔ Actif</span>'
       : p.status === 'pending'
       ? '<span class="info-badge" style="background:var(--amber-bg); border:1px solid rgba(243,156,18,0.2); color:var(--amber)">⏳ En attente</span>'
@@ -2188,18 +2274,19 @@ function renderAdminPlayers() {
     const lvlNum = p.level != null ? Number(p.level).toFixed(2) : (p.selfEstimatedLevel ? Number(p.selfEstimatedLevel).toFixed(2) : null);
     const levelCell = lvlNum
       ? `<span class="level-badge">${lvlNum} ${p.levelValidatedAt ? '<span class="coach-check">✓</span>' : '<span style="font-size:9px; color:var(--amber)">(auto)</span>'}</span>`
-      : `<span class="level-badge pending">À évaluer</span>`;
+      : `<span class="level-badge pending">${isGuest ? 'Non évalué' : 'À évaluer'}</span>`;
 
     return `
     <tr data-gender="${genderKey}" data-status="${p.status || 'pending'}">
       <td>
         <div style="display:flex; align-items:center; gap:10px">
-          <div class="player-table-avatar" style="background:${isFem ? 'rgba(233,30,99,0.2)' : 'rgba(52,152,219,0.2)'}; border:1px solid ${isFem ? 'rgba(233,30,99,0.4)' : 'rgba(52,152,219,0.4)'}">${isFem ? '👩' : '👨'}</div>
+          <div class="player-table-avatar" style="background:${isGuest ? 'rgba(255,255,255,0.08)' : isFem ? 'rgba(233,30,99,0.2)' : 'rgba(52,152,219,0.2)'}; border:1px solid ${isGuest ? 'rgba(255,255,255,0.15)' : isFem ? 'rgba(233,30,99,0.4)' : 'rgba(52,152,219,0.4)'}">
+            ${isGuest ? '👤' : isFem ? '👩' : '👨'}
+          </div>
           <div>
             <div class="player-table-name">${p.firstName} ${p.lastName || ''}</div>
-            <div style="font-size:11px; color:var(--text-muted); display:flex; gap:6px; align-items:center">
-              <span>${p.email || '—'}</span>
-              <span style="color:var(--gold); font-weight:700">🎾 ${(Number(p.loyaltyPoints) || 0).toFixed(1)} pts</span>
+            <div style="font-size:11px; color:var(--text-muted)">
+              <span>${p.email || (isGuest ? 'Compte invité (en attente d\'inscription)' : '—')}</span>
             </div>
           </div>
         </div>
@@ -2217,17 +2304,27 @@ function renderAdminPlayers() {
           </div>
           <span style="font-size:12px; color:var(--text-secondary); font-weight:600">${(p.reliabilityScore || 50).toFixed(0)}%</span>
         </div>
-        <div style="font-size:10px; color:var(--text-muted); margin-top:2px" title="Niveau éprouvé lors de confrontations face à des pairs de même niveau (±1.0)">
+        <div style="font-size:10px; color:var(--text-muted); margin-top:2px" title="Confrontations face à des pairs (±1.0)">
           ${p.peerConfrontationsCount || 0} match(s) pairs
         </div>
       </td>
-      <td style="font-family:'Outfit',sans-serif; font-size:16px; font-weight:900; color:var(--text-secondary)">${p.totalMatchesPlayed || 0}</td>
+      <td style="text-align:center">
+        <span class="match-count-badge" style="font-family:'Outfit',sans-serif; font-size:14px; font-weight:900; color:var(--text-white); background:rgba(255,255,255,0.06); border:1px solid var(--border-subtle); padding:3px 9px; border-radius:10px" title="Matchs réellement joués et homologués">
+          🎾 ${p.totalMatchesPlayed || 0}
+        </span>
+      </td>
+      <td style="text-align:center">
+        <span class="loyalty-count-badge" style="font-family:'Outfit',sans-serif; font-size:13px; font-weight:800; color:var(--gold); background:rgba(212,175,55,0.12); border:1px solid rgba(212,175,55,0.3); padding:3px 9px; border-radius:10px" title="Points fidélité cumulés sur le cercle">
+          ⭐ ${(Number(p.loyaltyPoints) || 0).toFixed(1)} pts
+        </span>
+      </td>
       <td>${statusBadge}</td>
       <td>
-        <button class="btn-table-action success" onclick="openPlayerEvalModal('${p.id}')">📋 Évaluer</button>
-        ${p.status === 'pending'
-          ? `<button class="btn-table-action" onclick="activatePlayer('${p.id}')">Activer</button>`
-          : `<button class="btn-table-action danger" onclick="suspendPlayer('${p.id}')">Suspendre</button>`}
+        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap">
+          <button class="btn-table-action success" onclick="openPlayerEvalModal('${p.id}')" title="Évaluer le joueur">📋 Évaluer</button>
+          <button class="btn-table-action" onclick="openEditPlayerModal('${p.id}')" style="border-color:var(--gold); color:var(--gold)" title="Modifier les informations">✏️ Modifier</button>
+          <button class="btn-table-action danger" onclick="deletePlayer('${p.id}')" title="Supprimer ce joueur de la base">🗑️</button>
+        </div>
       </td>
     </tr>`;
   }).join('');
@@ -2490,15 +2587,21 @@ function renderSlotDetail(bookingId) {
             </button>` : ''}
         </div>
 
-        ${b.players.map(p => `
+        ${b.players.map(p => {
+          const isG = p.isGuest || p.status === 'guest' || !p.gender;
+          return `
           <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:8px">
-            <div class="player-avatar-sm filled">🎾</div>
+            <div class="player-avatar-sm filled">${isG ? '👤' : '🎾'}</div>
             <div style="flex:1">
-              <div style="font-size:13px; font-weight:700; color:var(--text-primary)">${p.name}</div>
+              <div style="font-size:13px; font-weight:700; color:var(--text-primary)">
+                ${p.name}
+                ${isG ? '<span class="card-tag" style="background:rgba(212,175,55,0.15); color:var(--gold); border:1px solid rgba(212,175,55,0.3); font-size:10px; margin-left:6px; padding:2px 7px; border-radius:6px">👤 Invité</span>' : ''}
+              </div>
               <div style="font-size:11px; color:var(--text-muted)">Niveau ${p.level || '5.0'} ${p.isOrganizer ? '· Organisateur' : ''}</div>
             </div>
             ${currentMode === 'backoffice-dashboard' ? `<button class="btn-table-action danger" onclick="removePlayerFromBooking('${b.id}','${p.userId}')">Retirer</button>` : ''}
-          </div>`).join('')}
+          </div>`;
+        }).join('')}
 
         <!-- FORMULAIRE AJOUT CO-JOUEUR (ENRICHISSEMENT BDD CLUB) -->
         <div id="addPlayerToSlotDrawer_${b.id}" style="display:none; background:rgba(212,175,55,0.08); border:1.5px solid rgba(212,175,55,0.35); border-radius:10px; padding:12px; margin-top:10px">
@@ -2517,8 +2620,9 @@ function renderSlotDetail(bookingId) {
           </div>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px">
             <div>
-              <label class="modal-label" style="font-size:10px">Genre</label>
+              <label class="modal-label" style="font-size:10px">Genre / Statut</label>
               <select class="login-field" id="slotNewPlayerGender" style="font-size:12px; padding:8px">
+                <option value="">👤 Invité (sans sexe)</option>
                 <option value="male">Homme 👨</option>
                 <option value="female">Femme 👩</option>
               </select>
@@ -2538,6 +2642,11 @@ function renderSlotDetail(bookingId) {
           </div>
         </div>
       </div>
+
+      <!-- Action directe : Saisie officielle du score pour ce match -->
+      <button type="button" class="btn-primary-action" onclick="openRecordMatchForBooking('${b.id}')" style="background:linear-gradient(135deg, #f59e0b, #d97706); display:flex; align-items:center; justify-content:center; gap:8px; font-size:13px; font-weight:800; padding:12px; margin-top:6px; border:none; box-shadow:0 4px 15px rgba(245,158,11,0.3)">
+        🏆 Enregistrer / Saisir le score de ce match
+      </button>
 
       ${currentMode === 'backoffice-dashboard' ? `
         <div style="display:flex; gap:10px; margin-top:8px">
@@ -2572,7 +2681,8 @@ function submitAddPlayerToBooking(bookingId) {
   }
 
   const phoneInput = document.getElementById('slotNewPlayerPhone')?.value?.trim() || '';
-  const genderInput = document.getElementById('slotNewPlayerGender')?.value || 'male';
+  const rawGender = document.getElementById('slotNewPlayerGender')?.value;
+  const genderInput = rawGender ? rawGender : null;
   const levelInput = parseFloat(document.getElementById('slotNewPlayerLevel')?.value) || 5.0;
 
   const parts = nameInput.split(' ');
@@ -2582,22 +2692,24 @@ function submitAddPlayerToBooking(bookingId) {
   // Vérifier si le joueur existe déjà dans la base du club
   let existingPlayer = (DB.players || []).find(p =>
     (p.phone && phoneInput && p.phone === phoneInput) ||
-    `${p.firstName} ${p.lastName}`.toLowerCase().trim() === nameInput.toLowerCase().trim()
+    `${p.firstName} ${p.lastName || ''}`.toLowerCase().trim() === nameInput.toLowerCase().trim()
   );
 
   if (!existingPlayer) {
-    // Créer un nouveau joueur dans la base de données du club (pour évaluation et notation future !)
+    // Créer un nouveau joueur dans la base de données du club (invité sans sexe ou joueur standard)
+    const isGuest = !genderInput;
     existingPlayer = {
-      id: 'usr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      id: (isGuest ? 'guest_' : 'usr_') + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
       firstName: firstName,
       lastName: lastName,
       phone: phoneInput,
-      gender: genderInput,
+      gender: genderInput, // null si invité "sans sexe"
       email: `${firstName.toLowerCase().replace(/[^a-z0-9]/g, '')}.${Date.now().toString().slice(-4)}@circlepadel.tn`,
-      role: 'player',
-      status: 'pending', // en attente d'évaluation coach
+      role: isGuest ? 'guest' : 'player',
+      status: isGuest ? 'guest' : 'pending',
       selfEstimatedLevel: levelInput,
-      level: levelInput,
+      level: isGuest ? null : levelInput,
+      loyaltyPoints: 0,
       reliabilityScore: 50,
       totalMatchesPlayed: 0,
       peerConfrontationsCount: 0,
@@ -2983,7 +3095,146 @@ function ensureDemoPlayersAvailable() {
   });
 }
 
-function openRecordMatchModal(mode = 'admin') {
+// ============================================================================
+// FEUILLE DE MATCH (RATING ENGINE ELO / GLICKO-2 & SAISIE LIBRE / FICHE CLUB)
+// ============================================================================
+
+function renderPlayerMiniFicheHTML(p) {
+  if (!p) return '';
+  const isGuest = p.status === 'guest' || p.role === 'guest';
+  const isFem = isPlayerFemale(p);
+  const lvl = (p.level != null ? Number(p.level).toFixed(2) : (p.selfEstimatedLevel ? Number(p.selfEstimatedLevel).toFixed(2) : '5.00'));
+  const fiab = (p.reliabilityScore || 50).toFixed(0);
+  const side = SIDE_LABELS[p.preferredSide] || 'Polyvalent';
+  const style = STYLE_LABELS[p.playStyle] || 'Équilibré';
+  const matches = p.totalMatchesPlayed || 0;
+  const avatarBg = isGuest ? 'rgba(255,255,255,0.08)' : (isFem ? 'rgba(233,30,99,0.2)' : 'rgba(52,152,219,0.2)');
+  const avatarBorder = isGuest ? 'rgba(255,255,255,0.2)' : (isFem ? 'rgba(233,30,99,0.4)' : 'rgba(52,152,219,0.4)');
+  const genderEmoji = isGuest ? '👤' : (isFem ? '👩' : '👨');
+
+  return `
+    <div class="match-player-card-content">
+      <div class="match-player-card-avatar" style="background:${avatarBg}; border:1px solid ${avatarBorder}">
+        ${genderEmoji}
+      </div>
+      <div class="match-player-card-info">
+        <div class="match-player-card-name">
+          <span>${p.firstName} ${p.lastName || ''}</span>
+          <span style="font-size:9.5px; opacity:0.8; font-weight:600">${isGuest ? '👤 Invité' : (isFem ? '👩 Joueuse' : '👨 Joueur')}</span>
+        </div>
+        <div class="match-player-card-tags">
+          <span class="card-tag gold">⭐ Niv ${lvl} / 10</span>
+          <span class="card-tag fiab">🎯 Fiab. ${fiab}%</span>
+          <span class="card-tag subtle">${side} · ${style}</span>
+          <span class="card-tag subtle">🏆 ${matches} match${matches > 1 ? 's' : ''}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function handleMatchPlayerSelectChange(slotId) {
+  const sel = document.getElementById(slotId);
+  const card = document.getElementById(`card_${slotId}`);
+  const manual = document.getElementById(`manual_${slotId}`);
+  const badge = document.getElementById(`badge_${slotId}`);
+  if (!sel) return;
+
+  if (sel.value === '__manual__') {
+    if (card) { card.style.display = 'none'; card.innerHTML = ''; }
+    if (manual) manual.style.display = 'block';
+    if (badge) {
+      badge.textContent = '✍️ Saisie libre';
+      badge.style.color = '#e67e22';
+    }
+  } else {
+    if (manual) manual.style.display = 'none';
+    if (card) {
+      const player = (DB.players || []).find(p => p.id === sel.value);
+      if (player) {
+        card.style.display = 'block';
+        card.innerHTML = renderPlayerMiniFicheHTML(player);
+      } else {
+        card.style.display = 'none';
+        card.innerHTML = '';
+      }
+    }
+    if (badge) {
+      badge.textContent = 'Fiche Club ✓';
+      badge.style.color = 'var(--gold)';
+    }
+  }
+  updateMatchSimulationPreview();
+}
+window.handleMatchPlayerSelectChange = handleMatchPlayerSelectChange;
+
+function getSlotResolvedPlayer(slotId) {
+  const select = document.getElementById(slotId);
+  if (!select) return null;
+  const val = select.value;
+  if (val === '__manual__') {
+    const nameInput = document.getElementById(`manualName_${slotId}`);
+    const genderInput = document.getElementById(`manualGender_${slotId}`);
+    const levelInput = document.getElementById(`manualLevel_${slotId}`);
+    const fullName = (nameInput?.value || '').trim();
+    const gender = genderInput?.value || 'male';
+    const level = Math.max(1.0, Math.min(10.0, parseFloat(levelInput?.value) || 5.0));
+    return {
+      isManual: true,
+      rawName: fullName,
+      gender: gender,
+      level: level,
+      selfEstimatedLevel: level,
+      reliabilityScore: 50,
+      totalMatchesPlayed: 0,
+      peerConfrontationsCount: 0
+    };
+  } else {
+    const p = (DB.players || []).find(x => x.id === val);
+    return p ? { ...p, isManual: false } : null;
+  }
+}
+
+function setupSlotPicker(slotId, targetPlayerId, manualFallback = null) {
+  const sel = document.getElementById(slotId);
+  if (!sel) return;
+
+  const players = DB.players || [];
+  let html = `<option value="__manual__">✍️ + Saisie libre (Nouveau / Invité)</option>`;
+  html += players.map(p => {
+    const isGuest = p.status === 'guest' || p.role === 'guest';
+    const isFem = isPlayerFemale(p);
+    const lvl = (p.level != null ? Number(p.level).toFixed(2) : (p.selfEstimatedLevel ? Number(p.selfEstimatedLevel).toFixed(2) : '5.00'));
+    const isSel = (!manualFallback && p.id === targetPlayerId) ? 'selected' : '';
+    const icon = isGuest ? '👤' : (isFem ? '👩' : '👨');
+    return `<option value="${p.id}" ${isSel}>${icon} ${p.firstName} ${p.lastName || ''} (Niv ${lvl} · Fiab ${(p.reliabilityScore || 50).toFixed(0)}%)</option>`;
+  }).join('');
+
+  sel.innerHTML = html;
+
+  if (manualFallback) {
+    sel.value = '__manual__';
+    const nameInput = document.getElementById(`manualName_${slotId}`);
+    const genderInput = document.getElementById(`manualGender_${slotId}`);
+    const levelInput = document.getElementById(`manualLevel_${slotId}`);
+    if (nameInput) nameInput.value = manualFallback.name || '';
+    if (genderInput) genderInput.value = manualFallback.gender || 'male';
+    if (levelInput) levelInput.value = manualFallback.level != null ? Number(manualFallback.level).toFixed(1) : '5.0';
+  } else if (targetPlayerId && players.some(p => p.id === targetPlayerId)) {
+    sel.value = targetPlayerId;
+  }
+
+  handleMatchPlayerSelectChange(slotId);
+}
+
+function openRecordMatchForBooking(bookingId, role) {
+  const b = (DB.bookings || []).find(bk => bk.id === bookingId);
+  const mode = role || (currentMode === 'backoffice-dashboard' ? 'admin' : 'player');
+  openRecordMatchModal(mode, b);
+}
+window.openRecordMatchForBooking = openRecordMatchForBooking;
+
+function openRecordMatchModal(mode = 'admin', booking = null) {
   currentMatchSheetMode = mode;
   const badge = document.getElementById('matchSheetRoleBadge');
   if (badge) {
@@ -2994,35 +3245,37 @@ function openRecordMatchModal(mode = 'admin') {
   ensureDemoPlayersAvailable();
 
   const players = DB.players || [];
-  const buildOptions = (selectedId) => {
-    return players.map(p => {
-      const lvl = (p.level != null ? Number(p.level).toFixed(2) : (p.selfEstimatedLevel ? Number(p.selfEstimatedLevel).toFixed(2) : '5.00'));
-      const isSel = p.id === selectedId ? 'selected' : '';
-      return `<option value="${p.id}" ${isSel}>${p.firstName} ${p.lastName || ''} (Niv ${lvl} · Fiab ${(p.reliabilityScore || 50).toFixed(0)}%)</option>`;
-    }).join('');
-  };
+  const slotIds = ['matchTeam1Player1', 'matchTeam1Player2', 'matchTeam2Player1', 'matchTeam2Player2'];
 
-  const selT1P1 = document.getElementById('matchTeam1Player1');
-  const selT1P2 = document.getElementById('matchTeam1Player2');
-  const selT2P1 = document.getElementById('matchTeam2Player1');
-  const selT2P2 = document.getElementById('matchTeam2Player2');
+  if (booking && Array.isArray(booking.players) && booking.players.length > 0) {
+    const bPlayers = booking.players;
+    slotIds.forEach((sId, idx) => {
+      const bp = bPlayers[idx];
+      if (bp) {
+        const match = players.find(p => p.id === bp.userId || `${p.firstName} ${p.lastName}`.toLowerCase().trim() === (bp.name || '').toLowerCase().trim());
+        if (match) {
+          setupSlotPicker(sId, match.id, null);
+        } else {
+          setupSlotPicker(sId, null, { name: bp.name, gender: bp.gender || 'male', level: bp.level || 5.0 });
+        }
+      } else {
+        const usedIds = new Set(slotIds.slice(0, idx).map(id => document.getElementById(id)?.value).filter(v => v && v !== '__manual__'));
+        const nextAvailable = players.find(p => !usedIds.has(p.id))?.id || players[0]?.id;
+        setupSlotPicker(sId, nextAvailable, null);
+      }
+    });
+  } else {
+    const currentUserId = (mode === 'player' && DB.currentUser?.id && DB.currentUser.id !== 'guest') ? DB.currentUser.id : null;
+    const p1Id = currentUserId || (players[0]?.id || '');
+    const p2Id = players.find(p => p.id !== p1Id)?.id || (players[1]?.id || '');
+    const p3Id = players.find(p => p.id !== p1Id && p.id !== p2Id)?.id || (players[2]?.id || '');
+    const p4Id = players.find(p => p.id !== p1Id && p.id !== p2Id && p.id !== p3Id)?.id || (players[3]?.id || '');
 
-  const p1Id = (mode === 'player' && DB.currentUser?.id && DB.currentUser.id !== 'guest') ? DB.currentUser.id : (players[0]?.id || '');
-  const p2Id = players.find(p => p.id !== p1Id)?.id || (players[1]?.id || '');
-  const p3Id = players.find(p => p.id !== p1Id && p.id !== p2Id)?.id || (players[2]?.id || '');
-  const p4Id = players.find(p => p.id !== p1Id && p.id !== p2Id && p.id !== p3Id)?.id || (players[3]?.id || '');
-
-  if (selT1P1) {
-    selT1P1.innerHTML = buildOptions(p1Id);
-    if (mode === 'player' && DB.currentUser?.id !== 'guest') {
-      selT1P1.disabled = true;
-    } else {
-      selT1P1.disabled = false;
-    }
+    setupSlotPicker('matchTeam1Player1', p1Id, null);
+    setupSlotPicker('matchTeam1Player2', p2Id, null);
+    setupSlotPicker('matchTeam2Player1', p3Id, null);
+    setupSlotPicker('matchTeam2Player2', p4Id, null);
   }
-  if (selT1P2) selT1P2.innerHTML = buildOptions(p2Id);
-  if (selT2P1) selT2P1.innerHTML = buildOptions(p3Id);
-  if (selT2P2) selT2P2.innerHTML = buildOptions(p4Id);
 
   setMatchScoreSets(2, 1);
   openModal('modal-record-match');
@@ -3047,16 +3300,10 @@ function setMatchScoreSets(setsWon, setsLost) {
 }
 
 function updateMatchSimulationPreview() {
-  const p1Id = document.getElementById('matchTeam1Player1')?.value;
-  const p2Id = document.getElementById('matchTeam1Player2')?.value;
-  const p3Id = document.getElementById('matchTeam2Player1')?.value;
-  const p4Id = document.getElementById('matchTeam2Player2')?.value;
-
-  const players = DB.players || [];
-  const p1 = players.find(p => p.id === p1Id) || { level: 5.0, reliabilityScore: 50 };
-  const p2 = players.find(p => p.id === p2Id) || { level: 5.0, reliabilityScore: 50 };
-  const p3 = players.find(p => p.id === p3Id) || { level: 5.0, reliabilityScore: 50 };
-  const p4 = players.find(p => p.id === p4Id) || { level: 5.0, reliabilityScore: 50 };
+  const p1 = getSlotResolvedPlayer('matchTeam1Player1') || { level: 5.0, reliabilityScore: 50 };
+  const p2 = getSlotResolvedPlayer('matchTeam1Player2') || { level: 5.0, reliabilityScore: 50 };
+  const p3 = getSlotResolvedPlayer('matchTeam2Player1') || { level: 5.0, reliabilityScore: 50 };
+  const p4 = getSlotResolvedPlayer('matchTeam2Player2') || { level: 5.0, reliabilityScore: 50 };
 
   const p1Level = Number(p1.level || p1.selfEstimatedLevel || 5.0);
   const p2Level = Number(p2.level || p2.selfEstimatedLevel || 5.0);
@@ -3112,26 +3359,65 @@ function updateMatchSimulationPreview() {
 async function submitRecordMatch(e) {
   if (e && e.preventDefault) e.preventDefault();
 
-  const p1Id = document.getElementById('matchTeam1Player1')?.value;
-  const p2Id = document.getElementById('matchTeam1Player2')?.value;
-  const p3Id = document.getElementById('matchTeam2Player1')?.value;
-  const p4Id = document.getElementById('matchTeam2Player2')?.value;
+  const slotIds = ['matchTeam1Player1', 'matchTeam1Player2', 'matchTeam2Player1', 'matchTeam2Player2'];
+  const resolvedList = [];
 
-  const playerIds = [p1Id, p2Id, p3Id, p4Id];
-  const uniqueIds = new Set(playerIds);
-  if (uniqueIds.size < 4) {
-    showToast('Veuillez sélectionner 4 joueurs distincts pour ce match de double.', 'error');
-    return;
+  for (let i = 0; i < slotIds.length; i++) {
+    const sId = slotIds[i];
+    const res = getSlotResolvedPlayer(sId);
+    if (!res) {
+      showToast(`Veuillez renseigner le joueur ${i + 1}.`, 'error');
+      return;
+    }
+
+    if (res.isManual) {
+      if (!res.rawName || res.rawName.trim().length < 2) {
+        showToast(`Veuillez saisir le nom complet pour la saisie libre (Joueur ${i + 1}).`, 'error');
+        return;
+      }
+      const parts = res.rawName.trim().split(/\s+/);
+      const fn = parts[0];
+      const ln = parts.slice(1).join(' ') || '';
+
+      // Recherche si un joueur porte déjà ce nom
+      let match = (DB.players || []).find(p =>
+        p.firstName?.toLowerCase() === fn.toLowerCase() &&
+        (p.lastName || '').toLowerCase() === ln.toLowerCase()
+      );
+
+      if (!match) {
+        // Créer un nouveau joueur dans la base du club !
+        match = {
+          id: 'usr_manual_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+          firstName: fn,
+          lastName: ln,
+          gender: res.gender,
+          level: res.level,
+          selfEstimatedLevel: res.level,
+          reliabilityScore: 50,
+          totalMatchesPlayed: 0,
+          peerConfrontationsCount: 0,
+          status: 'pending',
+          role: 'player',
+          preferredSide: 'right',
+          playStyle: 'all-around',
+          phone: '',
+          email: '',
+          loyaltyPoints: 0,
+          createdAt: new Date().toISOString()
+        };
+        DB.players.push(match);
+      }
+      resolvedList.push(match);
+    } else {
+      resolvedList.push(res);
+    }
   }
 
-  const players = DB.players || [];
-  const p1 = players.find(p => p.id === p1Id);
-  const p2 = players.find(p => p.id === p2Id);
-  const p3 = players.find(p => p.id === p3Id);
-  const p4 = players.find(p => p.id === p4Id);
-
-  if (!p1 || !p2 || !p3 || !p4) {
-    showToast('Un ou plusieurs joueurs sont introuvables.', 'error');
+  const [p1, p2, p3, p4] = resolvedList;
+  const uniqueIds = new Set([p1.id, p2.id, p3.id, p4.id]);
+  if (uniqueIds.size < 4) {
+    showToast('Veuillez sélectionner ou saisir 4 joueurs distincts pour ce match de double.', 'error');
     return;
   }
 
@@ -3143,7 +3429,7 @@ async function submitRecordMatch(e) {
     const setsLost = currentMatchSheetScore.setsLost;
     const scoreDetail = document.getElementById('matchScoreGamesDetail')?.value?.trim() || '';
 
-    // Calcul individuel pour chaque joueur selon son propre niveau et sa propre fiabilité !
+    // Calcul individuel pour chaque joueur
     const p1Level = Number(p1.level || p1.selfEstimatedLevel || 5.0);
     const p2Level = Number(p2.level || p2.selfEstimatedLevel || 5.0);
     const p3Level = Number(p3.level || p3.selfEstimatedLevel || 5.0);
@@ -3189,9 +3475,9 @@ async function submitRecordMatch(e) {
       pl.lastDelta = u.calc.delta;
       pl.totalMatchesPlayed = (pl.totalMatchesPlayed || 0) + 1;
       pl.peerConfrontationsCount = (pl.peerConfrontationsCount || 0) + 1;
-      pl.status = 'active';
+      if (pl.status === 'guest') pl.status = 'active';
 
-      // Attribution des points fidélité (1.0 pt heures creuses 08h-17h, 0.5 pt heures de pointe 17h-23h)
+      // Attribution points fidélité (1.0 pt creuses 08h-17h, 0.5 pt pointe 17h-23h)
       const currentHour = new Date().getHours();
       const isOffPeak = currentHour >= 8 && currentHour < 17;
       const loyaltyGain = isOffPeak ? 1.0 : 0.5;
@@ -3227,7 +3513,7 @@ async function submitRecordMatch(e) {
         userId: pl.id,
         type: 'match_alert',
         title: u.isWin ? 'Victoire homologuée 🎾' : 'Match homologué 🎾',
-        body: `${u.isWin ? 'Victoire' : 'Défaite'} ${u.setsWon}-${u.setsLost} vs ${u.opps}. Nouveau niveau : ${u.calc.newLevel.toFixed(2)} (${u.calc.delta >= 0 ? '+' : ''}${u.calc.delta.toFixed(2)}). +${loyaltyGain} pt fidélité ajouté au cercle ! 🎾`,
+        body: `${u.isWin ? 'Victoire' : 'Défaite'} ${u.setsWon}-${u.setsLost} vs ${u.opps}. Nouveau niveau : ${u.calc.newLevel.toFixed(2)} (${u.calc.delta >= 0 ? '+' : ''}${u.calc.delta.toFixed(2)}). +${loyaltyGain} pt fidélité ajouté ! 🎾`,
         createdAt: new Date().toISOString()
       });
 
@@ -3255,10 +3541,11 @@ async function submitRecordMatch(e) {
     // Actualiser toutes les vues
     renderProfileScreen();
     renderHomeScreen();
+    renderMyBookings();
     if (typeof renderAdminPlayers === 'function') renderAdminPlayers();
     if (typeof renderAdminKPIs === 'function') renderAdminKPIs();
 
-    showToast(`✓ Match homologué ! Nouveaux niveaux calculés selon le Rating Engine 🎾`, 'success');
+    showToast(`✓ Match homologué ! Nouveaux niveaux et fiches mis à jour 🎾`, 'success');
   } catch (err) {
     console.error('submitRecordMatch error:', err);
     showToast('Erreur lors de l\'enregistrement du match.', 'error');
@@ -3266,6 +3553,76 @@ async function submitRecordMatch(e) {
     if (btn) { btn.disabled = false; btn.textContent = '✓ Homologuer le Match & Mettre à Jour les Niveaux 🎾'; }
   }
 }
+
+// ============================================================================
+// GESTION JOUEUR (MODIFICATION & SUPPRESSION PAR LE GÉRANT)
+// ============================================================================
+
+function openEditPlayerModal(playerId) {
+  const p = (DB.players || []).find(x => x.id === playerId);
+  if (!p) return;
+  document.getElementById('editPlayerId').value = p.id;
+  document.getElementById('editPlayerFirstName').value = p.firstName || '';
+  document.getElementById('editPlayerLastName').value = p.lastName || '';
+  document.getElementById('editPlayerGender').value = p.gender || '';
+  document.getElementById('editPlayerStatus').value = p.status || 'active';
+  document.getElementById('editPlayerPhone').value = p.phone || '';
+  document.getElementById('editPlayerEmail').value = p.email || '';
+  document.getElementById('editPlayerLevel').value = p.level != null ? Number(p.level).toFixed(2) : (p.selfEstimatedLevel || '');
+  document.getElementById('editPlayerLoyalty').value = (Number(p.loyaltyPoints) || 0).toFixed(1);
+  document.getElementById('editPlayerSide').value = p.preferredSide || 'right';
+  document.getElementById('editPlayerStyle').value = p.playStyle || 'all-around';
+  openModal('modal-edit-player');
+}
+window.openEditPlayerModal = openEditPlayerModal;
+
+function submitEditPlayer(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  const id = document.getElementById('editPlayerId').value;
+  const p = (DB.players || []).find(x => x.id === id);
+  if (!p) return;
+
+  p.firstName = document.getElementById('editPlayerFirstName').value.trim();
+  p.lastName = document.getElementById('editPlayerLastName').value.trim();
+  const rawGender = document.getElementById('editPlayerGender').value;
+  p.gender = rawGender ? rawGender : null;
+  p.status = document.getElementById('editPlayerStatus').value;
+  p.phone = document.getElementById('editPlayerPhone').value.trim();
+  p.email = document.getElementById('editPlayerEmail').value.trim();
+  const lvlVal = document.getElementById('editPlayerLevel').value;
+  p.level = lvlVal ? parseFloat(lvlVal) : null;
+  p.loyaltyPoints = parseFloat(document.getElementById('editPlayerLoyalty').value) || 0;
+  p.preferredSide = document.getElementById('editPlayerSide').value;
+  p.playStyle = document.getElementById('editPlayerStyle').value;
+
+  saveDB(DB, true);
+  closeAllModals();
+  renderAdminPlayers();
+  renderAdminKPIs();
+  showToast(`Fiche de ${p.firstName} mise à jour ✓`, 'success');
+}
+window.submitEditPlayer = submitEditPlayer;
+
+function deletePlayer(playerId) {
+  const p = (DB.players || []).find(x => x.id === playerId);
+  if (!p) return;
+  const name = `${p.firstName} ${p.lastName || ''}`.trim();
+  if (confirm(`Confirmez-vous la suppression du joueur "${name}" de la base de données ?\nCette action est irréversible.`)) {
+    DB.players = (DB.players || []).filter(x => x.id !== playerId);
+    saveDB(DB, true);
+    closeAllModals();
+    renderAdminPlayers();
+    renderAdminKPIs();
+    showToast(`Joueur "${name}" supprimé de la base de données.`, 'info');
+  }
+}
+window.deletePlayer = deletePlayer;
+
+function confirmDeleteFromEditModal() {
+  const id = document.getElementById('editPlayerId')?.value;
+  if (id) deletePlayer(id);
+}
+window.confirmDeleteFromEditModal = confirmDeleteFromEditModal;
 
 // Exposer globalement pour HTML onclick / onchange
 window.openRecordMatchModal = openRecordMatchModal;
@@ -3566,12 +3923,37 @@ function switchAdminTab(tabName) {
 // MODAL SYSTEM
 // ============================================================================
 
+function populateClubPlayersDatalist() {
+  const datalist = document.getElementById('clubPlayersDatalist');
+  if (!datalist) return;
+  const currentId = DB.currentUser?.id;
+  const players = (DB.players || []).filter(p => p && p.id !== currentId);
+  datalist.innerHTML = players.map(p => {
+    const fn = (p.firstName || '').trim();
+    const ln = (p.lastName || '').trim();
+    const fullName = `${fn} ${ln}`.trim();
+    if (!fullName) return '';
+    const isGuest = p.status === 'guest' || !p.gender;
+    const lvl = p.level != null ? Number(p.level).toFixed(1) : (p.selfEstimatedLevel ? Number(p.selfEstimatedLevel).toFixed(1) : '5.0');
+    return `<option value="${fullName}">${isGuest ? `${fullName} (Invité)` : `${fullName} · Niv.${lvl}`}</option>`;
+  }).join('');
+}
+window.populateClubPlayersDatalist = populateClubPlayersDatalist;
+
 function openModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) {
     modal.classList.add('active');
     modal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
+  }
+  if (modalId === 'modal-book-court') {
+    populateClubPlayersDatalist();
+    const user = (DB.players || []).find(p => p.id === DB.currentUser?.id) || DB.currentUser;
+    const nameEl = document.getElementById('bookPlayer1NameDisplay');
+    if (nameEl) {
+      nameEl.textContent = `Joueur 1 : ${user?.firstName || 'Joueur'} ${user?.lastName || ''} (Organisateur)`.trim();
+    }
   }
 }
 
@@ -3930,12 +4312,70 @@ document.addEventListener('DOMContentLoaded', () => {
         const courtId  = `court_${courtNum}`;
         const court    = (DB.courts || []).find(c => c.id === courtId);
         const user     = (DB.players || []).find(p => p.id === DB.currentUser?.id) || DB.currentUser;
+        
+        const currentUserName = `${user?.firstName || 'Joueur'} ${user?.lastName || ''}`.trim();
+        const bookingPlayers = [
+          { userId: DB.currentUser?.id || 'guest', name: currentUserName, level: user?.level || 5.0, isOrganizer: true }
+        ];
+
+        // Co-joueurs précisés par le joueur (enregistrés et ajoutés en BDD en tant qu'invités sans sexe)
+        const coPlayerInputs = [
+          document.getElementById('bookCoPlayer2')?.value?.trim(),
+          document.getElementById('bookCoPlayer3')?.value?.trim(),
+          document.getElementById('bookCoPlayer4')?.value?.trim()
+        ];
+
+        coPlayerInputs.forEach((coName, idx) => {
+          if (!coName) return;
+          // Chercher si ce nom correspond déjà à un joueur dans DB.players
+          let match = (DB.players || []).find(p => `${p.firstName} ${p.lastName || ''}`.toLowerCase().trim() === coName.toLowerCase());
+          if (match) {
+            bookingPlayers.push({
+              userId: match.id,
+              name: `${match.firstName} ${match.lastName || ''}`.trim(),
+              level: match.level || 5.0,
+              isGuest: match.status === 'guest'
+            });
+          } else {
+            // Création en tant qu'invité dans la base de données sans sexe ("donc les enregistrer sans sexe")
+            const parts = coName.split(/\s+/);
+            const fn = parts[0];
+            const ln = parts.slice(1).join(' ') || '';
+            const guestPlayer = {
+              id: 'guest_' + Date.now() + '_' + idx + '_' + Math.random().toString(36).substr(2, 4),
+              firstName: fn,
+              lastName: ln,
+              gender: null, // "sans sexe" comme requis expressément
+              level: null,
+              selfEstimatedLevel: null,
+              reliabilityScore: 50,
+              totalMatchesPlayed: 0,
+              peerConfrontationsCount: 0,
+              status: 'guest',
+              role: 'guest',
+              preferredSide: 'right',
+              playStyle: 'all-around',
+              loyaltyPoints: 0,
+              phone: '',
+              email: '',
+              createdAt: new Date().toISOString()
+            };
+            DB.players.push(guestPlayer);
+            bookingPlayers.push({
+              userId: guestPlayer.id,
+              name: `${guestPlayer.firstName} ${guestPlayer.lastName}`.trim(),
+              level: '5.0',
+              isGuest: true
+            });
+          }
+        });
+
         const newBooking = {
           id: `bk_${Date.now()}`, courtId,
           courtName: court?.name || `Terrain ${courtNum}`,
           date, startTime: time, endTime: addMinutes(time, duration),
           type, status: 'confirmed',
-          players: [{ userId: DB.currentUser?.id || 'guest', name: `${user?.firstName || 'Joueur'} ${user?.lastName || ''}`.trim(), level: user?.level || 3, isOrganizer: true }],
+          players: bookingPlayers,
           waitlist: [], pricePerPlayer: DB.appConfig?.pricePeak || 25,
           createdAt: new Date().toISOString(),
         };
@@ -4335,6 +4775,16 @@ function applyTheme(theme) {
   const btn = document.getElementById('btnToggleTheme');
   if (btn) btn.textContent = isDark ? '🌙' : '☀️';
   localStorage.setItem(THEME_KEY, theme);
+
+  // Mettre à jour immédiatement le radar de compétences pour adapter les petits traits
+  try {
+    const user = (DB.players || []).find(p => p.id === DB.currentUser?.id) || DB.currentUser;
+    if (user && user.skills) {
+      renderRadarChart(user.skills);
+    }
+  } catch (err) {
+    // silence
+  }
 }
 
 function toggleTheme() {

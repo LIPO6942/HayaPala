@@ -888,8 +888,8 @@ img { display: block; max-width: 100%; }
    ========================================================================== */
 .play-match-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
   padding: 0 20px;
   margin-bottom: 24px;
 }
@@ -4276,6 +4276,150 @@ button:active:not(:disabled), .btn-primary-action:active:not(:disabled) {
   background: rgba(231, 76, 60, 0.18);
   color: #ff6b6b;
   border: 1px solid rgba(231, 76, 60, 0.4);
+}
+
+/* Fiche Joueur Club & Saisie Libre (Feuille de Match) */
+.match-slot-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.match-player-card-preview {
+  margin-top: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 8px;
+  padding: 8px 10px;
+  transition: all 0.2s ease;
+}
+body.light-mode .match-player-card-preview {
+  background: #ffffff;
+  border-color: rgba(212, 175, 55, 0.45);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+.match-player-card-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.match-player-card-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.match-player-card-info {
+  flex: 1;
+  min-width: 0;
+}
+.match-player-card-name {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--text-white);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body.light-mode .match-player-card-name {
+  color: #0f172a;
+}
+.match-player-card-tags {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-top: 3px;
+}
+.card-tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  line-height: 1.4;
+}
+.card-tag.gold {
+  background: rgba(212, 175, 55, 0.15);
+  color: var(--gold);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+}
+.card-tag.fiab {
+  background: rgba(46, 204, 113, 0.15);
+  color: #2ecc71;
+  border: 1px solid rgba(46, 204, 113, 0.3);
+}
+.card-tag.subtle {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+}
+body.light-mode .card-tag.subtle {
+  background: rgba(0, 0, 0, 0.05);
+  color: #64748b;
+}
+
+.match-player-manual-box {
+  margin-top: 6px;
+  background: rgba(212, 175, 55, 0.06);
+  border: 1.5px dashed rgba(212, 175, 55, 0.4);
+  border-radius: 8px;
+  padding: 8px 10px;
+  animation: fadeIn 0.2s ease;
+}
+body.light-mode .match-player-manual-box {
+  background: rgba(212, 175, 55, 0.08);
+  border-color: rgba(212, 175, 55, 0.5);
+}
+
+/* Radar de compétences en mode clair (lignes concentriques, petits traits & rayons nets) */
+body.light-mode .radar-chart-wrap {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+body.light-mode .radar-chart-title {
+  color: #0f172a !important;
+}
+body.light-mode #skillsRadarSvg {
+  overflow: visible;
+}
+body.light-mode #skillsRadarSvg polygon[fill="none"] {
+  stroke: #64748b !important;
+  stroke-width: 1.5px !important;
+  stroke-dasharray: 3 3 !important;
+  opacity: 0.85 !important;
+}
+body.light-mode #skillsRadarSvg polygon[fill="none"]:last-of-type {
+  stroke: #1e293b !important;
+  stroke-width: 1.8px !important;
+  stroke-dasharray: none !important;
+  opacity: 1 !important;
+}
+body.light-mode #skillsRadarSvg line {
+  stroke: #475569 !important;
+  stroke-width: 1.5px !important;
+  opacity: 0.75 !important;
+}
+body.light-mode #skillsRadarSvg text {
+  fill: #0f172a !important;
+  font-weight: 800 !important;
+  font-size: 11px !important;
+  letter-spacing: -0.01em;
+}
+body.light-mode #skillsRadarSvg circle {
+  fill: #d4af37 !important;
+  stroke: #ffffff !important;
+  stroke-width: 2.5px !important;
+}
+body.light-mode #skillsRadarSvg polygon[fill^="rgba(212"],
+body.light-mode #skillsRadarSvg polygon[fill^="rgba(200"] {
+  fill: rgba(212, 175, 55, 0.35) !important;
+  stroke: #b8860b !important;
+  stroke-width: 2.6px !important;
 }
 
 /* ==========================================================================
