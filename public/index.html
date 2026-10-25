@@ -911,7 +911,7 @@
                   placeholder="🔍 Rechercher un membre..."
                   style="padding-left:16px; max-width:240px; height:38px" />
               </div>
-              <button class="btn-new-admin-booking" id="btnAdminOpenRegisterPlayer">
+              <button class="btn-new-admin-booking" id="btnAdminOpenRegisterPlayer" onclick="openModal('modal-register-player')">
                 <span>+</span> Inscrire un membre
               </button>
             </div>
@@ -1555,7 +1555,7 @@
       <div style="background:var(--bg-card-2); border:1px solid var(--border-gold-sm); border-radius:var(--radius-md); padding:12px 14px; font-size:12px; color:var(--text-secondary); line-height:1.5; margin-bottom:16px">
         ⚠️ Le niveau officiel sera attribué par le coach lors de l'évaluation. Le joueur sera en statut <strong style="color:var(--amber)">En attente</strong> jusqu'à validation.
       </div>
-      <button class="btn-primary-action" id="btnConfirmRegisterPlayer">Inscrire le membre</button>
+      <button type="button" class="btn-primary-action" id="btnConfirmRegisterPlayer" onclick="confirmRegisterPlayer()">Inscrire le membre</button>
     </div>
   </div>
 
@@ -1723,6 +1723,9 @@
           Fermer
         </button>
       </div>
+    </div><!-- /.modal-sheet -->
+  </div><!-- /#modal-auth -->
+
   <!-- ── Modale : Modification / Gestion Fiche Joueur (Gérant) ── -->
   <div class="modal-overlay" id="modal-edit-player" role="dialog" aria-modal="true">
     <div class="modal-sheet" style="max-width:540px">
@@ -2144,6 +2147,6 @@
   <!-- ── Toast notifications container ── -->
   <div class="toast-container" id="toastContainer" role="alert" aria-live="polite"></div>
 
-  <script type="module" src="./js/app.js?v=2.1.0"></script>
+  <script type="module" src="./js/app.js?v=2.2.0"></script>
 </body>
 </html>

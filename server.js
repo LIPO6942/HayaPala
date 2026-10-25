@@ -269,7 +269,8 @@ function getInitialCirclePadelDB() {
     notifications: [],
     transactions: [],
     matchReviews: [],
-    auditLogs: []
+    auditLogs: [],
+    deletedPlayerIds: []
   };
 }
 
@@ -353,6 +354,77 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  // DELETE /api/circlepadel/players/:id - Authoritative instant player deletion
+  if (method === 'DELETE' && pathname.startsWith('/api/circlepadel/players/')) {
+    try {
+      const playerId = decodeURIComponent(pathname.replace('/api/circlepadel/players/', '').trim());
+      if (!playerId) return jsonResponse({ success: false, message: 'ID joueur manquant' }, 400);
+
+      let existing = getInitialCirclePadelDB();
+      if (fs.existsSync(CP_DB_FILE)) {
+        try { existing = JSON.parse(fs.readFileSync(CP_DB_FILE, 'utf-8')); } catch(e){}
+      }
+
+      const target = (existing.players || []).find(p => p.id === playerId);
+      const name = target ? `${target.firstName} ${target.lastName || ''}`.trim() : playerId;
+
+      // Ajouter aux tombstones de suppression permanents
+      const existingDeleted = Array.isArray(existing.deletedPlayerIds) ? existing.deletedPlayerIds : [];
+      const deletedSet = new Set(existingDeleted);
+      deletedSet.add(playerId);
+      const updatedDeletedIds = Array.from(deletedSet);
+
+      // Retirer définitivement de la liste des joueurs
+      const updatedPlayers = (existing.players || []).filter(p => p.id !== playerId);
+
+      // Ajouter audit certifié
+      const auditEntry = {
+        id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+        action: 'PLAYER_DELETED',
+        entityId: playerId,
+        entityType: 'player',
+        playerName: name,
+        playerEmail: target?.email || '',
+        playerPhone: target?.phone || '',
+        performedBy: 'Moslem Gouia (Gérant)',
+        timestamp: new Date().toISOString(),
+        details: `Suppression définitive du compte joueur "${name}" (ID: ${playerId}) effectuée par le gérant.`
+      };
+      const existingAudit = Array.isArray(existing.auditLogs) ? existing.auditLogs : [];
+      existingAudit.unshift(auditEntry);
+
+      const updatedDB = {
+        ...existing,
+        players: updatedPlayers,
+        deletedPlayerIds: updatedDeletedIds,
+        auditLogs: existingAudit,
+        updatedAt: new Date().toISOString()
+      };
+
+      fs.writeFileSync(CP_DB_FILE, JSON.stringify(updatedDB, null, 2), 'utf-8');
+
+      // Diffusion instantanée SSE vers tous les appareils (<10ms)
+      broadcastCirclePadelEvent({
+        type: 'db_updated',
+        source: 'admin',
+        action: 'PLAYER_DELETED',
+        deletedPlayerId: playerId,
+        timestamp: Date.now(),
+        playersCount: updatedPlayers.length
+      });
+
+      return jsonResponse({
+        success: true,
+        deletedPlayerId: playerId,
+        playersCount: updatedPlayers.length,
+        message: `Joueur "${name}" supprimé définitivement.`
+      });
+    } catch (err) {
+      console.error('Error deleting player:', err);
+      return jsonResponse({ success: false, error: err.message }, 500);
+    }
+  }
+
   // POST /api/circlepadel/db - Update and persist shared database with intelligent collaborative merge
   if (method === 'POST' && pathname === '/api/circlepadel/db') {
     try {
@@ -365,13 +437,28 @@ const server = http.createServer(async (req, res) => {
           } catch (e) {}
         }
 
-        // 1. Authoritative Players Sync (supports additions, updates, and deletions)
-        let mergedPlayers = Array.isArray(body.players) ? body.players : (existing.players || []);
-        if (body.lastDeletedPlayerId) {
-          mergedPlayers = mergedPlayers.filter(p => p && p.id !== body.lastDeletedPlayerId);
-        }
+        // 1. Authoritative Deleted Player Tombstones (guarantees deleted players stay deleted permanently)
+        const existingDeleted = Array.isArray(existing.deletedPlayerIds) ? existing.deletedPlayerIds : [];
+        const incomingDeleted = Array.isArray(body.deletedPlayerIds) ? body.deletedPlayerIds : [];
+        const deletedSet = new Set([...existingDeleted, ...incomingDeleted]);
+        if (body.lastDeletedPlayerId) deletedSet.add(body.lastDeletedPlayerId);
+        if (body.deletedPlayerId) deletedSet.add(body.deletedPlayerId);
+        const mergedDeletedIds = Array.from(deletedSet);
 
-        // 2. Merge Bookings
+        // 2. Authoritative Players Sync (supports additions, updates, and deletions)
+        const playerMap = new Map();
+        (existing.players || []).forEach(p => {
+          if (p && p.id && !deletedSet.has(p.id)) playerMap.set(p.id, p);
+        });
+        (Array.isArray(body.players) ? body.players : []).forEach(p => {
+          if (p && p.id && !deletedSet.has(p.id)) {
+            const prev = playerMap.get(p.id);
+            playerMap.set(p.id, prev ? { ...prev, ...p } : p);
+          }
+        });
+        const mergedPlayers = Array.from(playerMap.values());
+
+        // 3. Merge Bookings
         const bookingMap = new Map();
         (existing.bookings || []).forEach(b => {
           if (b && b.id) bookingMap.set(b.id, b);
@@ -384,7 +471,7 @@ const server = http.createServer(async (req, res) => {
         });
         const mergedBookings = Array.from(bookingMap.values());
 
-        // 3. Merge Audit Logs (Full certified and immutable audit trail)
+        // 4. Merge Audit Logs (Full certified and immutable audit trail)
         const existingAudit = Array.isArray(existing.auditLogs) ? existing.auditLogs : [];
         const incomingAudit = Array.isArray(body.auditLogs) ? body.auditLogs : [];
         const auditMap = new Map();
@@ -396,6 +483,7 @@ const server = http.createServer(async (req, res) => {
           ...existing,
           ...body,
           players: mergedPlayers,
+          deletedPlayerIds: mergedDeletedIds,
           bookings: mergedBookings,
           auditLogs: mergedAuditLogs,
           updatedAt: new Date().toISOString()
@@ -408,7 +496,7 @@ const server = http.createServer(async (req, res) => {
           type: 'db_updated',
           source: body.clientSource || 'admin',
           action: body.lastAction || (body.lastDeletedPlayerId ? 'PLAYER_DELETED' : 'DB_SYNC'),
-          deletedPlayerId: body.lastDeletedPlayerId || null,
+          deletedPlayerId: body.lastDeletedPlayerId || body.deletedPlayerId || null,
           timestamp: Date.now(),
           playersCount: mergedPlayers.length
         });

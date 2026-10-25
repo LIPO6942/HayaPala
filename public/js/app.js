@@ -95,12 +95,20 @@ try {
 function sanitizeDB(db) {
   if (!db || typeof db !== 'object') return;
   if (!Array.isArray(db.players)) db.players = [];
+  if (!Array.isArray(db.deletedPlayerIds)) db.deletedPlayerIds = [];
   if (!Array.isArray(db.courts) || db.courts.length === 0) db.courts = [...COURTS_SEED];
   if (!Array.isArray(db.bookings)) db.bookings = [];
   if (!Array.isArray(db.notifications)) db.notifications = [];
   if (!Array.isArray(db.matchReviews)) db.matchReviews = [];
   if (!Array.isArray(db.transactions)) db.transactions = [];
   if (!Array.isArray(db.auditLogs)) db.auditLogs = [];
+
+  // Immunité absolue : exclure tout joueur supprimé
+  if (db.deletedPlayerIds.length > 0) {
+    const deletedSet = new Set(db.deletedPlayerIds);
+    db.players = db.players.filter(p => p && p.id && !deletedSet.has(p.id));
+  }
+
   db.bookings.forEach(b => {
     if (b && !Array.isArray(b.players)) b.players = [];
   });
@@ -111,13 +119,24 @@ let _syncDebounceTimer = null;
 
 /**
  * Fusionne intelligemment la liste locale et entrante de joueurs
- * Garantit qu'aucun compte créé localement ou en attente d'évaluation ne disparaît.
+ * Garantit qu'aucun compte créé localement ne disparaît et qu'aucun joueur supprimé ne ressuscite.
  */
 function mergePlayersLists(currentList, incomingList) {
-  if (Array.isArray(incomingList) && incomingList.length > 0) {
-    return incomingList;
-  }
-  return currentList || [];
+  const deletedSet = new Set(DB.deletedPlayerIds || []);
+  const map = new Map();
+  (currentList || []).forEach(p => {
+    if (p && p.id && !deletedSet.has(p.id)) map.set(p.id, p);
+  });
+  (incomingList || []).forEach(p => {
+    if (p && p.id && !deletedSet.has(p.id)) {
+      if (!map.has(p.id)) {
+        map.set(p.id, p);
+      } else {
+        map.set(p.id, { ...map.get(p.id), ...p });
+      }
+    }
+  });
+  return Array.from(map.values());
 }
 
 /**
@@ -201,8 +220,13 @@ async function syncFromBackend(isFromRealtimeEvent = false, realtimePayload = nu
     if (!res.ok) return;
     const remote = await res.json();
     if (remote && Array.isArray(remote.players)) {
+      if (Array.isArray(remote.deletedPlayerIds)) {
+        const mergedDeleted = new Set([...(DB.deletedPlayerIds || []), ...remote.deletedPlayerIds]);
+        DB.deletedPlayerIds = Array.from(mergedDeleted);
+      }
+      const deletedSet = new Set(DB.deletedPlayerIds || []);
       const prevCount = (DB.players || []).length;
-      DB.players = remote.players;
+      DB.players = remote.players.filter(p => p && p.id && !deletedSet.has(p.id));
       const newCount = DB.players.length;
 
       if (Array.isArray(remote.courts) && remote.courts.length) DB.courts = remote.courts;
@@ -4360,26 +4384,35 @@ function deletePlayer(playerId) {
     if (!Array.isArray(DB.auditLogs)) DB.auditLogs = [];
     DB.auditLogs.unshift(auditEntry);
 
-    // 2. Suppression locale
+    // 2. Tombstone de suppression permanente
+    if (!Array.isArray(DB.deletedPlayerIds)) DB.deletedPlayerIds = [];
+    if (!DB.deletedPlayerIds.includes(playerId)) DB.deletedPlayerIds.push(playerId);
+
+    // 3. Suppression locale immédiate
     DB.players = (DB.players || []).filter(x => x.id !== playerId);
     DB.lastDeletedPlayerId = playerId;
+    DB.deletedPlayerId = playerId;
     DB.lastAction = 'PLAYER_DELETED';
 
-    // 3. Propagation instantanée serveur & SSE (0ms)
+    // 4. Appel direct de l'API DELETE pour confirmation atomique serveur
+    fetch(`/api/circlepadel/players/${encodeURIComponent(playerId)}`, { method: 'DELETE' }).catch(() => {});
+
+    // 5. Propagation instantanée serveur & SSE (0ms)
     saveDB(DB, true, true);
     setTimeout(() => {
       delete DB.lastDeletedPlayerId;
+      delete DB.deletedPlayerId;
       delete DB.lastAction;
     }, 500);
 
-    // 4. Suppression distante Firestore en tâche de fond
+    // 6. Suppression distante Firestore en tâche de fond
     fbDeletePlayer(playerId).catch(() => {});
 
     closeAllModals();
     renderAdminPlayers();
     renderAdminKPIs();
     renderAdminAuditLogs();
-    showToast(`Joueur "${name}" supprimé partout (enregistré dans l'audit) ✓`, 'info');
+    showToast(`✓ Joueur "${name}" supprimé définitivement partout.`, 'info');
   }
 }
 window.deletePlayer = deletePlayer;
@@ -4389,6 +4422,103 @@ function confirmDeleteFromEditModal() {
   if (id) deletePlayer(id);
 }
 window.confirmDeleteFromEditModal = confirmDeleteFromEditModal;
+
+/**
+ * Inscription administrative d'un membre depuis la modale "Inscrire un membre"
+ * Appelé directement par onclick="confirmRegisterPlayer()"
+ */
+function confirmRegisterPlayer() {
+  const nameInput = document.getElementById('regPlayerName');
+  const phoneInput = document.getElementById('regPlayerPhone');
+  const emailInput = document.getElementById('regPlayerEmail');
+  const genderInput = document.getElementById('regPlayerGender');
+  const sideInput = document.getElementById('regPlayerSide');
+  const styleInput = document.getElementById('regPlayerStyle');
+
+  const name = nameInput?.value?.trim();
+  if (!name) {
+    showToast('Veuillez renseigner le nom du joueur.', 'error');
+    if (nameInput) nameInput.focus();
+    return;
+  }
+
+  const phone = phoneInput?.value?.trim() || '';
+  const email = emailInput?.value?.trim() || '';
+  const gender = genderInput?.value || 'male';
+  const side = sideInput?.value || 'right';
+  const style = styleInput?.value || 'offensive';
+
+  const parts = name.split(/\s+/);
+  const firstName = parts[0] || 'Membre';
+  const lastName = parts.slice(1).join(' ') || '';
+
+  const newPlayer = {
+    id: `player_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+    firstName,
+    lastName,
+    phone,
+    email: email || `${firstName.toLowerCase()}.${(lastName.toLowerCase().replace(/[^a-z0-9]/g, '')) || Math.floor(100 + Math.random() * 900)}@circlepadel.tn`,
+    gender,
+    avatar: null,
+    role: 'player',
+    status: 'pending',
+    level: null,
+    selfEstimatedLevel: 5.0,
+    preferredSide: side,
+    playStyle: style,
+    reliabilityScore: 50,
+    totalMatchesPlayed: 0,
+    skills: {},
+    levelHistory: [{
+      date: getTodayStr(),
+      level: 5.0,
+      note: 'Inscription administrative · En attente d\'évaluation officielle coach'
+    }],
+    loyaltyPoints: 0,
+    loyaltyHistory: [],
+    consentSignedAt: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+  };
+
+  // Trace d'audit certifiée
+  const auditEntry = {
+    id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+    action: 'PLAYER_CREATED',
+    entityId: newPlayer.id,
+    entityType: 'player',
+    playerName: `${firstName} ${lastName}`.trim(),
+    playerEmail: newPlayer.email,
+    playerPhone: phone,
+    performedBy: `${DB.currentUser?.firstName || 'Gérant'} ${DB.currentUser?.lastName || ''}`.trim() || 'Admin (Gérant)',
+    timestamp: new Date().toISOString(),
+    details: `Création administrative du membre "${firstName} ${lastName}" par le gérant au desk.`
+  };
+  if (!Array.isArray(DB.auditLogs)) DB.auditLogs = [];
+  DB.auditLogs.unshift(auditEntry);
+
+  if (!Array.isArray(DB.players)) DB.players = [];
+  DB.players.push(newPlayer);
+  DB.lastAction = 'PLAYER_CREATED';
+
+  // Réinitialiser les champs du formulaire
+  if (nameInput) nameInput.value = '';
+  if (phoneInput) phoneInput.value = '';
+  if (emailInput) emailInput.value = '';
+
+  // Sauvegarde locale + sync backend instantané vers tous les appareils
+  saveDB(DB, true, true);
+  setTimeout(() => { delete DB.lastAction; }, 500);
+
+  closeModal('modal-register-player');
+  renderAdminPlayers();
+  renderAdminKPIs();
+  renderAdminAuditLogs();
+  showToast(`✓ Membre "${firstName} ${lastName}" inscrit(e) et ajouté(e) aux évaluations !`, 'success');
+
+  fbSavePlayer(newPlayer).catch(() => {});
+  fbTrack('player_registered', { playerId: newPlayer.id });
+}
+window.confirmRegisterPlayer = confirmRegisterPlayer;
 
 // Exposer globalement pour HTML onclick / onchange
 window.openRecordMatchModal = openRecordMatchModal;
@@ -4705,8 +4835,21 @@ function switchAdminTab(tabName) {
   document.querySelectorAll('.admin-tab-content').forEach(content => {
     content.classList.toggle('active', content.id === `adminContent${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
   });
-  if (tabName === 'audit') {
+  if (tabName === 'players') {
+    renderAdminPlayers();
+  } else if (tabName === 'audit') {
     renderAdminAuditLogs();
+  } else if (tabName === 'planning') {
+    renderAdminTimetable();
+  } else if (tabName === 'courts') {
+    renderAdminCourts();
+  } else if (tabName === 'alerts') {
+    renderAdminAlerts();
+  } else if (tabName === 'stats') {
+    renderAdminKPIs();
+    renderAdminStats();
+  } else if (tabName === 'matches') {
+    renderAdminMatches();
   }
 }
 
@@ -5379,53 +5522,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── Inscription membre gérant ──
     if (id === 'btnConfirmRegisterPlayer') {
-      const name = document.getElementById('regPlayerName')?.value?.trim();
-      const phone = document.getElementById('regPlayerPhone')?.value?.trim();
-      const email = document.getElementById('regPlayerEmail')?.value?.trim() || '';
-      const gender = document.getElementById('regPlayerGender')?.value || 'male';
-      const side = document.getElementById('regPlayerSide')?.value || 'right';
-      const style = document.getElementById('regPlayerStyle')?.value || 'offensive';
-      if (!name || !phone) { showToast('Nom et téléphone obligatoires.', 'error'); return; }
-      const [firstName, ...lastParts] = name.split(' ');
-      const newPlayer = {
-        id: `player_${Date.now()}`,
-        firstName, lastName: lastParts.join(' ') || '', phone, email,
-        gender,
-        avatar: null, role: 'player', status: 'pending', level: null,
-        preferredSide: side, playStyle: style, reliabilityScore: 50,
-        totalMatchesPlayed: 0, skills: {}, levelHistory: [],
-        loyaltyPoints: 0, loyaltyHistory: [],
-        consentSignedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
-      };
-
-      // Trace d'audit certifiée
-      const auditEntry = {
-        id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
-        action: 'PLAYER_CREATED',
-        entityId: newPlayer.id,
-        entityType: 'player',
-        playerName: `${firstName} ${newPlayer.lastName}`.trim(),
-        playerEmail: email,
-        playerPhone: phone,
-        performedBy: `${DB.currentUser?.firstName || 'Gérant'} ${DB.currentUser?.lastName || ''}`.trim() || 'Admin (Gérant)',
-        timestamp: new Date().toISOString(),
-        details: `Création administrative du membre ${name} par le gérant au desk.`
-      };
-      if (!Array.isArray(DB.auditLogs)) DB.auditLogs = [];
-      DB.auditLogs.unshift(auditEntry);
-
-      DB.players.push(newPlayer);
-      DB.lastAction = 'PLAYER_CREATED';
-      saveDB(DB, true, true);
-      setTimeout(() => { delete DB.lastAction; }, 500);
-
-      closeAllModals();
-      renderAdminPlayers();
-      renderAdminKPIs();
-      renderAdminAuditLogs();
-      showToast(`${name} inscrit(e) et synchronisé(e) partout ✓`, 'success');
-      fbSavePlayer(newPlayer).catch(() => {});
-      fbTrack('player_registered', { playerId: newPlayer.id });
+      confirmRegisterPlayer();
+      return;
     }
 
     // ── Navigation jours planning gérant (‹ / › / Aujourd'hui) ──
@@ -5563,8 +5661,14 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
           const cached = JSON.parse(e.newValue);
           if (cached && Array.isArray(cached.players)) {
-            DB.players = cached.players;
+            if (Array.isArray(cached.deletedPlayerIds)) {
+              const mergedDeleted = new Set([...(DB.deletedPlayerIds || []), ...cached.deletedPlayerIds]);
+              DB.deletedPlayerIds = Array.from(mergedDeleted);
+            }
+            const deletedSet = new Set(DB.deletedPlayerIds || []);
+            DB.players = cached.players.filter(p => p && p.id && !deletedSet.has(p.id));
             if (Array.isArray(cached.bookings)) DB.bookings = mergeBookingsLists(DB.bookings, cached.bookings);
+            if (Array.isArray(cached.auditLogs)) DB.auditLogs = cached.auditLogs;
             renderAdminPlayers();
             renderAdminKPIs();
             renderAdminAlerts();
@@ -5572,6 +5676,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderCourtsGrid();
             renderHomeScreen();
             renderProfileScreen();
+            renderAdminAuditLogs();
           }
         } catch (err) {}
       }
