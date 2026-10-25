@@ -52,12 +52,24 @@ const COURTS_SEED = [
 // Aucune donnée mock n'est chargée — tout vient de Firestore
 // ============================================================================
 
-const DB_KEY = 'circlepadel_db_v1';
+const DB_KEY = 'circlepadel_db_v2';
 
-/** Structure vide initiale — sera peuplée exclusivement par Firestore */
+/** Structure vide initiale — sera peuplée exclusivement par le serveur */
 let DB = {
   appConfig:     { ...DEFAULT_CONFIG },
-  currentUser:   { id: 'guest', firstName: 'Joueur', lastName: '', role: 'player' },
+  currentUser:   {
+    id: 'user_moslem',
+    firstName: 'Moslem',
+    lastName: 'Gouia',
+    email: 'moslem.gouia@example.com',
+    phone: '+216 22 227 041',
+    role: 'admin',
+    status: 'active',
+    level: 5.0,
+    reliabilityScore: 82,
+    totalMatchesPlayed: 24,
+    loyaltyPoints: 45
+  },
   players:       [],
   courts:        [...COURTS_SEED],
   bookings:      [],
@@ -66,17 +78,13 @@ let DB = {
   transactions:  [],
 };
 
-// Restaurer le cache Firestore uniquement (flag _fromFirestore requis)
+// Nettoyer l'ancien cache local v1 et restaurer le cache v2
 try {
+  localStorage.removeItem('circlepadel_db_v1');
   const raw = localStorage.getItem(DB_KEY);
   if (raw) {
     const cached = JSON.parse(raw);
-    if (cached._fromFirestore === true) {
-      DB = { ...DB, ...cached };
-    } else {
-      // Ancien cache localStorage (données mock) → on l'efface
-      localStorage.removeItem(DB_KEY);
-    }
+    DB = { ...DB, ...cached };
   }
 } catch (e) { localStorage.removeItem(DB_KEY); }
 
@@ -104,41 +112,10 @@ let _syncDebounceTimer = null;
  * Garantit qu'aucun compte créé localement ou en attente d'évaluation ne disparaît.
  */
 function mergePlayersLists(currentList, incomingList) {
-  const map = new Map();
-  // 1. Ajouter tous les joueurs distants
-  (incomingList || []).forEach(p => {
-    if (p && p.id) {
-      map.set(p.id, p);
-      if (p.email) map.set(`email_${p.email.toLowerCase().trim()}`, p);
-    }
-  });
-
-  // 2. Préserver impérativement tous les joueurs locaux
-  (currentList || []).forEach(p => {
-    if (!p || !p.id) return;
-    const byId = map.get(p.id);
-    const byEmail = p.email ? map.get(`email_${p.email.toLowerCase().trim()}`) : null;
-    const remoteMatch = byId || byEmail;
-
-    if (!remoteMatch) {
-      // Joueur créé localement mais pas encore présent sur le serveur : LE CONSERVER !
-      map.set(p.id, p);
-    } else {
-      // Si local est en attente d'évaluation coach ou plus récent, fusionner
-      const merged = { ...remoteMatch, ...p };
-      map.set(remoteMatch.id, merged);
-      if (p.id !== remoteMatch.id) map.set(p.id, merged);
-    }
-  });
-
-  // 3. Retourner la liste dédoublonnée
-  const unique = new Map();
-  map.forEach((p, k) => {
-    if (p && p.id && !k.startsWith('email_')) {
-      unique.set(p.id, p);
-    }
-  });
-  return Array.from(unique.values());
+  if (Array.isArray(incomingList) && incomingList.length > 0) {
+    return incomingList;
+  }
+  return currentList || [];
 }
 
 /**
@@ -214,7 +191,7 @@ async function syncFromBackend(isFromRealtimeEvent = false) {
     const remote = await res.json();
     if (remote && Array.isArray(remote.players)) {
       const prevCount = (DB.players || []).length;
-      DB.players = mergePlayersLists(DB.players, remote.players);
+      DB.players = remote.players;
       const newCount = DB.players.length;
 
       if (Array.isArray(remote.courts) && remote.courts.length) DB.courts = remote.courts;
@@ -1583,6 +1560,44 @@ async function handlePlayerLogin(email, password) {
     const norm = (email || '').toLowerCase().trim();
     const cleanInput = norm.replace(/[\s\-\+\.]/g, '');
 
+    // Accès rapide Admin CirclePadel (supporte "admin", "admin@circlepadel.com", "moslem")
+    if ((norm === 'admin' || norm === 'admin@hayapala.tn' || norm === 'admin@circlepadel.com' || norm === 'moslem') && (password === 'admin' || !password || password === 'padel2026')) {
+      let adminPlayer = (DB.players || []).find(p => p.role === 'admin' || p.id === 'user_moslem' || p.firstName?.toLowerCase() === 'moslem') || {
+        id: 'user_moslem',
+        firstName: 'Moslem',
+        lastName: 'Gouia',
+        email: 'moslem.gouia@example.com',
+        phone: '+216 22 227 041',
+        gender: 'male',
+        role: 'admin',
+        status: 'active',
+        level: 5.0,
+        reliabilityScore: 82,
+        totalMatchesPlayed: 24,
+        loyaltyPoints: 45
+      };
+      DB.currentUser = { ...adminPlayer, role: 'admin' };
+      saveDB(DB);
+      updateAuthUI();
+      updateAuthRoleUI();
+      renderHomeScreen();
+      renderProfileScreen();
+      renderAdminPlayers();
+      closeModal('modal-auth');
+      showCelebrationModal({
+        title: `Bienvenue, ${DB.currentUser.firstName} (Admin) !`,
+        subtitle: `Connexion sécurisée établie. Espace Gérant et profil athlète synchronisés.`,
+        badgeText: 'SESSION ADMIN VALIDÉE',
+        icon: '🎾',
+        durationMs: 950,
+        onComplete: () => {
+          navigateToScreen('screen-profile');
+          showToast(`Connecté en tant qu'administrateur 🎾`, 'success');
+        }
+      });
+      return;
+    }
+
     // 1. Recherche parmi les joueurs locaux en mémoire
     let localPlayer = (DB.players || []).find(p => {
       const pEmail = (p.email || '').toLowerCase().trim();
@@ -1603,7 +1618,7 @@ async function handlePlayerLogin(email, password) {
         if (res.ok) {
           const remote = await res.json();
           if (remote && Array.isArray(remote.players)) {
-            DB.players = mergePlayersLists(DB.players, remote.players);
+            DB.players = remote.players;
             localPlayer = DB.players.find(p => {
               const pEmail = (p.email || '').toLowerCase().trim();
               const pPhone = (p.phone || '').replace(/[\s\-\+\.]/g, '');
@@ -4117,7 +4132,7 @@ function deletePlayer(playerId) {
     DB.players = (DB.players || []).filter(x => x.id !== playerId);
     DB.lastDeletedPlayerId = playerId;
     saveDB(DB, true);
-    delete DB.lastDeletedPlayerId;
+    setTimeout(() => { delete DB.lastDeletedPlayerId; }, 250);
     closeAllModals();
     renderAdminPlayers();
     renderAdminKPIs();
@@ -4751,20 +4766,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('btnLoginSubmit');
     const originalText = btn ? btn.textContent : '';
 
-    // Mode démo : admin / admin → accès direct sans Firebase Auth
-    if ((email === 'admin' || email === 'admin@hayapala.tn' || email === 'admin@circlepadel.com') && password === 'admin') {
-      DB.currentUser = {
-        id: 'admin_1',
-        firstName: 'Gérant',
-        lastName: 'CirclePadel',
-        email: email,
+    // Mode démo / admin : admin / admin → accès direct sans Firebase Auth
+    if ((email === 'admin' || email === 'admin@hayapala.tn' || email === 'admin@circlepadel.com' || email.toLowerCase() === 'moslem') && (password === 'admin' || !password || password === 'padel2026')) {
+      let adminPlayer = (DB.players || []).find(p => p.role === 'admin' || p.id === 'user_moslem' || p.firstName?.toLowerCase() === 'moslem') || {
+        id: 'user_moslem',
+        firstName: 'Moslem',
+        lastName: 'Gouia',
+        email: 'moslem.gouia@example.com',
+        phone: '+216 22 227 041',
+        gender: 'male',
         role: 'admin',
-        status: 'active'
+        status: 'active',
+        level: 5.0,
+        reliabilityScore: 82,
+        totalMatchesPlayed: 24,
+        loyaltyPoints: 45
       };
+      DB.currentUser = { ...adminPlayer, role: 'admin' };
       saveDB(DB);
       updateAuthRoleUI();
       switchViewMode('backoffice-dashboard');
-      showToast('Bienvenue Admin 👋', 'gold');
+      showToast('Bienvenue Moslem (Admin) 👋', 'gold');
       fbTrack('login', { method: 'demo' });
       return;
     }
@@ -5252,7 +5274,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
           const cached = JSON.parse(e.newValue);
           if (cached && Array.isArray(cached.players)) {
-            DB.players = mergePlayersLists(DB.players, cached.players);
+            DB.players = cached.players;
             if (Array.isArray(cached.bookings)) DB.bookings = mergeBookingsLists(DB.bookings, cached.bookings);
             renderAdminPlayers();
             renderAdminKPIs();

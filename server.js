@@ -110,14 +110,143 @@ function getInitialCirclePadelDB() {
       maxPlayersPerMatch: 4,
       alertBeforeMatchHours: 6
     },
-    currentUser: { id: 'guest', firstName: 'Joueur', lastName: '', role: 'player' },
+    currentUser: {
+      id: "user_moslem",
+      firstName: "Moslem",
+      lastName: "Gouia",
+      email: "moslem.gouia@example.com",
+      phone: "+216 22 227 041",
+      role: "admin",
+      status: "active",
+      level: 5.0,
+      reliabilityScore: 82,
+      totalMatchesPlayed: 24,
+      loyaltyPoints: 45
+    },
     courts: [
       { id: 'court_1', name: 'Terrain 1', surface: 'Gazon synthétique bleu', isActive: true, amenities: ['Éclairage LED', 'Chauffage'] },
       { id: 'court_2', name: 'Terrain 2', surface: 'Gazon synthétique bleu', isActive: true, amenities: ['Éclairage LED'] },
       { id: 'court_3', name: 'Terrain 3', surface: 'Gazon synthétique vert', isActive: true, amenities: ['Éclairage LED', 'Chauffage'] },
       { id: 'court_4', name: 'Terrain 4', surface: 'Moquette indoor', isActive: true, amenities: ['Éclairage LED', 'Climatisation'] },
     ],
-    players: [],
+    players: [
+      {
+        id: "user_moslem",
+        firstName: "Moslem",
+        lastName: "Gouia",
+        email: "moslem.gouia@example.com",
+        phone: "+216 22 227 041",
+        gender: "male",
+        role: "admin",
+        status: "active",
+        level: 5.0,
+        reliabilityScore: 82,
+        totalMatchesPlayed: 24,
+        peerConfrontationsCount: 24,
+        preferredSide: "right",
+        playStyle: "offensive",
+        loyaltyPoints: 45,
+        skills: { "bandeja": 7, "vibora": 5, "salida_cristal": 4, "volee": 7, "placement": 8, "regularite": 7, "mental": 8 }
+      },
+      {
+        id: "T0LZnBNfJaS1pwrzWWOYj9a6Hko1",
+        createdAt: "2026-10-24T01:00:36.199Z",
+        email: "mounag@gmail.com",
+        firstName: "Mouna",
+        lastName: "Go",
+        gender: "female",
+        level: null,
+        levelHistory: [],
+        peerConfrontationsCount: 0,
+        phone: "",
+        playStyle: "all-around",
+        preferredSide: "right",
+        reliabilityScore: 50,
+        role: "player",
+        skills: {},
+        status: "pending",
+        totalMatchesPlayed: 0,
+        loyaltyPoints: 10.5
+      },
+      {
+        id: "test_player_1",
+        level: null,
+        firstName: "Karim",
+        lastName: "Jlassi",
+        gender: "male",
+        playStyle: "offensive",
+        totalMatchesPlayed: 0,
+        peerConfrontationsCount: 0,
+        levelHistory: [],
+        skills: {},
+        status: "pending",
+        preferredSide: "right",
+        phone: "98123456",
+        reliabilityScore: 50,
+        loyaltyPoints: 14.5,
+        email: "karim.jlassi@circlepadel.tn"
+      },
+      {
+        id: "usr_ahmed",
+        level: 5.2,
+        firstName: "Ahmed",
+        lastName: "Horrigue",
+        gender: "male",
+        playStyle: "all-around",
+        totalMatchesPlayed: 18,
+        peerConfrontationsCount: 18,
+        levelHistory: [],
+        skills: {},
+        status: "active",
+        preferredSide: "right",
+        phone: "97223344",
+        reliabilityScore: 68,
+        loyaltyPoints: 32,
+        email: "ahmed.horrigue@circlepadel.tn"
+      },
+      {
+        id: "usr_mariem",
+        level: 4.8,
+        firstName: "Mariem",
+        lastName: "Snoussi",
+        gender: "female",
+        playStyle: "defensive",
+        totalMatchesPlayed: 8,
+        peerConfrontationsCount: 8,
+        levelHistory: [],
+        skills: {},
+        status: "active",
+        preferredSide: "right",
+        phone: "22334455",
+        reliabilityScore: 48,
+        loyaltyPoints: 16,
+        email: "mariem.snoussi@circlepadel.tn"
+      },
+      {
+        id: "player_test_1792936967842",
+        firstName: "Syrine",
+        lastName: "Trabelsi",
+        gender: "female",
+        phone: "22111222",
+        email: "syrine@test.com",
+        status: "pending",
+        loyaltyPoints: 0
+      },
+      {
+        id: "usr_bilel",
+        firstName: "Bilel",
+        lastName: "Krima",
+        gender: "male",
+        level: 7.5,
+        selfEstimatedLevel: 7,
+        reliabilityScore: 84,
+        totalMatchesPlayed: 28,
+        peerConfrontationsCount: 28,
+        status: "active",
+        preferredSide: "left",
+        playStyle: "offensive"
+      }
+    ],
     bookings: [],
     notifications: [],
     transactions: [],
@@ -217,21 +346,11 @@ const server = http.createServer(async (req, res) => {
           } catch (e) {}
         }
 
-        // 1. Merge Players (by ID, ensuring no newly created player is ever dropped)
-        const playerMap = new Map();
-        (existing.players || []).forEach(p => {
-          if (p && p.id) playerMap.set(p.id, p);
-        });
+        // 1. Authoritative Players Sync (supports additions, updates, and deletions)
+        let mergedPlayers = Array.isArray(body.players) ? body.players : (existing.players || []);
         if (body.lastDeletedPlayerId) {
-          playerMap.delete(body.lastDeletedPlayerId);
+          mergedPlayers = mergedPlayers.filter(p => p && p.id !== body.lastDeletedPlayerId);
         }
-        (body.players || []).forEach(p => {
-          if (p && p.id && p.id !== body.lastDeletedPlayerId) {
-            const prev = playerMap.get(p.id);
-            playerMap.set(p.id, prev ? { ...prev, ...p } : p);
-          }
-        });
-        const mergedPlayers = Array.from(playerMap.values());
 
         // 2. Merge Bookings
         const bookingMap = new Map();

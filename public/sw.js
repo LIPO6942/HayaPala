@@ -1,5 +1,4 @@
-// HayaPala PWA Service Worker
-const CACHE_NAME = 'hayapala-pwa-v1';
+const CACHE_NAME = 'hayapala-pwa-v2';
 const ASSETS = [
   '/',
   '/index.html',
