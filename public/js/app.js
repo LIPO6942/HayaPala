@@ -2072,6 +2072,55 @@ function renderProfileHistory(user) {
 }
 
 // ============================================================================
+// DROITS & AUTORISATION DE SAISIE DU SCORE (CIRCLEPADEL)
+// ============================================================================
+
+/**
+ * RÈGLE D'AUTORISATION STRICTE (CIRCLEPADEL) :
+ * Un score d'un match ne peut être renseigné ou homologué que par :
+ * 1. Le gérant lui-même (mode backoffice ou rôle admin).
+ * 2. OU les joueurs ayant participé à ce match ET possédant un compte officiel CirclePadel (non invité).
+ */
+function canUserRecordMatchScore(booking = null, targetUser = null) {
+  const user = targetUser || (DB.players || []).find(p => p.id === DB.currentUser?.id) || DB.currentUser;
+
+  // 1. Le gérant a toujours le plein pouvoir d'homologation de tous les matchs
+  if (currentMode === 'backoffice-dashboard' || user?.role === 'admin') {
+    return { allowed: true, reason: 'admin' };
+  }
+
+  // 2. Le joueur doit obligatoirement avoir un compte officiel CirclePadel (pas un invité sans compte)
+  if (!user || !user.id || user.id === 'guest') {
+    return {
+      allowed: false,
+      reason: 'Connexion requise : Vous devez posséder un compte officiel CirclePadel pour enregistrer un score.'
+    };
+  }
+  const isGuest = user.role === 'guest' || user.status === 'guest';
+  if (isGuest) {
+    return {
+      allowed: false,
+      reason: 'Compte invité : Seuls les membres possédant un compte officiel CirclePadel peuvent enregistrer un score.'
+    };
+  }
+
+  // 3. Si un match spécifique est ciblé : le joueur DOIT impérativement y avoir participé
+  if (booking) {
+    const players = booking.players || [];
+    const hasParticipated = players.some(p => p && p.userId === user.id && !p.isGuest);
+    if (!hasParticipated) {
+      return {
+        allowed: false,
+        reason: 'Accès restreint : Seuls les joueurs ayant participé à ce match avec un compte CirclePadel, ou le gérant, peuvent enregistrer le score.'
+      };
+    }
+  }
+
+  return { allowed: true, reason: 'player_participant' };
+}
+window.canUserRecordMatchScore = canUserRecordMatchScore;
+
+// ============================================================================
 // MY BOOKINGS
 // ============================================================================
 
@@ -2093,6 +2142,7 @@ function renderMyBookings() {
     const isPast = b.date < today;
     const spots = (DB.appConfig?.maxPlayersPerMatch || 4) - (b.players || []).length;
     const hasRecorded = b.scoreRecorded === true;
+    const canRecord = canUserRecordMatchScore(b).allowed;
     return `
     <div class="match-list-card" style="${isPast ? 'opacity:0.85; border-color:rgba(255,255,255,0.08)' : ''}">
       <div class="match-list-top">
@@ -2112,9 +2162,11 @@ function renderMyBookings() {
       <div class="match-list-bottom">
         <span class="match-price-tag">${b.pricePerPlayer || 25} DT <span>/joueur</span></span>
         <div style="display:flex; gap:8px; align-items:center">
-          <button type="button" onclick="openRecordMatchForBooking('${b.id}', 'player')" style="padding:6px 12px; border-radius:var(--radius-full); border:1px solid var(--gold); background:rgba(212,175,55,0.15); color:var(--gold); font-size:11px; font-weight:800; cursor:pointer" title="Enregistrer ou modifier le score">
-            ${hasRecorded ? '🏆 Modifier le score' : '🏆 Saisir le score'}
-          </button>
+          ${canRecord ? `
+            <button type="button" onclick="openRecordMatchForBooking('${b.id}', 'player')" style="padding:6px 12px; border-radius:var(--radius-full); border:1px solid var(--gold); background:rgba(212,175,55,0.15); color:var(--gold); font-size:11px; font-weight:800; cursor:pointer" title="Enregistrer ou modifier le score">
+              ${hasRecorded ? '🏆 Modifier le score' : '🏆 Saisir le score'}
+            </button>` : `
+            <span style="font-size:10px; color:var(--text-muted); padding:4px 8px; background:rgba(255,255,255,0.03); border-radius:var(--radius-sm)">Compte requis</span>`}
           ${!isPast && (b.players || []).some(p => p.userId === user.id) ? `
             <button onclick="cancelMyBooking('${b.id}')" style="padding:6px 14px; border-radius:var(--radius-full); border:1px solid rgba(231,76,60,0.3); background:transparent; color:var(--red); font-size:11px; font-weight:700; cursor:pointer">
               Annuler
@@ -2918,9 +2970,20 @@ function renderSlotDetail(bookingId) {
       </div>
 
       <!-- Action directe : Saisie officielle du score pour ce match -->
-      <button type="button" class="btn-primary-action" onclick="openRecordMatchForBooking('${b.id}')" style="background:linear-gradient(135deg, #f59e0b, #d97706); display:flex; align-items:center; justify-content:center; gap:8px; font-size:13px; font-weight:800; padding:12px; margin-top:6px; border:none; box-shadow:0 4px 15px rgba(245,158,11,0.3)">
-        🏆 Enregistrer / Saisir le score de ce match
-      </button>
+      ${(() => {
+        const auth = canUserRecordMatchScore(b);
+        if (auth.allowed) {
+          return `
+          <button type="button" class="btn-primary-action" onclick="openRecordMatchForBooking('${b.id}')" style="background:linear-gradient(135deg, #f59e0b, #d97706); display:flex; align-items:center; justify-content:center; gap:8px; font-size:13px; font-weight:800; padding:12px; margin-top:6px; border:none; box-shadow:0 4px 15px rgba(245,158,11,0.3)">
+            🏆 Enregistrer / Saisir le score de ce match
+          </button>`;
+        } else {
+          return `
+          <div style="font-size:11.5px; color:var(--text-muted); text-align:center; padding:10px; background:rgba(255,255,255,0.03); border-radius:8px; border:1px solid rgba(255,255,255,0.06); margin-top:6px">
+            🔒 La saisie du score est réservée aux joueurs ayant participé à ce match avec un compte CirclePadel, ou au gérant.
+          </div>`;
+        }
+      })()}
 
       ${currentMode === 'backoffice-dashboard' ? `
         <div style="display:flex; gap:10px; margin-top:8px">
@@ -3512,15 +3575,13 @@ function checkFinishedMatchesScorePrompt() {
   const now = new Date();
   const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-  // Chercher un match confirmé, créé par ce joueur, dont l'horaire de fin est dépassé, et sans score saisi
+  // Chercher un match confirmé, auquel ce joueur a participé avec un compte officiel, dont l'horaire de fin est dépassé, et sans score saisi
   const pendingMatch = (DB.bookings || []).find(b => {
     if (!b || b.status !== 'confirmed' || b.scoreRecorded === true) return false;
 
-    // Doit être l'organisateur / créateur du match
-    const isCreator = (b.players || []).some(p => p.userId === user.id && p.isOrganizer) ||
-                      (b.players || [])[0]?.userId === user.id ||
-                      b.type === 'private';
-    if (!isCreator) return false;
+    // Doit être un participant du match ayant un compte CirclePadel officiel (ou le créateur)
+    const auth = canUserRecordMatchScore(b, user);
+    if (!auth.allowed) return false;
 
     // Ignoré pour cette session ?
     if (sessionStorage.getItem('dismissed_score_prompt_' + b.id)) return false;
@@ -3573,14 +3634,36 @@ function dismissFinishedMatchScorePrompt() {
 window.dismissFinishedMatchScorePrompt = dismissFinishedMatchScorePrompt;
 
 function openRecordMatchForBooking(bookingId, role) {
-  currentRecordingBookingId = bookingId || null;
   const b = (DB.bookings || []).find(bk => bk.id === bookingId);
+  const auth = canUserRecordMatchScore(b);
+  if (!auth.allowed) {
+    showToast(auth.reason, 'error');
+    return;
+  }
+  currentRecordingBookingId = bookingId || null;
   const mode = role || (currentMode === 'backoffice-dashboard' ? 'admin' : 'player');
   openRecordMatchModal(mode, b);
 }
 window.openRecordMatchForBooking = openRecordMatchForBooking;
 
+function handleQuickCardRecordMatch() {
+  const auth = canUserRecordMatchScore(null);
+  if (!auth.allowed) {
+    showToast(auth.reason, 'error');
+    return;
+  }
+  currentRecordingBookingId = null;
+  openRecordMatchModal('player', null);
+}
+window.handleQuickCardRecordMatch = handleQuickCardRecordMatch;
+
 function openRecordMatchModal(mode = 'admin', booking = null) {
+  const auth = canUserRecordMatchScore(booking);
+  if (!auth.allowed) {
+    showToast(auth.reason, 'error');
+    return;
+  }
+
   currentMatchSheetMode = mode;
   const badge = document.getElementById('matchSheetRoleBadge');
   if (badge) {
@@ -3705,6 +3788,13 @@ function updateMatchSimulationPreview() {
 async function submitRecordMatch(e) {
   if (e && e.preventDefault) e.preventDefault();
 
+  const targetBooking = currentRecordingBookingId ? (DB.bookings || []).find(b => b.id === currentRecordingBookingId) : null;
+  const auth = canUserRecordMatchScore(targetBooking);
+  if (!auth.allowed) {
+    showToast(auth.reason, 'error');
+    return;
+  }
+
   const slotIds = ['matchTeam1Player1', 'matchTeam1Player2', 'matchTeam2Player1', 'matchTeam2Player2'];
   const resolvedList = [];
 
@@ -3765,6 +3855,16 @@ async function submitRecordMatch(e) {
   if (uniqueIds.size < 4) {
     showToast('Veuillez sélectionner ou saisir 4 joueurs distincts pour ce match de double.', 'error');
     return;
+  }
+
+  // Vérification stricte : si c'est une déclaration joueur (hors gérant), le joueur connecté DOIT faire partie des 4 joueurs
+  if (currentMatchSheetMode === 'player' && currentMode !== 'backoffice-dashboard' && DB.currentUser?.role !== 'admin') {
+    const user = (DB.players || []).find(p => p.id === DB.currentUser?.id) || DB.currentUser;
+    const isParticipant = resolvedList.some(p => p.id === user?.id);
+    if (!isParticipant) {
+      showToast("Vous devez impérativement faire partie des 4 joueurs du match pour en enregistrer le score.", "error");
+      return;
+    }
   }
 
   const btn = document.getElementById('btnSubmitRecordMatch');

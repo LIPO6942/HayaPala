@@ -151,7 +151,7 @@
                 <div class="quick-card-arrow">›</div>
               </div>
             </div>
-            <div class="action-quick-card" id="quickCardRecordMatch" onclick="openRecordMatchModal('player')" style="background:linear-gradient(135deg, rgba(212,175,55,0.12), rgba(46,204,113,0.08)); border-color:rgba(212,175,55,0.35)">
+            <div class="action-quick-card" id="quickCardRecordMatch" onclick="handleQuickCardRecordMatch()" style="background:linear-gradient(135deg, rgba(212,175,55,0.12), rgba(46,204,113,0.08)); border-color:rgba(212,175,55,0.35)">
               <div class="quick-card-icon">🏆</div>
               <div class="quick-card-bottom">
                 <div class="quick-card-title">Enregistrer<br>un score</div>
@@ -519,7 +519,7 @@
 
           <!-- Bouton Déclarer un match pour le joueur -->
           <div style="padding:0 20px; margin-top:16px">
-            <button type="button" class="btn-primary-action" onclick="openRecordMatchModal('player')" style="width:100%; background:linear-gradient(135deg, rgba(212,175,55,0.22), rgba(46,204,113,0.18)); border:1.5px solid var(--gold); font-weight:800; border-radius:12px; padding:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px">
+            <button type="button" class="btn-primary-action" onclick="handleQuickCardRecordMatch()" style="width:100%; background:linear-gradient(135deg, rgba(212,175,55,0.22), rgba(46,204,113,0.18)); border:1.5px solid var(--gold); font-weight:800; border-radius:12px; padding:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px">
               <span>⚡</span> Déclarer le Score d'un Match (Rating Elo)
             </button>
           </div>
