@@ -398,7 +398,7 @@
               </div>
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12px; border-top:1px solid rgba(255,255,255,0.06); padding-top:8px">
                 <div>Matchs joués : <strong id="statMatchesPlayed" style="color:var(--gold)">0</strong></div>
-                <div>Fiabilité pairs : <strong id="statReliability" style="color:var(--gold)">50%</strong></div>
+                <div>Fiabilité (Pairs) : <strong id="statReliability" style="color:var(--gold)">15%</strong></div>
               </div>
               <!-- Jauge de Fiabilité Glicko-2 dynamique -->
               <div class="reliability-gauge-container">
@@ -993,7 +993,7 @@
               <p class="panel-subtitle">Homologation des scores avec calcul Elo / Glicko-2 instantané pour les 4 joueurs.</p>
             </div>
             <div style="display:flex; gap:10px; flex-wrap:wrap">
-              <button type="button" class="btn-primary-action" id="btnAdminRecordMatchScore" onclick="openRecordMatchModal('admin')" style="background:linear-gradient(135deg, #d4af37, #b8860b); color:#000; font-weight:800; padding:10px 18px; border-radius:10px; border:none; cursor:pointer; display:flex; align-items:center; gap:8px">
+              <button type="button" class="btn-primary-action" id="btnAdminRecordMatchScore" onclick="openAdminSelectMatchModal()" style="background:linear-gradient(135deg, #d4af37, #b8860b); color:#000; font-weight:800; padding:10px 18px; border-radius:10px; border:none; cursor:pointer; display:flex; align-items:center; gap:8px">
                 <span>🏆</span> Enregistrer une Feuille de Match
               </button>
               <button type="button" class="btn-new-admin-booking" id="btnAdminCreateOpenMatch" onclick="openModal('modal-admin-create-slot')">
@@ -1837,6 +1837,28 @@
     </div>
   </div>
 
+  <!-- ── Modale : Sélection du Match pour Enregistrement de Score ── -->
+  <div class="modal-overlay" id="modal-select-match-to-record" role="dialog" aria-modal="true" style="display:none">
+    <div class="modal-sheet" style="max-width:540px">
+      <div class="modal-drag-indicator"></div>
+      <div class="modal-top-bar">
+        <div>
+          <div class="modal-title" id="selectMatchModalTitle" style="display:flex; align-items:center; gap:8px">
+            <span>🎾 Sélectionner un Match Terminé</span>
+          </div>
+          <div id="selectMatchModalSubtitle" style="font-size:11px; color:var(--text-secondary); margin-top:2px">
+            Choisissez la réservation terminée pour laquelle saisir ou corriger le score
+          </div>
+        </div>
+        <button class="modal-close-btn" onclick="closeModal('modal-select-match-to-record')" aria-label="Fermer">✕</button>
+      </div>
+
+      <div id="selectMatchListContainer" style="max-height:60vh; overflow-y:auto; display:flex; flex-direction:column; gap:10px; margin-top:14px; padding-right:4px">
+        <!-- Rempli dynamiquement par JS -->
+      </div>
+    </div>
+  </div>
+
   <!-- ── Modale : Enregistrement Feuille de Match (Rating Engine Elo / Glicko-2) ── -->
   <div class="modal-overlay" id="modal-record-match" role="dialog" aria-modal="true">
     <div class="modal-sheet" style="max-width:580px">
@@ -1850,6 +1872,11 @@
           <div style="font-size:11px; color:var(--text-secondary); margin-top:2px">Calcul dynamique Elo/Glicko-2 (Échelle 1.00 à 10.00)</div>
         </div>
         <button class="modal-close-btn" onclick="closeModal('modal-record-match')" aria-label="Fermer">✕</button>
+      </div>
+
+      <!-- Bandeau récapitulatif du match ciblé -->
+      <div id="matchSheetBookingBanner" style="display:none; margin:10px 0 14px; padding:10px 14px; background:rgba(212,175,55,0.08); border:1px solid rgba(212,175,55,0.25); border-radius:10px; font-size:12px; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px">
+        <!-- Rempli par openRecordMatchModal -->
       </div>
 
       <form id="formRecordMatch" onsubmit="submitRecordMatch(event)">

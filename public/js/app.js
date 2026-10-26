@@ -1152,10 +1152,11 @@ function renderProfileScreen() {
   
   const relEl = document.getElementById('statReliability');
   const peerMatches = user.peerConfrontationsCount || 0;
-  const relVal = user.reliabilityScore || 50;
+  const totalMatches = user.totalMatchesPlayed || 0;
+  const relVal = user.reliabilityScore != null ? Number(user.reliabilityScore).toFixed(0) : (user.levelValidatedAt ? 75 : 15);
   if (relEl) {
     relEl.textContent = `${relVal}%`;
-    relEl.title = `Fiabilité : ${relVal}% — Validée sur ${peerMatches} confrontation(s) face à des pairs de même niveau (±1.0)`;
+    relEl.title = `Fiabilité : ${relVal}% — Validée sur ${peerMatches} confrontation(s) face à des pairs (écart ≤ 1.0)`;
   }
 
   const peerBadge = document.getElementById('profilePeerConfrontationsBadge');
@@ -1164,10 +1165,12 @@ function renderProfileScreen() {
   }
   const relDesc = document.getElementById('profileReliabilityDesc');
   if (relDesc) {
-    if (peerMatches === 0) {
-      relDesc.textContent = "Niveau initial coach (50% de fiabilité). Votre niveau réel se consolidera lors de vos confrontations en match avec des joueurs de votre niveau (écart ±1.0).";
+    if (!user.levelValidatedAt && peerMatches === 0) {
+      relDesc.textContent = `Niveau auto-évalué (fiabilité minimale ${relVal}%). Réalisez une évaluation coach ou jouez des matchs face à des pairs (écart ≤ 1.0) pour calibrer votre cote.`;
+    } else if (user.levelValidatedAt && peerMatches === 0) {
+      relDesc.textContent = `Niveau certifié coach (fiabilité initiale ${relVal}%). Disputez des matchs officiels face à des pairs pour consolider votre cote jusqu'à 99%.`;
     } else {
-      relDesc.textContent = `${peerMatches} match(s) disputé(s) face à des pairs de même niveau. Votre niveau réel est calibré et validé à ${relVal}%.`;
+      relDesc.textContent = `${peerMatches} match(s) disputé(s) face à des pairs de même niveau (sur ${totalMatches} au total). Cote réelle calibrée et validée à ${relVal}%.`;
     }
   }
 
@@ -1850,7 +1853,7 @@ async function handlePlayerLogin(email, password) {
           level: null,
           preferredSide: 'right',
           playStyle: 'all-around',
-          reliabilityScore: 50,
+          reliabilityScore: 15,
           peerConfrontationsCount: 0,
           totalMatchesPlayed: 0,
           skills: {},
@@ -1967,7 +1970,7 @@ async function handlePlayerRegister({ firstName, lastName, phone, email, passwor
     level: null, // En attente d'évaluation officielle par le coach
     preferredSide: cleanSide,
     playStyle: cleanStyle,
-    reliabilityScore: 50,
+    reliabilityScore: 15,
     peerConfrontationsCount: 0,
     totalMatchesPlayed: 0,
     loyaltyPoints: 0,
@@ -2309,7 +2312,7 @@ function renderProfileHistory(user) {
 function canUserRecordMatchScore(booking = null, targetUser = null) {
   const user = targetUser || (DB.players || []).find(p => p.id === DB.currentUser?.id) || DB.currentUser;
 
-  // 1. Le gérant a toujours le plein pouvoir d'homologation de tous les matchs
+  // 1. Le gérant a toujours le plein pouvoir d'homologation et de correction
   if (currentMode === 'backoffice-dashboard' || user?.role === 'admin') {
     return { allowed: true, reason: 'admin' };
   }
@@ -2329,16 +2332,38 @@ function canUserRecordMatchScore(booking = null, targetUser = null) {
     };
   }
 
-  // 3. Si un match spécifique est ciblé : le joueur DOIT impérativement y avoir participé
-  if (booking) {
-    const players = booking.players || [];
-    const hasParticipated = players.some(p => p && p.userId === user.id && !p.isGuest);
-    if (!hasParticipated) {
-      return {
-        allowed: false,
-        reason: 'Accès restreint : Seuls les joueurs ayant participé à ce match avec un compte CirclePadel, ou le gérant, peuvent enregistrer le score.'
-      };
-    }
+  // 3. Doit obligatoirement être rattaché à une réservation
+  if (!booking) {
+    return {
+      allowed: false,
+      reason: 'Aucun match sélectionné. La saisie du score nécessite obligatoirement un match réel terminé.'
+    };
+  }
+
+  // 4. Si le score est déjà homologué : saisie définitive pour les joueurs, seul le gérant peut modifier
+  if (booking.scoreRecorded === true) {
+    return {
+      allowed: false,
+      reason: 'Le score de ce match est déjà homologué et définitif. Seul le gérant du club peut le modifier.'
+    };
+  }
+
+  // 5. Le match doit impérativement avoir été atteint temporellement (terminé)
+  if (!isBookingFinished(booking)) {
+    return {
+      allowed: false,
+      reason: `Match non terminé : la saisie du score sera débloquée à la fin du match (${booking.endTime || 'fin du créneau'}).`
+    };
+  }
+
+  // 6. Le joueur DOIT impérativement y avoir participé
+  const players = booking.players || [];
+  const hasParticipated = players.some(p => p && p.userId === user.id && !p.isGuest);
+  if (!hasParticipated) {
+    return {
+      allowed: false,
+      reason: 'Accès restreint : Seuls les joueurs ayant participé à ce match avec un compte CirclePadel, ou le gérant, peuvent enregistrer le score.'
+    };
   }
 
   return { allowed: true, reason: 'player_participant' };
@@ -2407,8 +2432,15 @@ function renderMyBookings() {
         <span class="match-price-tag">${b.pricePerPlayer || 25} DT <span>/joueur</span></span>
         <div style="display:flex; gap:8px; align-items:center">
           ${(isFinished && canRecord) ? `
-            <button type="button" onclick="openRecordMatchForBooking('${b.id}', 'player')" style="padding:6px 12px; border-radius:var(--radius-full); border:1px solid var(--gold); background:rgba(212,175,55,0.15); color:var(--gold); font-size:11px; font-weight:800; cursor:pointer" title="Enregistrer ou modifier le score">
-              ${hasRecorded ? '🏆 Modifier le score' : '🏆 Saisir le score'}
+            <button type="button" onclick="openRecordMatchForBooking('${b.id}', 'player')" style="padding:6px 12px; border-radius:var(--radius-full); border:1px solid var(--gold); background:rgba(212,175,55,0.15); color:var(--gold); font-size:11px; font-weight:800; cursor:pointer" title="Enregistrer le score">
+              🏆 Saisir le score
+            </button>` : (isFinished && hasRecorded ? `
+            <span style="font-size:11px; color:var(--green); font-weight:700; display:flex; align-items:center; gap:4px">
+              ✓ Score homologué
+            </span>` : '')}
+          ${(isFinished && hasRecorded && (currentMode === 'backoffice-dashboard' || user?.role === 'admin')) ? `
+            <button type="button" onclick="openRecordMatchForBooking('${b.id}', 'admin')" style="padding:6px 12px; border-radius:var(--radius-full); border:1px solid var(--gold); background:rgba(212,175,55,0.15); color:var(--gold); font-size:11px; font-weight:800; cursor:pointer" title="Modifier le score en tant que gérant">
+              ✏️ Modifier le score
             </button>` : ''}
           ${!isFinished && (b.players || []).some(p => p.userId === user.id) ? `
             <button onclick="cancelMyBooking('${b.id}')" style="padding:6px 14px; border-radius:var(--radius-full); border:1px solid rgba(231,76,60,0.3); background:transparent; color:var(--red); font-size:11px; font-weight:700; cursor:pointer">
@@ -3653,7 +3685,7 @@ async function saveEvaluation(e) {
     player.weightedScore = weightedScore;
     player.status = 'active'; // Joueur validé et actif !
     player.skills = { ...evalSkillValues };
-    player.reliabilityScore = player.reliabilityScore || 50; // Fiabilité initiale coach 50%
+    player.reliabilityScore = Math.max(player.reliabilityScore || 0, 75.0); // Fiabilité certifiée coach 75%
     player.peerConfrontationsCount = player.peerConfrontationsCount || 0;
     player.levelValidatedAt = new Date().toISOString();
     player.levelValidatedBy = 'coach_ali';
@@ -3743,17 +3775,18 @@ let currentMatchSheetMode = 'admin';
  */
 function calculatePadelRatingUpdate({ playerLevel, playerReliability, partnerLevel, opponent1Level, opponent2Level, setsWon, setsLost }) {
   const pLevel = Math.max(1.0, Math.min(10.0, Number(playerLevel) || 5.0));
-  const pReliability = Math.max(0, Math.min(99.0, Number(playerReliability) || 50.0));
+  const pReliability = Math.max(10.0, Math.min(99.0, Number(playerReliability) || 15.0));
   const partLevel = Math.max(1.0, Math.min(10.0, Number(partnerLevel) || pLevel));
   const opp1 = Math.max(1.0, Math.min(10.0, Number(opponent1Level) || 5.0));
   const opp2 = Math.max(1.0, Math.min(10.0, Number(opponent2Level) || 5.0));
 
-  // Étape A : Moyennes des paires
+  // Étape A : Moyennes des paires et qualification de la confrontation face à des pairs
   const teamAverage = (pLevel + partLevel) / 2;
   const opponentAverage = (opp1 + opp2) / 2;
+  const levelGap = Math.abs(teamAverage - opponentAverage);
+  const isPeerMatch = levelGap <= 1.0; // Match équilibré face à des pairs (écart ≤ 1.0)
 
   // Étape B : Probabilité attendue de victoire (E) - Courbe logistique calibrée pour l'échelle 1-10
-  // Le diviseur est 0.85 * (9/7) ≈ 1.09 pour conserver l'exact même ratio 10:1 de probabilité
   const exponent = (opponentAverage - teamAverage) / 1.09;
   const expectedWinRate = 1 / (1 + Math.pow(10, exponent));
 
@@ -3778,12 +3811,16 @@ function calculatePadelRatingUpdate({ playerLevel, playerReliability, partnerLev
   const newLevel = Math.max(1.00, Math.min(10.00, Number((pLevel + deltaRounded).toFixed(2))));
 
   // Étape G : Progression de la fiabilité vers 99%
-  const newReliability = Math.min(99.0, Number((pReliability + (100 - pReliability) * 0.035).toFixed(2)));
+  // Progression dynamique : +5% du gap si confrontation face à des pairs (écart ≤ 1.0), sinon +1% si match déséquilibré
+  const relGrowthRate = isPeerMatch ? 0.05 : 0.01;
+  const newReliability = Math.min(99.0, Number((pReliability + (100 - pReliability) * relGrowthRate).toFixed(2)));
 
   return {
     newLevel,
     delta: deltaRounded,
     newReliability,
+    isPeerMatch,
+    levelGap: Number(levelGap.toFixed(2)),
     expectedWinRate: Number((expectedWinRate * 100).toFixed(1)),
     teamAverage: Number(teamAverage.toFixed(2)),
     opponentAverage: Number(opponentAverage.toFixed(2)),
@@ -4012,9 +4049,103 @@ function dismissFinishedMatchScorePrompt() {
 }
 window.dismissFinishedMatchScorePrompt = dismissFinishedMatchScorePrompt;
 
+function openAdminSelectMatchModal() {
+  closeAllModals();
+  const allFinished = (DB.bookings || []).filter(b =>
+    b && b.status !== 'cancelled' && isBookingFinished(b)
+  ).sort((a, b) => (b.date + b.startTime).localeCompare(a.date + a.startTime));
+
+  if (allFinished.length === 0) {
+    showToast("Aucun match terminé trouvé dans le club.", "info");
+    return;
+  }
+  openSelectMatchModal(allFinished, 'admin');
+}
+window.openAdminSelectMatchModal = openAdminSelectMatchModal;
+
+function openSelectMatchModal(bookingsList, role = 'player') {
+  closeAllModals();
+  const container = document.getElementById('selectMatchListContainer');
+  const titleEl = document.getElementById('selectMatchModalTitle');
+  const subtitleEl = document.getElementById('selectMatchModalSubtitle');
+
+  if (titleEl) {
+    titleEl.innerHTML = role === 'admin' 
+      ? '<span>👑 Supervision Gérant · Feuilles de Match</span>'
+      : '<span>🎾 Sélectionner un Match Terminé</span>';
+  }
+  if (subtitleEl) {
+    subtitleEl.textContent = role === 'admin'
+      ? 'Sélectionnez un match terminé du club pour en homologuer ou corriger le score officiel.'
+      : 'Sélectionnez le match terminé dont vous souhaitez déclarer le résultat.';
+  }
+
+  if (!container) return;
+
+  if (!bookingsList || bookingsList.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state" style="padding:24px 10px">
+        <div class="empty-state-icon">📋</div>
+        <div class="empty-state-title">Aucun match terminé</div>
+        <div class="empty-state-desc">Aucune réservation éligible pour la saisie du score.</div>
+      </div>`;
+    openModal('modal-select-match-to-record');
+    return;
+  }
+
+  const today = getTodayStr();
+
+  container.innerHTML = bookingsList.map(b => {
+    const isToday = b.date === today;
+    const dateFormatted = isToday ? "Aujourd'hui" : formatDate(b.date);
+    const hasRecorded = b.scoreRecorded === true;
+    const playersNames = (b.players || []).map(p => p.name || 'Joueur').join(', ') || 'Aucun participant';
+    const scoreText = b.score ? `${b.score.setsWon} - ${b.score.setsLost}` : (b.scoreDetail || '');
+
+    return `
+      <div style="background:var(--bg-card-2); border:1px solid ${hasRecorded ? 'rgba(46,204,113,0.35)' : 'rgba(212,175,55,0.35)'}; border-radius:12px; padding:12px 14px; display:flex; flex-direction:column; gap:8px">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px">
+          <div>
+            <div style="font-weight:800; font-size:13px; color:var(--text-white)">📍 ${b.courtName || 'Court Club'}</div>
+            <div style="font-size:11.5px; color:var(--gold); margin-top:2px">📅 ${dateFormatted} · ⏰ ${b.startTime} – ${b.endTime}</div>
+          </div>
+          <span class="info-badge ${hasRecorded ? 'green' : 'gold'}" style="font-size:10px; font-weight:800">
+            ${hasRecorded ? `✓ Score validé ${scoreText ? `(${scoreText})` : ''}` : '⏳ En attente de score'}
+          </span>
+        </div>
+
+        <div style="font-size:11.5px; color:var(--text-secondary); line-height:1.4">
+          👥 <strong>Joueurs :</strong> ${playersNames}
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:4px">
+          ${role === 'admin' ? `
+            <button type="button" class="btn-primary-action" onclick="openRecordMatchForBooking('${b.id}', 'admin')" style="padding:7px 14px; font-size:12px; font-weight:800; background:${hasRecorded ? 'linear-gradient(135deg, #d4af37, #b8860b)' : 'linear-gradient(135deg, #2ecc71, #27ae60)'}">
+              ${hasRecorded ? '✏️ Corriger le score' : '🏆 Saisir le score officiel'}
+            </button>` : `
+            ${!hasRecorded ? `
+              <button type="button" class="btn-primary-action" onclick="openRecordMatchForBooking('${b.id}', 'player')" style="padding:7px 14px; font-size:12px; font-weight:800; background:linear-gradient(135deg, #2ecc71, #27ae60)">
+                🏆 Saisir ce score ›
+              </button>` : `
+              <span style="font-size:11px; color:var(--green); font-weight:700; align-self:center">✓ Homologué (Définitif)</span>
+            `}
+          `}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  openModal('modal-select-match-to-record');
+}
+window.openSelectMatchModal = openSelectMatchModal;
+
 function openRecordMatchForBooking(bookingId, role) {
   closeAllModals();
   const b = (DB.bookings || []).find(bk => bk.id === bookingId);
+  if (!b) {
+    showToast('Réservation introuvable.', 'error');
+    return;
+  }
   const auth = canUserRecordMatchScore(b);
   if (!auth.allowed) {
     showToast(auth.reason, 'error');
@@ -4028,24 +4159,80 @@ window.openRecordMatchForBooking = openRecordMatchForBooking;
 
 function handleQuickCardRecordMatch() {
   closeAllModals();
-  const auth = canUserRecordMatchScore(null);
-  if (!auth.allowed) {
-    showToast(auth.reason, 'error');
+  const user = (DB.players || []).find(p => p.id === DB.currentUser?.id) || DB.currentUser;
+
+  // 1. Vérification connexion
+  if (!user || !user.id || user.id === 'guest' || user.role === 'guest') {
+    showToast('Connexion requise : Vous devez posséder un compte officiel CirclePadel pour enregistrer un score.', 'warning');
     return;
   }
-  currentRecordingBookingId = null;
-  openRecordMatchModal('player', null);
+
+  // 2. Si Gérant / Admin : choix obligatoire parmi les réservations du club
+  if (currentMode === 'backoffice-dashboard' || user.role === 'admin') {
+    openAdminSelectMatchModal();
+    return;
+  }
+
+  // 3. Pour le joueur : rechercher ses réservations terminées et non encore notées
+  const eligibleBookings = (DB.bookings || []).filter(b =>
+    b && b.status !== 'cancelled' &&
+    Array.isArray(b.players) && b.players.some(p => p && p.userId === user.id) &&
+    isBookingFinished(b) &&
+    !b.scoreRecorded
+  ).sort((a, b) => (b.date + b.startTime).localeCompare(a.date + a.startTime));
+
+  if (eligibleBookings.length === 0) {
+    // Vérifier si le joueur a des matchs passés déjà notés
+    const alreadyRecorded = (DB.bookings || []).filter(b =>
+      b && b.status !== 'cancelled' &&
+      Array.isArray(b.players) && b.players.some(p => p && p.userId === user.id) &&
+      isBookingFinished(b) &&
+      b.scoreRecorded === true
+    );
+
+    // Vérifier s'il a des matchs futurs programmés
+    const futureBookings = (DB.bookings || []).filter(b =>
+      b && b.status !== 'cancelled' &&
+      Array.isArray(b.players) && b.players.some(p => p && p.userId === user.id) &&
+      !isBookingFinished(b)
+    );
+
+    if (alreadyRecorded.length > 0 && futureBookings.length === 0) {
+      showToast('Tous vos matchs terminés ont déjà leur score homologué. La saisie est définitive (seul le gérant peut modifier).', 'info');
+    } else if (futureBookings.length > 0) {
+      const nextB = futureBookings[0];
+      const dateTxt = nextB.date === getTodayStr() ? "aujourd'hui" : `le ${formatDate(nextB.date)}`;
+      showToast(`Votre match (${dateTxt} à ${nextB.startTime}) n'est pas encore terminé. La saisie du score sera débloquée à sa fin (${nextB.endTime}).`, 'info');
+    } else {
+      showToast("Vous n'avez aucun match terminé en attente de score. Réservez un créneau sur le planning pour jouer votre premier match !", 'info');
+    }
+    return;
+  }
+
+  // 4. Si exactement 1 match en attente : ouverture directe
+  if (eligibleBookings.length === 1) {
+    openRecordMatchForBooking(eligibleBookings[0].id, 'player');
+    return;
+  }
+
+  // 5. Si plusieurs matchs en attente : modale de sélection
+  openSelectMatchModal(eligibleBookings, 'player');
 }
 window.handleQuickCardRecordMatch = handleQuickCardRecordMatch;
 
 function openRecordMatchModal(mode = 'admin', booking = null) {
   closeAllModals();
+  if (!booking) {
+    showToast("La saisie du score nécessite obligatoirement la sélection d'un match réel terminé.", 'error');
+    return;
+  }
   const auth = canUserRecordMatchScore(booking);
   if (!auth.allowed) {
     showToast(auth.reason, 'error');
     return;
   }
 
+  currentRecordingBookingId = booking.id;
   currentMatchSheetMode = mode;
   const badge = document.getElementById('matchSheetRoleBadge');
   if (badge) {
@@ -4053,12 +4240,27 @@ function openRecordMatchModal(mode = 'admin', booking = null) {
     badge.className = mode === 'admin' ? 'info-badge gold' : 'info-badge green';
   }
 
+  const banner = document.getElementById('matchSheetBookingBanner');
+  if (banner) {
+    const formattedDate = booking.date === getTodayStr() ? "Aujourd'hui" : formatDate(booking.date);
+    banner.innerHTML = `
+      <div style="display:flex; align-items:center; gap:8px">
+        <strong style="color:var(--text-white)">📍 ${booking.courtName || 'Court Club'}</strong>
+        <span style="color:var(--gold); font-weight:700">📅 ${formattedDate} (${booking.startTime} – ${booking.endTime})</span>
+      </div>
+      <span class="info-badge ${booking.scoreRecorded ? 'gold' : 'green'}" style="font-size:10px">
+        ${booking.scoreRecorded ? '✏️ Modification Gérant' : '✓ Enregistrement Initial'}
+      </span>
+    `;
+    banner.style.display = 'flex';
+  }
+
   ensureDemoPlayersAvailable();
 
   const players = DB.players || [];
   const slotIds = ['matchTeam1Player1', 'matchTeam1Player2', 'matchTeam2Player1', 'matchTeam2Player2'];
 
-  if (booking && Array.isArray(booking.players) && booking.players.length > 0) {
+  if (Array.isArray(booking.players) && booking.players.length > 0) {
     const bPlayers = booking.players;
     slotIds.forEach((sId, idx) => {
       const bp = bPlayers[idx];
@@ -4079,20 +4281,17 @@ function openRecordMatchModal(mode = 'admin', booking = null) {
         setupSlotPicker(sId, nextAvailable, null);
       }
     });
-  } else {
-    const currentUserId = (mode === 'player' && DB.currentUser?.id && DB.currentUser.id !== 'guest') ? DB.currentUser.id : null;
-    const p1Id = currentUserId || (players[0]?.id || '');
-    const p2Id = players.find(p => p.id !== p1Id)?.id || (players[1]?.id || '');
-    const p3Id = players.find(p => p.id !== p1Id && p.id !== p2Id)?.id || (players[2]?.id || '');
-    const p4Id = players.find(p => p.id !== p1Id && p.id !== p2Id && p.id !== p3Id)?.id || (players[3]?.id || '');
-
-    setupSlotPicker('matchTeam1Player1', p1Id, null);
-    setupSlotPicker('matchTeam1Player2', p2Id, null);
-    setupSlotPicker('matchTeam2Player1', p3Id, null);
-    setupSlotPicker('matchTeam2Player2', p4Id, null);
   }
 
-  setMatchScoreSets(2, 1);
+  // Si le match avait déjà un score enregistré, pré-sélectionner ce score
+  if (booking.score && booking.score.setsWon != null && booking.score.setsLost != null) {
+    setMatchScoreSets(booking.score.setsWon, booking.score.setsLost);
+    const detailInput = document.getElementById('matchScoreGamesDetail');
+    if (detailInput) detailInput.value = booking.score.gamesDetail || booking.scoreDetail || '';
+  } else {
+    setMatchScoreSets(2, 1);
+  }
+
   openModal('modal-record-match');
 }
 
@@ -4134,9 +4333,14 @@ function updateMatchSimulationPreview() {
     const t2AvgEl = document.getElementById('team2AverageBadge');
     if (t2AvgEl) t2AvgEl.textContent = `Moyenne : ${t2Avg.toFixed(2)} / 10`;
 
+    const p1Rel = p1.reliabilityScore != null ? p1.reliabilityScore : (p1.levelValidatedAt ? 75 : 15);
+    const p2Rel = p2.reliabilityScore != null ? p2.reliabilityScore : (p2.levelValidatedAt ? 75 : 15);
+    const p3Rel = p3.reliabilityScore != null ? p3.reliabilityScore : (p3.levelValidatedAt ? 75 : 15);
+    const p4Rel = p4.reliabilityScore != null ? p4.reliabilityScore : (p4.levelValidatedAt ? 75 : 15);
+
     const simT1 = calculatePadelRatingUpdate({
       playerLevel: t1Avg,
-      playerReliability: ((p1.reliabilityScore || 50) + (p2.reliabilityScore || 50)) / 2,
+      playerReliability: (p1Rel + p2Rel) / 2,
       partnerLevel: t1Avg,
       opponent1Level: p3Level,
       opponent2Level: p4Level,
@@ -4146,7 +4350,7 @@ function updateMatchSimulationPreview() {
 
     const simT2 = calculatePadelRatingUpdate({
       playerLevel: t2Avg,
-      playerReliability: ((p3.reliabilityScore || 50) + (p4.reliabilityScore || 50)) / 2,
+      playerReliability: (p3Rel + p4Rel) / 2,
       partnerLevel: t2Avg,
       opponent1Level: p1Level,
       opponent2Level: p2Level,
@@ -4155,7 +4359,10 @@ function updateMatchSimulationPreview() {
     });
 
     const probEl = document.getElementById('matchWinProbBadge');
-    if (probEl) probEl.textContent = `Probabilité Éq 1 : ${simT1.expectedWinRate}%`;
+    if (probEl) {
+      const peerText = simT1.isPeerMatch ? '🎯 Pairs (±1.0)' : '⚠️ Écart > 1.0';
+      probEl.textContent = `Probabilité Éq 1 : ${simT1.expectedWinRate}% · ${peerText}`;
+    }
 
     const prevT1 = document.getElementById('matchDeltaTeam1Preview');
     if (prevT1) {
@@ -4272,25 +4479,25 @@ async function submitRecordMatch(e) {
     const p4Level = Number(p4.level || p4.selfEstimatedLevel || 5.0);
 
     const calc1 = calculatePadelRatingUpdate({
-      playerLevel: p1Level, playerReliability: p1.reliabilityScore || 50,
+      playerLevel: p1Level, playerReliability: p1.reliabilityScore != null ? p1.reliabilityScore : (p1.levelValidatedAt ? 75 : 15),
       partnerLevel: p2Level, opponent1Level: p3Level, opponent2Level: p4Level,
       setsWon: setsWon, setsLost: setsLost
     });
 
     const calc2 = calculatePadelRatingUpdate({
-      playerLevel: p2Level, playerReliability: p2.reliabilityScore || 50,
+      playerLevel: p2Level, playerReliability: p2.reliabilityScore != null ? p2.reliabilityScore : (p2.levelValidatedAt ? 75 : 15),
       partnerLevel: p1Level, opponent1Level: p3Level, opponent2Level: p4Level,
       setsWon: setsWon, setsLost: setsLost
     });
 
     const calc3 = calculatePadelRatingUpdate({
-      playerLevel: p3Level, playerReliability: p3.reliabilityScore || 50,
+      playerLevel: p3Level, playerReliability: p3.reliabilityScore != null ? p3.reliabilityScore : (p3.levelValidatedAt ? 75 : 15),
       partnerLevel: p4Level, opponent1Level: p1Level, opponent2Level: p2Level,
       setsWon: setsLost, setsLost: setsWon
     });
 
     const calc4 = calculatePadelRatingUpdate({
-      playerLevel: p4Level, playerReliability: p4.reliabilityScore || 50,
+      playerLevel: p4Level, playerReliability: p4.reliabilityScore != null ? p4.reliabilityScore : (p4.levelValidatedAt ? 75 : 15),
       partnerLevel: p3Level, opponent1Level: p1Level, opponent2Level: p2Level,
       setsWon: setsLost, setsLost: setsWon
     });
@@ -4310,7 +4517,9 @@ async function submitRecordMatch(e) {
       pl.reliabilityScore = u.calc.newReliability;
       pl.lastDelta = u.calc.delta;
       pl.totalMatchesPlayed = (pl.totalMatchesPlayed || 0) + 1;
-      pl.peerConfrontationsCount = (pl.peerConfrontationsCount || 0) + 1;
+      if (u.calc.isPeerMatch) {
+        pl.peerConfrontationsCount = (pl.peerConfrontationsCount || 0) + 1;
+      }
       if (pl.status === 'guest') pl.status = 'active';
 
       // Attribution points fidélité (1.0 pt creuses 08h-17h, 0.5 pt pointe 17h-23h)
@@ -4378,7 +4587,15 @@ async function submitRecordMatch(e) {
       if (bk) {
         bk.scoreRecorded = true;
         bk.matchRecorded = true;
+        bk.status = 'completed';
         bk.scoreDetail = scoreDetail;
+        bk.score = {
+          setsWon: setsWon,
+          setsLost: setsLost,
+          gamesDetail: scoreDetail,
+          recordedBy: DB.currentUser?.id || 'admin',
+          recordedAt: new Date().toISOString()
+        };
       }
     }
     currentRecordingBookingId = null;
