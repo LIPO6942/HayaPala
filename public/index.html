@@ -14,7 +14,7 @@
   <link rel="manifest" href="./manifest.json" />
   <link rel="icon" type="image/jpeg" href="./images/pwa-icon.jpg" />
   <link rel="apple-touch-icon" href="./images/pwa-icon.jpg" />
-  <link rel="stylesheet" href="./css/app.css?v=2.2.0" />
+  <link rel="stylesheet" href="./css/app.css?v=2.4.0" />
 </head>
 <body>
 
@@ -811,6 +811,7 @@
       <!-- ── Sub-nav tabs ── -->
       <div class="admin-subnav-bar">
         <button class="admin-tab-btn active" data-admin-tab="planning">📅 Planning &amp; Réservations</button>
+        <button class="admin-tab-btn" data-admin-tab="events">🏆 Événements, Thèmes &amp; Tournois</button>
         <button class="admin-tab-btn" data-admin-tab="courts">🏟️ Terrains</button>
         <button class="admin-tab-btn" data-admin-tab="players">👥 Membres &amp; Évaluation</button>
         <button class="admin-tab-btn" data-admin-tab="matches">⚡ Matchs ouverts</button>
@@ -857,6 +858,9 @@
               <span style="width:12px;height:12px; border-radius:3px; background:rgba(243,156,18,0.4); border:1px solid rgba(243,156,18,0.5)"></span> Cours coach
             </span>
             <span style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-muted)">
+              <span style="width:12px;height:12px; border-radius:3px; background:rgba(155,89,182,0.4); border:1px solid rgba(155,89,182,0.7)"></span> 🏆 Événement Club / Tournoi
+            </span>
+            <span style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-muted)">
               <span style="width:12px;height:12px; border-radius:3px; background:rgba(255,255,255,0.08); border:1px solid var(--border-subtle)"></span> Bloqué / Maintenance
             </span>
           </div>
@@ -873,6 +877,49 @@
                 <!-- Peuplé par JS -->
               </tbody>
             </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB G_EVENTS : 2ème Tableau Gérant — Événements, Matchs à Thème & Tournois (Indépendant) ── -->
+      <div class="admin-tab-content" id="adminContentEvents">
+        <div class="schedule-container">
+          <div class="schedule-header-actions">
+            <div>
+              <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px; flex-wrap:wrap">
+                <h2 style="font-family:'Outfit',sans-serif; font-size:22px; font-weight:900; color:var(--text-white); letter-spacing:-0.03em; margin:0">
+                  Tableau 2 : Événements, Matchs à Thème &amp; Tournois
+                </h2>
+                <span class="info-badge green" style="font-size:10px; font-weight:800">TABLEAU INDÉPENDANT</span>
+              </div>
+              <p style="font-size:13px; color:var(--text-secondary); margin:0">
+                Gestion indépendante des tournois, matchs festifs (Père/Fils, Saint-Valentin, Handisport...) et packs. Les événements réservent et bloquent automatiquement les terrains sur le Tableau 1 (Planning ordinaire).
+              </p>
+            </div>
+            <button class="btn-new-admin-booking" onclick="openCreateClubEventModal()" style="background:linear-gradient(135deg, #9b59b6, #8e44ad); border-color:#d4af37">
+              <span>+</span> Créer un Événement / Match à Thème
+            </button>
+          </div>
+
+          <!-- Filtres thématiques -->
+          <div class="event-theme-filters" style="display:flex; gap:8px; flex-wrap:wrap; margin:16px 0 20px 0">
+            <button class="filter-chip active" id="btnFilterEvtAll" onclick="setAdminEventsFilter('all')">Tous les événements</button>
+            <button class="filter-chip" id="btnFilterEvtFatherSon" onclick="setAdminEventsFilter('father_son')">👨‍👦 Père / Fils</button>
+            <button class="filter-chip" id="btnFilterEvtValentines" onclick="setAdminEventsFilter('valentines')">❤️ Saint-Valentin</button>
+            <button class="filter-chip" id="btnFilterEvtHandicap" onclick="setAdminEventsFilter('handicap')">♿ Padel Inclusif / Handisport</button>
+            <button class="filter-chip" id="btnFilterEvtEnv" onclick="setAdminEventsFilter('environmental')">🌱 Green Padel</button>
+            <button class="filter-chip" id="btnFilterEvtTournament" onclick="setAdminEventsFilter('tournament')">🏆 Tournois Officiels</button>
+            <button class="filter-chip" id="btnFilterEvtPack" onclick="setAdminEventsFilter('pack')">📦 Packs Spéciaux</button>
+          </div>
+
+          <!-- Grille des cartes d'événements -->
+          <div class="events-cards-grid" id="adminEventsCardsList">
+            <!-- Peuplé dynamiquement par JS -->
+          </div>
+
+          <!-- Espace de gestion détaillée de l'événement sélectionné (Inscriptions au Club House & Matchs) -->
+          <div class="event-detail-workbench" id="adminEventDetailWorkbench" style="display:none; margin-top:28px">
+            <!-- Peuplé dynamiquement par JS -->
           </div>
         </div>
       </div>
@@ -2230,9 +2277,232 @@
     </div>
   </div>
 
+  <!-- ── Modale : Créer un Événement / Match à Thème (Tableau 2) ── -->
+  <div class="modal-overlay" id="modal-create-club-event" role="dialog" aria-modal="true">
+    <div class="modal-sheet" style="max-width:520px">
+      <div class="modal-drag-indicator"></div>
+      <div class="modal-top-bar">
+        <div class="modal-title">🏆 Créer un Événement / Match à Thème</div>
+        <button class="modal-close-btn" onclick="closeModal('modal-create-club-event')" aria-label="Fermer">✕</button>
+      </div>
+      <form id="formCreateClubEvent" onsubmit="handleCreateClubEvent(event)">
+        <div class="modal-field-group">
+          <label class="modal-label">Titre de l'événement</label>
+          <input type="text" class="login-field" id="eventTitleInput" required placeholder="Ex: Tournoi Fête des Pères — Family Padel Cup" />
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+          <div class="modal-field-group">
+            <label class="modal-label">Thématique de l'événement</label>
+            <select class="login-field" id="eventThemeSelect" onchange="handleEventThemeChange()">
+              <option value="father_son">👨‍👦 Match Père / Fils (Family Padel)</option>
+              <option value="valentines">❤️ Saint-Valentin (Matchs en Couples)</option>
+              <option value="handicap">♿ Padel Inclusif / Handisport</option>
+              <option value="environmental">🌱 Green Padel (Éco-responsable)</option>
+              <option value="tournament">🏆 Tournoi Officiel / Championnat</option>
+              <option value="pack">📦 Formule Pack & Animation Club</option>
+            </select>
+          </div>
+          <div class="modal-field-group">
+            <label class="modal-label">Type de classement</label>
+            <select class="login-field" id="eventRankedSelect">
+              <option value="false" selected>🛡️ Hors-classement (Exhibition amicale)</option>
+              <option value="true">🏅 Compétitif (Impact classement Elo)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px">
+          <div class="modal-field-group">
+            <label class="modal-label">Date</label>
+            <input type="date" class="login-field" id="eventDateInput" required />
+          </div>
+          <div class="modal-field-group">
+            <label class="modal-label">Heure Début</label>
+            <select class="login-field" id="eventStartTimeSelect">
+              <option value="08:00">08:00</option>
+              <option value="09:30">09:30</option>
+              <option value="11:00">11:00</option>
+              <option value="12:30">12:30</option>
+              <option value="14:00" selected>14:00</option>
+              <option value="15:30">15:30</option>
+              <option value="17:00">17:00</option>
+              <option value="18:30">18:30</option>
+              <option value="20:00">20:00</option>
+            </select>
+          </div>
+          <div class="modal-field-group">
+            <label class="modal-label">Heure Fin</label>
+            <select class="login-field" id="eventEndTimeSelect">
+              <option value="11:00">11:00</option>
+              <option value="12:30">12:30</option>
+              <option value="14:00">14:00</option>
+              <option value="15:30">15:30</option>
+              <option value="17:00">17:00</option>
+              <option value="18:00" selected>18:00</option>
+              <option value="20:00">20:00</option>
+              <option value="21:30">21:30</option>
+              <option value="23:00">23:00</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-field-group">
+          <label class="modal-label">Terrains à réserver et bloquer sur le Tableau 1 (Planning ordinaire)</label>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; background:var(--bg-card-2); border:1px solid var(--border-subtle); border-radius:10px; padding:10px 14px">
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer">
+              <input type="checkbox" name="eventCourts" value="court-1" checked />
+              <span>Court 1 · Central Philippe-Chatrier</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer">
+              <input type="checkbox" name="eventCourts" value="court-2" checked />
+              <span>Court 2 · Panoramique 360°</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer">
+              <input type="checkbox" name="eventCourts" value="court-3" />
+              <span>Court 3 · Sunset Outdoor</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer">
+              <input type="checkbox" name="eventCourts" value="court-4" />
+              <span>Court 4 · Indoor Masters</span>
+            </label>
+          </div>
+          <div style="font-size:11px; color:var(--gold); margin-top:5px">
+            ⚡ Ces terrains seront automatiquement verrouillés et masqués pour les réservations ordinaires pendant cette plage.
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+          <div class="modal-field-group">
+            <label class="modal-label">Formule / Pack associé</label>
+            <input type="text" class="login-field" id="eventPackInput" placeholder="Ex: Pack Famille (Matchs + Goûter + T-shirt)" />
+          </div>
+          <div class="modal-field-group">
+            <label class="modal-label">Tarif par équipe / paire (DT)</label>
+            <input type="number" class="login-field" id="eventPriceInput" min="0" value="60" />
+          </div>
+        </div>
+
+        <div class="modal-field-group">
+          <label class="modal-label">Description &amp; Règlement de l'événement</label>
+          <textarea class="login-field" id="eventDescInput" rows="2" placeholder="Tournoi convivial ouvert aux paires parent/enfant. Récompenses au club house."></textarea>
+        </div>
+
+        <button type="submit" class="btn-primary-action" style="margin-top:10px; padding:12px; background:linear-gradient(135deg, #9b59b6, #8e44ad); border-color:#d4af37">
+          🔒 Créer l'Événement &amp; Bloquer les terrains sur le Tableau 1
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Modale : Inscrire une Équipe au Club House (Tableau 2) ── -->
+  <div class="modal-overlay" id="modal-event-register-team" role="dialog" aria-modal="true">
+    <div class="modal-sheet" style="max-width:460px">
+      <div class="modal-drag-indicator"></div>
+      <div class="modal-top-bar">
+        <div class="modal-title">📝 Inscription Équipe au Club House</div>
+        <button class="modal-close-btn" onclick="closeModal('modal-event-register-team')" aria-label="Fermer">✕</button>
+      </div>
+      <form id="formEventRegisterTeam" onsubmit="handleRegisterEventTeam(event)">
+        <input type="hidden" id="registerTeamEventId" />
+        <div style="background:var(--bg-card-2); border:1px solid var(--border-subtle); border-radius:10px; padding:10px 14px; margin-bottom:14px">
+          <div style="font-size:11px; color:var(--text-muted)">Événement sélectionné :</div>
+          <div style="font-size:14px; font-weight:800; color:var(--gold)" id="registerTeamEventTitle">—</div>
+        </div>
+
+        <div class="modal-field-group">
+          <label class="modal-label">Joueur 1 (Capitaine / Parent / Référent)</label>
+          <input type="text" class="login-field" id="teamPlayer1Name" required placeholder="Ex: Karim Trabelsi (ou recherche membre)" list="clubPlayersDatalist" />
+        </div>
+
+        <div class="modal-field-group">
+          <label class="modal-label">Joueur 2 (Partenaire / Enfant / Conjoint)</label>
+          <input type="text" class="login-field" id="teamPlayer2Name" required placeholder="Ex: Yassine Trabelsi (11 ans)" list="clubPlayersDatalist" />
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+          <div class="modal-field-group">
+            <label class="modal-label">Catégorie / Duo</label>
+            <input type="text" class="login-field" id="teamCategoryInput" placeholder="Ex: Junior 10-13 ans / Duo Mixte" />
+          </div>
+          <div class="modal-field-group">
+            <label class="modal-label">Téléphone de contact</label>
+            <input type="tel" class="login-field" id="teamPhoneInput" placeholder="+216 98 123 456" />
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+          <div class="modal-field-group">
+            <label class="modal-label">Formule / Pack</label>
+            <input type="text" class="login-field" id="teamPackInput" placeholder="Pack Famille" />
+          </div>
+          <div class="modal-field-group">
+            <label class="modal-label">Règlement au club house</label>
+            <select class="login-field" id="teamPaidSelect">
+              <option value="true" selected>✅ Payé au guichet</option>
+              <option value="false">⏳ En attente de règlement</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary-action" style="margin-top:12px; padding:12px">
+          Valider l'inscription de l'équipe
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Modale : Saisie du Score d'un Match d'Événement (Tableau 2) ── -->
+  <div class="modal-overlay" id="modal-event-match-score" role="dialog" aria-modal="true">
+    <div class="modal-sheet" style="max-width:440px">
+      <div class="modal-drag-indicator"></div>
+      <div class="modal-top-bar">
+        <div class="modal-title">🎾 Score du Match d'Événement</div>
+        <button class="modal-close-btn" onclick="closeModal('modal-event-match-score')" aria-label="Fermer">✕</button>
+      </div>
+      <form id="formEventMatchScore" onsubmit="handleSaveEventMatchScore(event)">
+        <input type="hidden" id="scoreMatchEventId" />
+        <input type="hidden" id="scoreMatchId" />
+
+        <div id="eventMatchRankedNotice" style="background:rgba(46,204,113,0.1); border:1px solid rgba(46,204,113,0.3); border-radius:10px; padding:10px 14px; margin-bottom:14px; font-size:12px; color:#2ecc71; line-height:1.4">
+          🛡️ <strong>Match festif hors-classement :</strong> la saisie de ce score valide le match pour l'événement sans modifier le classement Elo officiel des joueurs.
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr auto 1fr; gap:10px; align-items:center; margin-bottom:16px; text-align:center">
+          <div style="background:var(--bg-card-2); border:1px solid var(--border-subtle); border-radius:10px; padding:10px">
+            <div style="font-size:11px; color:var(--text-muted)">Équipe 1</div>
+            <div style="font-size:14px; font-weight:900; color:var(--text-white)" id="matchTeam1NameDisplay">—</div>
+          </div>
+          <div style="font-weight:900; font-size:16px; color:var(--gold)">VS</div>
+          <div style="background:var(--bg-card-2); border:1px solid var(--border-subtle); border-radius:10px; padding:10px">
+            <div style="font-size:11px; color:var(--text-muted)">Équipe 2</div>
+            <div style="font-size:14px; font-weight:900; color:var(--text-white)" id="matchTeam2NameDisplay">—</div>
+          </div>
+        </div>
+
+        <div class="modal-field-group">
+          <label class="modal-label">Score des sets (ex: 6-4, 6-3 ou 6-3, 4-6, 10-8)</label>
+          <input type="text" class="login-field" id="eventMatchScoreInput" required placeholder="6-4, 6-3" style="font-size:16px; font-weight:800; letter-spacing:1px; text-align:center" />
+        </div>
+
+        <div class="modal-field-group">
+          <label class="modal-label">Paire victorieuse</label>
+          <select class="login-field" id="eventMatchWinnerSelect" required>
+            <option value="team1" id="winnerOptionTeam1">Équipe 1</option>
+            <option value="team2" id="winnerOptionTeam2">Équipe 2</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn-primary-action" style="margin-top:12px; padding:12px">
+          Enregistrer le résultat du match
+        </button>
+      </form>
+    </div>
+  </div>
+
   <!-- ── Toast notifications container ── -->
   <div class="toast-container" id="toastContainer" role="alert" aria-live="polite"></div>
 
-  <script type="module" src="./js/app.js?v=2.3.0"></script>
+  <script type="module" src="./js/app.js?v=2.4.0"></script>
 </body>
 </html>

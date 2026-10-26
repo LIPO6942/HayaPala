@@ -92,12 +92,141 @@ try {
 /**
  * Assure l'intégrité de la structure DB pour immuniser l'interface contre tout bug d'incohérence
  */
+function getClubEventsSeed() {
+  const today = new Date().toISOString().split('T')[0];
+  return [
+    {
+      id: 'event-father-son',
+      title: 'Tournoi Fête des Pères — Family Padel Cup',
+      theme: 'father_son',
+      themeLabel: '👨‍👦 Père / Fils (Family Padel)',
+      date: today,
+      startTime: '14:00',
+      endTime: '18:00',
+      courtIds: ['court-1', 'court-2'],
+      isRanked: false,
+      status: 'active',
+      packType: 'Pack Famille (Matchs + Goûter + Casquettes)',
+      pricePerTeam: 60,
+      description: 'Tournoi double amical ouvert aux duos parent/enfant (< 16 ans). Ambiance festive, goûter au club house et médailles pour tous.',
+      teams: [
+        {
+          id: 'team-fs-1',
+          player1Name: 'Karim Trabelsi',
+          player2Name: 'Yassine Trabelsi (11 ans)',
+          category: 'Junior 10-13 ans',
+          phone: '+216 98 123 456',
+          pack: 'Pack Famille Premium',
+          paid: true,
+          registeredAt: '2026-10-26T10:00:00'
+        },
+        {
+          id: 'team-fs-2',
+          player1Name: 'Mehdi Ben Salem',
+          player2Name: 'Sami Ben Salem (13 ans)',
+          category: 'Junior 10-13 ans',
+          phone: '+216 22 456 789',
+          pack: 'Pack Famille Premium',
+          paid: true,
+          registeredAt: '2026-10-26T10:30:00'
+        },
+        {
+          id: 'team-fs-3',
+          player1Name: 'Tarek Ben Amor',
+          player2Name: 'Rayen Ben Amor (14 ans)',
+          category: 'Junior 14-16 ans',
+          phone: '+216 55 789 012',
+          pack: 'Pack Famille',
+          paid: false,
+          registeredAt: '2026-10-26T11:00:00'
+        }
+      ],
+      matches: [
+        {
+          id: 'm-fs-1',
+          courtId: 'court-1',
+          time: '14:00',
+          team1Id: 'team-fs-1',
+          team1Name: 'Karim & Yassine',
+          team2Id: 'team-fs-2',
+          team2Name: 'Mehdi & Sami',
+          score: '6-4, 6-3',
+          winnerTeamId: 'team-fs-1',
+          winnerName: 'Karim & Yassine',
+          status: 'completed',
+          isRanked: false
+        },
+        {
+          id: 'm-fs-2',
+          courtId: 'court-2',
+          time: '15:30',
+          team1Id: 'team-fs-2',
+          team1Name: 'Mehdi & Sami',
+          team2Id: 'team-fs-3',
+          team2Name: 'Tarek & Rayen',
+          score: '',
+          winnerTeamId: '',
+          winnerName: '',
+          status: 'pending',
+          isRanked: false
+        }
+      ]
+    },
+    {
+      id: 'event-valentines',
+      title: 'Soirée Saint-Valentin — Matchs en Couples & Doubles Mixtes',
+      theme: 'valentines',
+      themeLabel: '❤️ Saint-Valentin (Couples)',
+      date: today,
+      startTime: '18:30',
+      endTime: '21:30',
+      courtIds: ['court-3'],
+      isRanked: false,
+      status: 'planned',
+      packType: 'Pack Duo Love (Matchs + Cocktail Club House)',
+      pricePerTeam: 80,
+      description: 'Tournoi festif en double mixte pour couples. Ambiance musicale et cocktail dînatoire au club house après les matchs.',
+      teams: [
+        {
+          id: 'team-val-1',
+          player1Name: 'Sofiene Gharbi',
+          player2Name: 'Sarra Gharbi',
+          category: 'Duo Mixte',
+          phone: '+216 99 333 444',
+          pack: 'Pack Duo Love',
+          paid: true,
+          registeredAt: '2026-10-26T09:00:00'
+        }
+      ],
+      matches: []
+    },
+    {
+      id: 'event-handicap',
+      title: 'Journée Padel Inclusif & Handisport',
+      theme: 'handicap',
+      themeLabel: '♿ Handisport / Padel Inclusif',
+      date: today,
+      startTime: '09:30',
+      endTime: '12:30',
+      courtIds: ['court-4'],
+      isRanked: false,
+      status: 'planned',
+      packType: 'Session Gratuite / Initiation Club',
+      pricePerTeam: 0,
+      description: 'Matinée de sensibilisation et de découverte du padel fauteuil et adapté. Coaching dédié et matchs d\'exhibition partagés.',
+      teams: [],
+      matches: []
+    }
+  ];
+}
+
 function sanitizeDB(db) {
   if (!db || typeof db !== 'object') return;
   if (!Array.isArray(db.players)) db.players = [];
   if (!Array.isArray(db.deletedPlayerIds)) db.deletedPlayerIds = [];
   if (!Array.isArray(db.courts) || db.courts.length === 0) db.courts = [...COURTS_SEED];
   if (!Array.isArray(db.bookings)) db.bookings = [];
+  if (!Array.isArray(db.clubEvents) || db.clubEvents.length === 0) db.clubEvents = getClubEventsSeed();
   if (!Array.isArray(db.notifications)) db.notifications = [];
   if (!Array.isArray(db.matchReviews)) db.matchReviews = [];
   if (!Array.isArray(db.transactions)) db.transactions = [];
@@ -2689,7 +2818,18 @@ function renderAdminTimetable() {
         return `<td onclick="openAdminSlotModal('${court.id}', '${time}', '${adminCurrentDate}')" style="cursor:pointer" title="Cliquer pour créer un créneau"></td>`;
       }
 
-      const typeClass = { private:'type-private', open:'type-open', course:'type-course', blocked:'type-blocked' }[booking.type] || '';
+      if (booking.type === 'event') {
+        const evtTitle = booking.notes || 'Événement Club';
+        const clickAction = booking.eventId ? `switchAdminTab('events'); selectAdminEvent('${booking.eventId}')` : `renderSlotDetail('${booking.id}'); openModal('modal-slot-detail')`;
+        return `<td>
+          <div class="cell-booking type-event" onclick="${clickAction}" style="cursor:pointer" title="Événement Club réservé : cliquer pour voir le Tableau 2">
+            <div class="cell-booking-name">🔒 ${evtTitle}</div>
+            <div class="cell-booking-sub">🏆 Tableau 2 Événements ›</div>
+          </div>
+        </td>`;
+      }
+
+      const typeClass = { private:'type-private', open:'type-open', course:'type-course', blocked:'type-blocked', event:'type-event' }[booking.type] || '';
       const playerCount = (booking.players || []).length;
       const organizer = (booking.players || []).find(p => p.isOrganizer);
       const displayName = organizer ? organizer.name : (booking.players?.[0]?.name || booking.notes || '—');
@@ -5279,6 +5419,8 @@ function switchAdminTab(tabName) {
   });
   if (tabName === 'players') {
     renderAdminPlayers();
+  } else if (tabName === 'events') {
+    renderAdminEvents();
   } else if (tabName === 'audit') {
     renderAdminAuditLogs();
   } else if (tabName === 'planning') {
@@ -6353,6 +6495,611 @@ function copyMobileSyncUrl() {
   }
 }
 window.copyMobileSyncUrl = copyMobileSyncUrl;
+
+// ============================================================================
+// TABLEAU 2 : GESTION DES ÉVÉNEMENTS, MATCHS À THÈME & TOURNOIS (INDÉPENDANT)
+// ============================================================================
+
+const EVENT_THEME_LABELS = {
+  father_son: '👨‍👦 Père / Fils (Family Padel)',
+  valentines: '❤️ Saint-Valentin (Couples)',
+  handicap: '♿ Padel Inclusif / Handisport',
+  environmental: '🌱 Green Padel',
+  tournament: '🏆 Tournoi Officiel',
+  pack: '📦 Pack Spécial'
+};
+
+let adminEventsFilter = 'all';
+let selectedAdminEventId = null;
+
+function syncEventsWithTimetable() {
+  if (!Array.isArray(DB.clubEvents)) return;
+  const events = DB.clubEvents.filter(e => e && e.status !== 'archived');
+
+  // Nettoyer les réservations générées automatiquement par les événements
+  DB.bookings = (DB.bookings || []).filter(b => !b.isEventAutoBlock);
+
+  events.forEach(evt => {
+    const startIdx = SLOT_TIMES.indexOf(evt.startTime);
+    let endIdx = SLOT_TIMES.indexOf(evt.endTime);
+    if (endIdx === -1) endIdx = SLOT_TIMES.length;
+    if (startIdx === -1) return;
+
+    const slotsToBlock = SLOT_TIMES.slice(startIdx, endIdx);
+
+    (evt.courtIds || []).forEach(courtId => {
+      slotsToBlock.forEach(time => {
+        const existing = DB.bookings.find(b => b.courtId === courtId && b.date === evt.date && b.startTime === time && b.status === 'confirmed');
+        if (!existing) {
+          DB.bookings.push({
+            id: `evt-block-${evt.id}-${courtId}-${time.replace(':', '')}`,
+            courtId: courtId,
+            date: evt.date,
+            startTime: time,
+            type: 'event',
+            status: 'confirmed',
+            eventId: evt.id,
+            eventTheme: evt.theme,
+            isEventAutoBlock: true,
+            notes: `${evt.title}`,
+            players: [
+              { userId: 'admin', name: `🔒 ${evt.themeLabel}`, isOrganizer: true }
+            ]
+          });
+        }
+      });
+    });
+  });
+}
+window.syncEventsWithTimetable = syncEventsWithTimetable;
+
+// Synchroniser immédiatement à l'initialisation
+try { syncEventsWithTimetable(); } catch (e) {}
+
+function setAdminEventsFilter(theme) {
+  adminEventsFilter = theme;
+  const filterMap = {
+    all: 'btnFilterEvtAll',
+    father_son: 'btnFilterEvtFatherSon',
+    valentines: 'btnFilterEvtValentines',
+    handicap: 'btnFilterEvtHandicap',
+    environmental: 'btnFilterEvtEnv',
+    tournament: 'btnFilterEvtTournament',
+    pack: 'btnFilterEvtPack'
+  };
+
+  document.querySelectorAll('.event-theme-filters .filter-chip').forEach(btn => {
+    btn.classList.toggle('active', btn.id === filterMap[theme]);
+  });
+  renderAdminEvents();
+}
+window.setAdminEventsFilter = setAdminEventsFilter;
+
+function selectAdminEvent(eventId) {
+  selectedAdminEventId = eventId;
+  renderAdminEvents();
+  const workbench = document.getElementById('adminEventDetailWorkbench');
+  if (workbench) {
+    workbench.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+window.selectAdminEvent = selectAdminEvent;
+
+function renderAdminEvents() {
+  const container = document.getElementById('adminEventsCardsList');
+  if (!container) return;
+
+  const events = (DB.clubEvents || []).filter(e => {
+    if (adminEventsFilter === 'all') return true;
+    return e.theme === adminEventsFilter;
+  });
+
+  if (events.length === 0) {
+    container.innerHTML = `
+      <div style="grid-column: 1 / -1; text-align:center; padding:36px; background:var(--bg-card-2); border:1px dashed var(--border-card); border-radius:14px">
+        <div style="font-size:36px; margin-bottom:10px">🏆</div>
+        <div style="font-size:15px; font-weight:800; color:var(--text-white)">Aucun événement dans cette catégorie</div>
+        <div style="font-size:12px; color:var(--text-secondary); margin-top:4px">Utilisez le bouton ci-dessus pour créer un match à thème ou tournoi.</div>
+      </div>
+    `;
+    renderAdminEventWorkbench(null);
+    return;
+  }
+
+  if (!selectedAdminEventId || !events.some(e => e.id === selectedAdminEventId)) {
+    selectedAdminEventId = events[0].id;
+  }
+
+  container.innerHTML = events.map(evt => {
+    const isSelected = evt.id === selectedAdminEventId;
+    const courtNames = (evt.courtIds || []).map(cid => {
+      const c = (DB.courts || []).find(court => court.id === cid);
+      return c ? c.name : cid;
+    }).join(', ') || 'Aucun terrain';
+    
+    const teamCount = (evt.teams || []).length;
+    const isRanked = evt.isRanked === true;
+    const rankedBadge = isRanked
+      ? `<span class="event-ranked-tag competitive">🏅 Tournoi Officiel (Avec Elo)</span>`
+      : `<span class="event-ranked-tag festive">🛡️ Match Festif (Hors-classement Elo)</span>`;
+
+    return `
+      <div class="event-card ${isSelected ? 'active-selected' : ''}" id="eventCard_${evt.id}">
+        <div>
+          <div class="event-card-header">
+            <span class="event-theme-badge ${evt.theme}">
+              ${EVENT_THEME_LABELS[evt.theme] || '🏆 Événement'}
+            </span>
+            <span class="info-badge ${evt.status === 'active' ? 'green' : 'amber'}" style="font-size:9px">
+              ${evt.status === 'active' ? 'EN COURS' : 'PROGRAMMÉ'}
+            </span>
+          </div>
+
+          <div class="event-title">${evt.title}</div>
+          <div style="margin-bottom:10px">${rankedBadge}</div>
+
+          <div class="event-meta-info">
+            <div class="event-meta-item">
+              <span>📅</span> <strong>${evt.date}</strong> · ${evt.startTime} — ${evt.endTime}
+            </div>
+            <div class="event-meta-item">
+              <span>🏟️</span> <span>Terrains bloqués : <strong style="color:var(--gold)">${courtNames}</strong></span>
+            </div>
+            <div class="event-meta-item">
+              <span>👥</span> <span>Inscriptions : <strong>${teamCount} paire(s) au guichet</strong></span>
+            </div>
+            ${evt.packType ? `
+            <div class="event-meta-item">
+              <span>📦</span> <span>Formule : <strong>${evt.packType}</strong> (${evt.pricePerTeam || 0} DT)</span>
+            </div>` : ''}
+          </div>
+        </div>
+
+        <div class="event-card-actions">
+          <button class="btn-primary-action" onclick="selectAdminEvent('${evt.id}')" style="flex:1; padding:7px 12px; font-size:12px; ${isSelected ? 'background:var(--gold); color:#000; font-weight:800' : ''}">
+            ${isSelected ? '✓ Sélectionné (Workbench)' : '👥 Gérer Paires & Matchs'}
+          </button>
+          <button class="btn-table-action danger" onclick="deleteClubEvent('${evt.id}')" title="Supprimer cet événement et libérer les terrains sur le Tableau 1">
+            🗑️
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  renderAdminEventWorkbench(selectedAdminEventId);
+}
+window.renderAdminEvents = renderAdminEvents;
+
+function renderAdminEventWorkbench(eventId) {
+  const workbench = document.getElementById('adminEventDetailWorkbench');
+  if (!workbench) return;
+  if (!eventId) {
+    workbench.style.display = 'none';
+    return;
+  }
+
+  const evt = (DB.clubEvents || []).find(e => e.id === eventId);
+  if (!evt) {
+    workbench.style.display = 'none';
+    return;
+  }
+
+  workbench.style.display = 'block';
+  const courtNames = (evt.courtIds || []).map(cid => {
+    const c = (DB.courts || []).find(court => court.id === cid);
+    return c ? c.name : cid;
+  }).join(', ');
+
+  const teamsHtml = (evt.teams && evt.teams.length > 0) ? `
+    <table class="workbench-teams-table">
+      <thead>
+        <tr>
+          <th>Paire #</th>
+          <th>Joueur 1 (Capitaine)</th>
+          <th>Joueur 2 (Partenaire / Enfant / Conjoint)</th>
+          <th>Catégorie</th>
+          <th>Téléphone</th>
+          <th>Formule Pack</th>
+          <th>Paiement Club House</th>
+          <th style="text-align:right">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${evt.teams.map((t, idx) => `
+          <tr>
+            <td><strong style="color:var(--gold)">Duo ${idx + 1}</strong></td>
+            <td><strong>${t.player1Name}</strong></td>
+            <td><strong>${t.player2Name}</strong></td>
+            <td><span style="font-size:11px; color:var(--text-secondary)">${t.category || 'Standard'}</span></td>
+            <td>${t.phone || '—'}</td>
+            <td><span style="color:#ffd700">${t.pack || evt.packType || 'Standard'}</span></td>
+            <td>
+              <span class="${t.paid ? 'badge-paid' : 'badge-unpaid'}">
+                ${t.paid ? '✓ Payé au guichet' : '⏳ En attente'}
+              </span>
+            </td>
+            <td style="text-align:right">
+              <button class="btn-table-action danger" onclick="deleteEventTeam('${evt.id}', '${t.id}')" title="Retirer cette équipe">Retirer</button>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  ` : `
+    <div style="text-align:center; padding:24px; background:rgba(255,255,255,0.02); border-radius:10px; color:var(--text-muted); font-size:12px">
+      Aucune paire inscrite pour l'instant. Utilisez le bouton ci-dessus pour enregistrer manuellement des joueurs au club house.
+    </div>
+  `;
+
+  const matchesHtml = (evt.matches && evt.matches.length > 0) ? `
+    <div class="event-matches-grid">
+      ${evt.matches.map(m => {
+        const isCompleted = m.status === 'completed' && m.score;
+        return `
+          <div class="event-match-card">
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+                <span style="font-size:11px; color:var(--text-muted)">🏟️ ${(DB.courts || []).find(c => c.id === m.courtId)?.name || m.courtId} · ⏰ ${m.time}</span>
+                <span class="info-badge ${isCompleted ? 'green' : 'amber'}" style="font-size:9px">
+                  ${isCompleted ? 'TERMINÉ' : 'EN ATTENTE'}
+                </span>
+              </div>
+              <div style="font-size:13px; font-weight:800; color:var(--text-white); margin-bottom:4px">
+                ${m.team1Name} <span style="color:var(--gold)">VS</span> ${m.team2Name}
+              </div>
+              <div style="font-size:12px; margin-top:6px">
+                Score : <strong style="color:${isCompleted ? '#2ecc71' : 'var(--text-muted)'}; font-size:14px">${m.score || 'Non joué'}</strong>
+              </div>
+              ${m.winnerName ? `<div style="font-size:11px; color:var(--gold); margin-top:2px">🏆 Vainqueur : <strong>${m.winnerName}</strong></div>` : ''}
+            </div>
+            <div style="margin-top:10px; border-top:1px solid rgba(255,255,255,0.06); padding-top:8px">
+              <button class="btn-primary-action" onclick="openEventMatchScoreModal('${evt.id}', '${m.id}')" style="width:100%; padding:6px; font-size:11px">
+                ✏️ ${isCompleted ? 'Modifier le Score' : 'Saisir le Score (Club House)'}
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  ` : `
+    <div style="text-align:center; padding:20px; background:rgba(255,255,255,0.02); border-radius:10px; color:var(--text-muted); font-size:12px">
+      Aucun match planifié pour le moment. Cliquez sur « + Programmer un Match » pour créer une rencontre.
+    </div>
+  `;
+
+  workbench.innerHTML = `
+    <div class="workbench-header">
+      <div>
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+          <span class="event-theme-badge ${evt.theme}">${EVENT_THEME_LABELS[evt.theme] || 'Événement'}</span>
+          <h3 style="font-family:'Outfit',sans-serif; font-size:18px; font-weight:900; color:var(--text-white); margin:0">${evt.title}</h3>
+        </div>
+        <div style="font-size:12px; color:var(--text-secondary); margin-top:5px">
+          📅 ${evt.date} (${evt.startTime} - ${evt.endTime}) · 🔒 Terrains verrouillés sur le Tableau 1 : <strong style="color:var(--gold)">${courtNames}</strong>
+        </div>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap">
+        <button class="btn-primary-action" onclick="openRegisterEventTeamModal('${evt.id}')" style="font-size:12px; padding:8px 16px">
+          + Inscrire une Équipe au Club House
+        </button>
+        <button class="btn-secondary-action" onclick="promptCreateEventMatch('${evt.id}')" style="font-size:12px; padding:8px 16px">
+          + Programmer un Match
+        </button>
+      </div>
+    </div>
+
+    <!-- Section 1 : Paires / Équipes inscrites -->
+    <div style="margin-bottom:24px">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
+        <h4 style="font-family:'Outfit',sans-serif; font-size:14px; font-weight:800; color:var(--gold); margin:0">
+          👥 Paires &amp; Équipes Inscrites au Guichet (${(evt.teams || []).length})
+        </h4>
+        <span style="font-size:11px; color:var(--text-muted)">Inscriptions manuelles au club house</span>
+      </div>
+      <div class="admin-table-responsive-wrap">
+        ${teamsHtml}
+      </div>
+    </div>
+
+    <!-- Section 2 : Matchs & Saisie des Scores -->
+    <div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+        <h4 style="font-family:'Outfit',sans-serif; font-size:14px; font-weight:800; color:var(--gold); margin:0">
+          🎾 Matchs &amp; Feuilles de Score (${(evt.matches || []).length})
+        </h4>
+        <span style="font-size:11px; color:${evt.isRanked ? 'var(--gold)' : '#2ecc71'}">
+          ${evt.isRanked ? '🏅 Match officiel avec Elo' : '🛡️ Match festif (Hors-classement Elo)'}
+        </span>
+      </div>
+      ${matchesHtml}
+    </div>
+  `;
+}
+window.renderAdminEventWorkbench = renderAdminEventWorkbench;
+
+function openCreateClubEventModal() {
+  const dateInput = document.getElementById('eventDateInput');
+  if (dateInput) dateInput.value = adminCurrentDate || getTodayStr();
+  const titleInput = document.getElementById('eventTitleInput');
+  if (titleInput) titleInput.value = 'Tournoi Spécial Père / Fils — Family Padel Cup';
+  const themeSelect = document.getElementById('eventThemeSelect');
+  if (themeSelect) themeSelect.value = 'father_son';
+  const rankedSelect = document.getElementById('eventRankedSelect');
+  if (rankedSelect) rankedSelect.value = 'false';
+  const startSelect = document.getElementById('eventStartTimeSelect');
+  if (startSelect) startSelect.value = '14:00';
+  const endSelect = document.getElementById('eventEndTimeSelect');
+  if (endSelect) endSelect.value = '18:00';
+  const packInput = document.getElementById('eventPackInput');
+  if (packInput) packInput.value = 'Pack Famille (Matchs + Goûter)';
+  const priceInput = document.getElementById('eventPriceInput');
+  if (priceInput) priceInput.value = '60';
+  const descInput = document.getElementById('eventDescInput');
+  if (descInput) descInput.value = 'Tournoi convivial réservé aux paires parent/enfant.';
+  openModal('modal-create-club-event');
+}
+window.openCreateClubEventModal = openCreateClubEventModal;
+
+function handleEventThemeChange() {
+  const theme = document.getElementById('eventThemeSelect')?.value;
+  const titleEl = document.getElementById('eventTitleInput');
+  const packEl = document.getElementById('eventPackInput');
+  const rankedEl = document.getElementById('eventRankedSelect');
+  if (!theme || !titleEl || !packEl || !rankedEl) return;
+  
+  if (theme === 'father_son') {
+    titleEl.value = 'Tournoi Spécial Père / Fils — Family Padel Cup';
+    packEl.value = 'Pack Famille (Matchs + Goûter Junior + T-shirt)';
+    rankedEl.value = 'false';
+  } else if (theme === 'valentines') {
+    titleEl.value = 'Soirée Saint-Valentin — Matchs en Couples & Doubles Mixtes';
+    packEl.value = 'Pack Duo Love (Matchs + Cocktail Club House)';
+    rankedEl.value = 'false';
+  } else if (theme === 'handicap') {
+    titleEl.value = 'Journée Padel Inclusif & Handisport';
+    packEl.value = 'Initiation Gratuite & Matchs Découverte';
+    rankedEl.value = 'false';
+  } else if (theme === 'environmental') {
+    titleEl.value = 'Green Padel Day — Tournoi Éco-responsable & Balles Recyclées';
+    packEl.value = 'Pack Green (Balles recyclées + Gourde offerte)';
+    rankedEl.value = 'false';
+  } else if (theme === 'tournament') {
+    titleEl.value = 'Grand Tournoi Open CirclePadel (Masters Club)';
+    packEl.value = 'Pack Tournoi Officiel';
+    rankedEl.value = 'true';
+  } else if (theme === 'pack') {
+    titleEl.value = 'Pack Stage Intensif + Matchs Découverte';
+    packEl.value = 'Pack Animation Club House';
+    rankedEl.value = 'false';
+  }
+}
+window.handleEventThemeChange = handleEventThemeChange;
+
+function handleCreateClubEvent(e) {
+  e.preventDefault();
+  const title = document.getElementById('eventTitleInput')?.value?.trim();
+  const theme = document.getElementById('eventThemeSelect')?.value;
+  const isRanked = document.getElementById('eventRankedSelect')?.value === 'true';
+  const date = document.getElementById('eventDateInput')?.value;
+  const startTime = document.getElementById('eventStartTimeSelect')?.value;
+  const endTime = document.getElementById('eventEndTimeSelect')?.value;
+  const packType = document.getElementById('eventPackInput')?.value?.trim();
+  const pricePerTeam = parseFloat(document.getElementById('eventPriceInput')?.value) || 0;
+  const description = document.getElementById('eventDescInput')?.value?.trim();
+
+  const selectedCourts = Array.from(document.querySelectorAll('input[name="eventCourts"]:checked')).map(cb => cb.value);
+
+  if (!title) {
+    showToast('Veuillez renseigner un titre pour l\'événement.', 'error');
+    return;
+  }
+
+  if (selectedCourts.length === 0) {
+    showToast('Sélectionnez au moins un terrain à réserver pour cet événement.', 'error');
+    return;
+  }
+
+  const newEvent = {
+    id: `evt-${Date.now().toString(36)}`,
+    title,
+    theme,
+    themeLabel: EVENT_THEME_LABELS[theme] || 'Événement',
+    date,
+    startTime,
+    endTime,
+    courtIds: selectedCourts,
+    isRanked,
+    status: 'active',
+    packType,
+    pricePerTeam,
+    description,
+    teams: [],
+    matches: []
+  };
+
+  DB.clubEvents = DB.clubEvents || [];
+  DB.clubEvents.unshift(newEvent);
+
+  syncEventsWithTimetable();
+  saveLocalDB();
+  closeModal('modal-create-club-event');
+
+  const courtNames = selectedCourts.map(cid => (DB.courts || []).find(c => c.id === cid)?.name || cid).join(', ');
+  showToast(`🔒 Événement créé ! Terrains verrouillés : ${courtNames}`, 'success');
+  selectedAdminEventId = newEvent.id;
+  renderAdminEvents();
+  renderAdminTimetable();
+}
+window.handleCreateClubEvent = handleCreateClubEvent;
+
+function deleteClubEvent(eventId) {
+  if (!confirm('Voulez-vous supprimer cet événement ? Les terrains bloqués seront automatiquement libérés sur le Tableau 1 (Planning ordinaire).')) {
+    return;
+  }
+  DB.clubEvents = (DB.clubEvents || []).filter(e => e.id !== eventId);
+  syncEventsWithTimetable();
+  saveLocalDB();
+  showToast('Événement supprimé et terrains libérés sur le planning ordinaire.', 'info');
+  renderAdminEvents();
+  renderAdminTimetable();
+}
+window.deleteClubEvent = deleteClubEvent;
+
+function openRegisterEventTeamModal(eventId) {
+  const evt = (DB.clubEvents || []).find(e => e.id === eventId);
+  if (!evt) return;
+  document.getElementById('registerTeamEventId').value = evt.id;
+  document.getElementById('registerTeamEventTitle').textContent = evt.title;
+  document.getElementById('teamPlayer1Name').value = '';
+  document.getElementById('teamPlayer2Name').value = '';
+  document.getElementById('teamCategoryInput').value = evt.theme === 'father_son' ? 'Junior 10-14 ans' : (evt.theme === 'valentines' ? 'Duo Mixte' : 'Standard');
+  document.getElementById('teamPhoneInput').value = '';
+  document.getElementById('teamPackInput').value = evt.packType || '';
+  document.getElementById('teamPaidSelect').value = 'true';
+  openModal('modal-event-register-team');
+}
+window.openRegisterEventTeamModal = openRegisterEventTeamModal;
+
+function handleRegisterEventTeam(e) {
+  e.preventDefault();
+  const eventId = document.getElementById('registerTeamEventId').value;
+  const evt = (DB.clubEvents || []).find(e => e.id === eventId);
+  if (!evt) return;
+
+  const player1Name = document.getElementById('teamPlayer1Name').value.trim();
+  const player2Name = document.getElementById('teamPlayer2Name').value.trim();
+  const category = document.getElementById('teamCategoryInput').value.trim();
+  const phone = document.getElementById('teamPhoneInput').value.trim();
+  const pack = document.getElementById('teamPackInput').value.trim();
+  const paid = document.getElementById('teamPaidSelect').value === 'true';
+
+  if (!player1Name || !player2Name) {
+    showToast('Veuillez renseigner les noms des deux joueurs.', 'error');
+    return;
+  }
+
+  const newTeam = {
+    id: `team-${Date.now().toString(36)}`,
+    player1Name,
+    player2Name,
+    category,
+    phone,
+    pack,
+    paid,
+    registeredAt: new Date().toISOString()
+  };
+
+  evt.teams = evt.teams || [];
+  evt.teams.push(newTeam);
+
+  saveLocalDB();
+  closeModal('modal-event-register-team');
+  showToast(`✓ Équipe « ${player1Name} & ${player2Name} » inscrite au club house !`, 'success');
+  renderAdminEvents();
+}
+window.handleRegisterEventTeam = handleRegisterEventTeam;
+
+function deleteEventTeam(eventId, teamId) {
+  const evt = (DB.clubEvents || []).find(e => e.id === eventId);
+  if (!evt || !Array.isArray(evt.teams)) return;
+  evt.teams = evt.teams.filter(t => t.id !== teamId);
+  saveLocalDB();
+  showToast('Équipe retirée de l\'événement.', 'info');
+  renderAdminEvents();
+}
+window.deleteEventTeam = deleteEventTeam;
+
+function openEventMatchScoreModal(eventId, matchId) {
+  const evt = (DB.clubEvents || []).find(e => e.id === eventId);
+  if (!evt) return;
+  const match = (evt.matches || []).find(m => m.id === matchId);
+  if (!match) return;
+
+  document.getElementById('scoreMatchEventId').value = evt.id;
+  document.getElementById('scoreMatchId').value = match.id;
+  document.getElementById('matchTeam1NameDisplay').textContent = match.team1Name;
+  document.getElementById('matchTeam2NameDisplay').textContent = match.team2Name;
+  document.getElementById('eventMatchScoreInput').value = match.score || '';
+
+  const opt1 = document.getElementById('winnerOptionTeam1');
+  const opt2 = document.getElementById('winnerOptionTeam2');
+  if (opt1) { opt1.value = match.team1Id || 'team1'; opt1.textContent = `Vainqueur : ${match.team1Name}`; }
+  if (opt2) { opt2.value = match.team2Id || 'team2'; opt2.textContent = `Vainqueur : ${match.team2Name}`; }
+  if (match.winnerTeamId) {
+    document.getElementById('eventMatchWinnerSelect').value = match.winnerTeamId;
+  }
+
+  const notice = document.getElementById('eventMatchRankedNotice');
+  if (notice) {
+    notice.innerHTML = evt.isRanked
+      ? `🏅 <strong>Tournoi Officiel compétitif :</strong> ce résultat sera comptabilisé pour le classement officiel.`
+      : `🛡️ <strong>Match festif hors-classement :</strong> la saisie de ce score valide le match pour l'événement sans modifier le classement Elo officiel des joueurs.`;
+  }
+
+  openModal('modal-event-match-score');
+}
+window.openEventMatchScoreModal = openEventMatchScoreModal;
+
+function handleSaveEventMatchScore(e) {
+  e.preventDefault();
+  const eventId = document.getElementById('scoreMatchEventId').value;
+  const matchId = document.getElementById('scoreMatchId').value;
+  const score = document.getElementById('eventMatchScoreInput').value.trim();
+  const winnerTeamId = document.getElementById('eventMatchWinnerSelect').value;
+
+  const evt = (DB.clubEvents || []).find(e => e.id === eventId);
+  if (!evt) return;
+  const match = (evt.matches || []).find(m => m.id === matchId);
+  if (!match) return;
+
+  match.score = score;
+  match.winnerTeamId = winnerTeamId;
+  match.winnerName = (winnerTeamId === match.team1Id) ? match.team1Name : match.team2Name;
+  match.status = 'completed';
+
+  saveLocalDB();
+  closeModal('modal-event-match-score');
+  showToast(`✓ Score enregistré ! ${evt.isRanked ? 'Classement officiel mis à jour.' : '🛡️ Match festif (aucun impact Elo).'}`);
+  renderAdminEvents();
+}
+window.handleSaveEventMatchScore = handleSaveEventMatchScore;
+
+function promptCreateEventMatch(eventId) {
+  const evt = (DB.clubEvents || []).find(e => e.id === eventId);
+  if (!evt) return;
+  if (!evt.teams || evt.teams.length < 2) {
+    showToast('Inscrivez au moins 2 équipes au club house avant de créer un match.', 'info');
+    return;
+  }
+
+  const t1 = evt.teams[0];
+  const t2 = evt.teams[1];
+  const matchTime = evt.startTime || '14:00';
+  const courtId = evt.courtIds?.[0] || 'court-1';
+
+  const newMatch = {
+    id: `m-${Date.now().toString(36)}`,
+    courtId,
+    time: matchTime,
+    team1Id: t1.id,
+    team1Name: `${t1.player1Name.split(' ')[0]} & ${t1.player2Name.split(' ')[0]}`,
+    team2Id: t2.id,
+    team2Name: `${t2.player1Name.split(' ')[0]} & ${t2.player2Name.split(' ')[0]}`,
+    score: '',
+    winnerTeamId: '',
+    winnerName: '',
+    status: 'pending',
+    isRanked: evt.isRanked === true
+  };
+
+  evt.matches = evt.matches || [];
+  evt.matches.push(newMatch);
+  saveLocalDB();
+  showToast('Nouveau match d\'événement programmé !', 'success');
+  renderAdminEvents();
+}
+window.promptCreateEventMatch = promptCreateEventMatch;
 
 // Enregistrement du Service Worker avec auto-update
 if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {

@@ -10,7 +10,7 @@ $html = Get-Content "$BASE\index.html" -Raw -Encoding UTF8
 $css  = Get-Content "$BASE\css\app.css"  -Raw -Encoding UTF8
 
 $inlineCSS = '<style>' + "`n" + $css + "`n" + '</style>'
-$html = $html -replace '<link rel="stylesheet" href="\./css/app\.css" />', $inlineCSS
+$html = $html -replace '<link rel="stylesheet" href="\./css/app\.css.*?" />', $inlineCSS
 
 $html | Set-Content $OUT -Encoding UTF8
 
