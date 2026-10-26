@@ -794,9 +794,13 @@
           <div class="kpi-label">Membres actifs</div>
           <div class="kpi-value" id="kpiPlayersValue">–</div>
         </div>
-        <div class="admin-kpi-card">
-          <div class="kpi-label">Alertes matchs incomplets</div>
-          <div class="kpi-value" id="kpiAlertsValue" style="color:var(--red)">0</div>
+        <div class="admin-kpi-card clickable-kpi" id="kpiCardIncompleteMatches" onclick="redirectToIncompleteMatches()" style="cursor:pointer" title="Cliquer pour voir et gérer les matchs incomplets">
+          <div class="kpi-label" style="display:flex; justify-content:space-between; align-items:center">
+            <span>Matchs incomplets</span>
+            <span style="font-size:12px; color:var(--gold); font-weight:800">›</span>
+          </div>
+          <div class="kpi-value" id="kpiAlertsValue" style="color:var(--amber)">0</div>
+          <div class="kpi-sub" id="kpiIncompleteMatchesSub" style="font-size:11px; color:var(--text-muted); margin-top:3px">À compléter ›</div>
         </div>
         <div class="admin-kpi-card">
           <div class="kpi-label">No-shows · Ce mois</div>
@@ -1001,6 +1005,7 @@
               </button>
             </div>
           </div>
+          <div id="adminMatchesFilterToolbar" style="margin-top:14px"></div>
           <div id="adminMatchesListContainer" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px">
             <!-- Peuplé par JS -->
           </div>

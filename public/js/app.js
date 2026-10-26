@@ -573,25 +573,48 @@ function joinOpenMatch(bookingId, playerId) {
 }
 
 /**
- * Vérifie les matchs incomplets et génère des alertes
+ * Retourne la liste des matchs ouverts incomplets (programmés, non terminés, < 4 joueurs)
+ */
+function getIncompleteMatches() {
+  const today = getTodayStr();
+  const maxPlayers = DB.appConfig?.maxPlayersPerMatch || 4;
+  return (DB.bookings || []).filter(b => {
+    if (!b || b.type !== 'open' || b.status !== 'confirmed') return false;
+    if (b.date < today) return false;
+    if (typeof isBookingFinished === 'function' && isBookingFinished(b)) return false;
+    const count = Array.isArray(b.players) ? b.players.length : 0;
+    return count < maxPlayers;
+  }).sort((a, b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
+}
+window.getIncompleteMatches = getIncompleteMatches;
+
+function isMatchUrgentIncomplete(b) {
+  if (!b) return false;
+  const alertHours = DB.appConfig?.alertBeforeMatchHours || 4;
+  const [h, m] = (b.startTime || '10:00').split(':').map(Number);
+  const matchDate = new Date(b.date);
+  matchDate.setHours(h, m, 0, 0);
+  const diffHours = (matchDate - new Date()) / 3600000;
+  return diffHours > 0 && diffHours <= alertHours;
+}
+window.isMatchUrgentIncomplete = isMatchUrgentIncomplete;
+
+/**
+ * Vérifie les matchs incomplets et génère des alertes urgentes
  */
 function checkMatchAlerts() {
-  const alertHours = DB.appConfig.alertBeforeMatchHours;
-  const now = new Date();
   const alerts = [];
+  const incomplete = getIncompleteMatches();
+  const maxPlayers = DB.appConfig?.maxPlayersPerMatch || 4;
 
-  DB.bookings.forEach(b => {
-    if (b.type !== 'open' || b.status !== 'confirmed') return;
-    const [h, m] = b.startTime.split(':').map(Number);
-    const matchDate = new Date(b.date);
-    matchDate.setHours(h, m, 0, 0);
-    const diffHours = (matchDate - now) / 3600000;
-    if (diffHours > 0 && diffHours <= alertHours && b.players.length < DB.appConfig.maxPlayersPerMatch) {
+  incomplete.forEach(b => {
+    if (isMatchUrgentIncomplete(b)) {
       alerts.push({
         bookingId: b.id,
         court: b.courtName,
         time: b.startTime,
-        playersMissing: DB.appConfig.maxPlayersPerMatch - b.players.length,
+        date: b.date,
+        playersMissing: maxPlayers - (b.players || []).length,
       });
     }
   });
@@ -2610,7 +2633,8 @@ function renderAdminKPIs() {
   const loyaltyNotifsCount = (DB.notifications || []).filter(n => (n.userId === 'admin' || n.targetRole === 'admin') && n.type === 'loyalty_milestone' && !n.isRead).length;
   const cancelNotifsCount = (DB.notifications || []).filter(n => (n.userId === 'admin' || n.targetRole === 'admin') && n.type === 'booking_cancelled' && !n.isRead).length;
   const pendingPlayersCount = (DB.players || []).filter(p => p.status === 'pending').length;
-  const totalAlerts = alerts.length + loyaltyNotifsCount + cancelNotifsCount + pendingPlayersCount;
+  const incompleteMatches = getIncompleteMatches();
+  const urgentCount = incompleteMatches.filter(isMatchUrgentIncomplete).length;
   const noShows = 0; // Phase 2
 
   const bEl = document.getElementById('kpiBookingsValue');
@@ -2621,8 +2645,22 @@ function renderAdminKPIs() {
   if (rEl) rEl.textContent = `${revenue} DT`;
   const pEl = document.getElementById('kpiPlayersValue');
   if (pEl) pEl.textContent = `${activePlayers} actifs`;
+  
   const aEl = document.getElementById('kpiAlertsValue');
-  if (aEl) aEl.textContent = totalAlerts;
+  if (aEl) {
+    aEl.textContent = incompleteMatches.length;
+    aEl.style.color = urgentCount > 0 ? 'var(--red)' : (incompleteMatches.length > 0 ? 'var(--amber)' : 'var(--green)');
+  }
+  const aSub = document.getElementById('kpiIncompleteMatchesSub');
+  if (aSub) {
+    if (urgentCount > 0) {
+      aSub.innerHTML = `⚠️ <strong style="color:var(--red)">${urgentCount} urgent${urgentCount > 1 ? 's' : ''}</strong> · Voir ›`;
+    } else if (incompleteMatches.length > 0) {
+      aSub.innerHTML = `<span style="color:var(--gold)">${incompleteMatches.length} en attente</span> · Voir ›`;
+    } else {
+      aSub.innerHTML = `<span style="color:var(--green)">Tous complets ✓</span>`;
+    }
+  }
   const nEl = document.getElementById('kpiNoShowsValue');
   if (nEl) nEl.textContent = `${noShows}`;
 }
@@ -2952,47 +2990,107 @@ function renderAdminAuditLogs() {
 }
 window.renderAdminAuditLogs = renderAdminAuditLogs;
 
+let adminMatchesFilter = 'all'; // 'all' ou 'incomplete'
+
+function setAdminMatchesFilter(filter) {
+  adminMatchesFilter = filter;
+  renderAdminMatches();
+}
+window.setAdminMatchesFilter = setAdminMatchesFilter;
+
+function redirectToIncompleteMatches() {
+  adminMatchesFilter = 'incomplete';
+  switchAdminTab('matches');
+  setTimeout(() => {
+    const el = document.getElementById('adminMatchesListContainer');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 100);
+}
+window.redirectToIncompleteMatches = redirectToIncompleteMatches;
+
 function renderAdminMatches() {
   const container = document.getElementById('adminMatchesListContainer');
+  if (!container) return;
   const today = getTodayStr();
-  const openMatches = DB.bookings.filter(b => b.type === 'open' && b.date >= today && b.status === 'confirmed');
+  const maxPlayers = DB.appConfig?.maxPlayersPerMatch || 4;
 
-  if (openMatches.length === 0) {
-    container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-state-icon">🎾</div><div class="empty-state-title">Aucun match ouvert</div></div>`;
+  const allOpenMatches = (DB.bookings || []).filter(b =>
+    b && b.type === 'open' && b.date >= today && b.status === 'confirmed' && !isBookingFinished(b)
+  ).sort((a, b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
+
+  const incompleteMatches = allOpenMatches.filter(b => (b.players || []).length < maxPlayers);
+  const displayedMatches = adminMatchesFilter === 'incomplete' ? incompleteMatches : allOpenMatches;
+
+  const toolbar = document.getElementById('adminMatchesFilterToolbar');
+  if (toolbar) {
+    toolbar.innerHTML = `
+      <div style="display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; align-items:center">
+        <button type="button" onclick="setAdminMatchesFilter('all')" class="admin-tab-btn ${adminMatchesFilter === 'all' ? 'active' : ''}" style="padding:8px 16px; font-size:12px; border-radius:8px">
+          🎾 Tous les matchs ouverts (${allOpenMatches.length})
+        </button>
+        <button type="button" onclick="setAdminMatchesFilter('incomplete')" class="admin-tab-btn ${adminMatchesFilter === 'incomplete' ? 'active' : ''}" style="padding:8px 16px; font-size:12px; border-radius:8px; ${incompleteMatches.length > 0 ? 'border-color:var(--amber); color:var(--amber)' : ''}">
+          ⚡ Incomplets uniquement (${incompleteMatches.length})
+        </button>
+        ${adminMatchesFilter === 'incomplete' && incompleteMatches.length > 0 ? `
+          <div style="font-size:12px; color:var(--amber); font-weight:700; display:flex; align-items:center; gap:6px">
+            <span>👉</span> Affichage filtré : ${incompleteMatches.length} match${incompleteMatches.length > 1 ? 's' : ''} en recherche de joueurs
+          </div>` : ''}
+      </div>
+    `;
+  }
+
+  if (displayedMatches.length === 0) {
+    const emptyMsg = adminMatchesFilter === 'incomplete'
+      ? 'Tous les matchs ouverts sont complets (4/4 joueurs) ! 🎉'
+      : 'Aucun match ouvert programmé actuellement.';
+    container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-state-icon">🎾</div><div class="empty-state-title">${emptyMsg}</div></div>`;
     return;
   }
 
-  container.innerHTML = openMatches.map(b => {
-    const spots = DB.appConfig.maxPlayersPerMatch - b.players.length;
+  container.innerHTML = displayedMatches.map(b => {
+    const spots = maxPlayers - (b.players || []).length;
+    const isUrgent = isMatchUrgentIncomplete(b) && spots > 0;
     return `
-    <div class="court-admin-card">
+    <div class="court-admin-card" style="${isUrgent ? 'border-color:var(--red); box-shadow:0 0 15px rgba(231,76,60,0.25)' : (spots > 0 ? 'border-color:rgba(243,156,18,0.4)' : '')}">
       <div class="court-admin-header">
         <div>
           <div class="court-admin-name">${b.courtName}</div>
-          <div class="court-admin-surface">${b.date === today ? 'Aujourd\'hui' : formatDate(b.date)} · ${b.startTime}</div>
+          <div class="court-admin-surface">${b.date === today ? "Aujourd'hui" : formatDate(b.date)} · ${b.startTime} – ${b.endTime}</div>
         </div>
-        <span class="match-status-badge ${spots === 0 ? 'full' : spots === 1 ? 'almost-full' : 'open'}">
-          ${spots === 0 ? 'Complet' : `${spots} libre${spots > 1 ? 's' : ''}`}
+        <span class="match-status-badge ${spots === 0 ? 'full' : (isUrgent ? 'danger' : (spots === 1 ? 'almost-full' : 'open'))}" style="${isUrgent ? 'background:rgba(231,76,60,0.2); color:var(--red); border:1px solid var(--red)' : ''}">
+          ${spots === 0 ? '✓ Complet' : (isUrgent ? `🚨 ${spots} libre${spots > 1 ? 's' : ''} (Urgent)` : `⚡ ${spots} libre${spots > 1 ? 's' : ''}`)}
         </span>
       </div>
+      ${isUrgent ? `
+      <div style="background:rgba(231,76,60,0.12); border-bottom:1px solid rgba(231,76,60,0.3); padding:8px 16px; font-size:11px; color:#ff6b6b; font-weight:700">
+        ⚠️ Alerte Gérant : Débute dans moins de ${DB.appConfig?.alertBeforeMatchHours || 4}h sans être complet !
+      </div>` : ''}
       <div style="padding:12px 16px; border-bottom:1px solid var(--border-subtle)">
         <div style="font-size:11px; color:var(--text-muted); margin-bottom:6px">NIVEAU REQUIS</div>
-        <span class="level-badge">${b.minLevel}–${b.maxLevel}</span>
+        <span class="level-badge">${b.minLevel || '1.0'}–${b.maxLevel || '10.0'}</span>
       </div>
       <div style="padding:12px 16px; border-bottom:1px solid var(--border-subtle)">
-        <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px">JOUEURS INSCRITS (${b.players.length}/4)</div>
-        ${b.players.map(p => `
+        <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px">JOUEURS INSCRITS (${(b.players || []).length}/4)</div>
+        ${(b.players || []).map(p => `
           <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px">
             <div class="player-avatar-sm filled">🎾</div>
             <span style="font-size:12px; color:var(--text-primary)">${p.name}</span>
-            <span class="level-badge" style="padding:1px 6px; font-size:10px">${p.level}</span>
+            <span class="level-badge" style="padding:1px 6px; font-size:10px">${p.level != null ? Number(p.level).toFixed(1) : '?'}</span>
             ${p.isOrganizer ? '<span style="font-size:10px; color:var(--gold)">Organisateur</span>' : ''}
           </div>`).join('')}
         ${Array(spots).fill('<div style="display:flex; align-items:center; gap:8px; margin-bottom:4px"><div class="player-avatar-sm empty">+</div><span style="font-size:12px; color:var(--text-muted)">Place libre</span></div>').join('')}
       </div>
       <div class="court-admin-actions">
-        <button class="btn-table-action danger" onclick="adminCancelBooking('${b.id}')">Annuler</button>
-        <button class="btn-table-action" onclick="renderSlotDetail('${b.id}'); openModal('modal-slot-detail')">Détail</button>
+        ${spots > 0 ? `
+          <button class="btn-table-action" onclick="showToast('Relance WhatsApp envoyée aux joueurs de niveau ${b.minLevel || '1.0'}–${b.maxLevel || '10.0'}', 'success')" style="border-color:var(--gold); color:var(--gold)" title="Envoyer une relance pour compléter le match">
+            📱 Relancer
+          </button>` : ''}
+        <button class="btn-table-action" onclick="renderSlotDetail('${b.id}'); openModal('modal-slot-detail')" title="Gérer le créneau et les inscriptions">
+          Détail
+        </button>
+        <button class="btn-table-action danger" onclick="adminCancelBooking('${b.id}')">
+          Annuler
+        </button>
       </div>
     </div>`;
   }).join('');
@@ -5670,9 +5768,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── Live alerts check (toutes les 5 min) ──
   setInterval(() => {
-    const alerts = checkMatchAlerts();
-    const kpiEl  = document.getElementById('kpiAlertsValue');
-    if (kpiEl) kpiEl.textContent = alerts.length;
+    renderAdminKPIs();
   }, 5 * 60 * 1000);
 
   // ============================================================================
