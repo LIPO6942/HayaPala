@@ -14,7 +14,7 @@
   <link rel="manifest" href="./manifest.json" />
   <link rel="icon" type="image/jpeg" href="./images/pwa-icon.jpg" />
   <link rel="apple-touch-icon" href="./images/pwa-icon.jpg" />
-  <link rel="stylesheet" href="./css/app.css?v=2.1.0" />
+  <link rel="stylesheet" href="./css/app.css?v=2.2.0" />
 </head>
 <body>
 
@@ -299,7 +299,7 @@
 
           <!-- FIFA ULTIMATE TEAM (FUT) PADEL CARD (CIRCLE PADEL GREEN EDITION) -->
           <div class="fut-card-container">
-            <div class="fut-card green-edition" id="futPlayerCard">
+            <div class="fut-card green-edition" id="futPlayerCard" onclick="openCourtsideDisplay()" style="cursor:pointer" title="Cliquer pour agrandir la carte en plein écran">
               <!-- Image de fond IA haute définition : Homme ou Femme selon le profil du joueur -->
               <img id="futCardBaseImg" src="./images/circlepadel_green_card.jpg" alt="CirclePadel FUT Card" class="fut-card-base-img" />
 
@@ -383,7 +383,7 @@
             <!-- Boutons d'actions Carte & Écran Terrain -->
             <div class="fut-card-actions" style="margin-top:16px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap; width:100%">
               <button type="button" class="btn-courtside-screen" id="btnOpenCourtsideDisplay" onclick="openCourtsideDisplay()">
-                📺 Affichage Écran Terrain (LED Stadium)
+                🔍 Agrandir la Carte / Écran Terrain
               </button>
               <button class="btn-primary-action" id="btnProfileAuthAction" style="width:auto; padding:9px 20px; font-size:13px">
                 🔐 Se connecter / Créer un compte
@@ -2076,21 +2076,28 @@
   <div class="modal-overlay courtside-overlay" id="modal-courtside-display" role="dialog" aria-modal="true">
     <div class="courtside-stage">
       <div class="courtside-top-bar">
+        <button type="button" class="btn-courtside-back" onclick="closeModal('modal-courtside-display')" title="Revenir au profil">
+          ← Revenir au profil
+        </button>
         <div class="courtside-club-brand">
           <span style="font-size:30px">🎾</span>
           <div>
-            <div style="font-family:'Outfit',sans-serif; font-size:20px; font-weight:900; letter-spacing:1.5px; color:var(--gold)">CIRCLEPADEL CLUB · LA MARSA</div>
-            <div style="font-size:11px; color:var(--text-secondary); letter-spacing:2px">AFFICHAGE COURTSIDE · ÉCRAN TERRAIN OFFICIEL</div>
+            <div style="font-family:'Outfit',sans-serif; font-size:18px; font-weight:900; letter-spacing:1.5px; color:var(--gold)">CIRCLEPADEL CLUB · LA MARSA</div>
+            <div style="font-size:11px; color:var(--text-secondary); letter-spacing:2px">CARTE JOUEUR OFFICIELLE · PLEIN FORMAT</div>
           </div>
         </div>
         <button class="modal-close-btn" onclick="closeModal('modal-courtside-display')" style="font-size:22px; width:44px; height:44px; border-radius:50%; background:rgba(255,255,255,0.12); border:1px solid rgba(212,175,55,0.4); color:var(--gold); cursor:pointer; display:flex; align-items:center; justify-content:center" title="Quitter le mode plein écran">✕</button>
       </div>
 
       <div class="courtside-center-arena">
-        <div class="courtside-match-tag">🏆 MATCH EN DIRECT · PRÉSENTATION OFFICIELLE DU JOUEUR</div>
+        <div class="courtside-match-tag">🏆 PRÉSENTATION OFFICIELLE DU JOUEUR · EA SPORTS FUT</div>
         <div id="courtsideCardMount">
           <!-- Carte FIFA insérée dynamiquement en grand format -->
         </div>
+
+        <button type="button" class="btn-courtside-back-bottom" onclick="closeModal('modal-courtside-display')">
+          ← Revenir au profil
+        </button>
 
         <div class="courtside-footer-ticker">
           <div class="ticker-item">⚡ STYLE : <strong id="csTickerStyle">—</strong></div>

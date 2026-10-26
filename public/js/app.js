@@ -2104,6 +2104,8 @@ function openCourtsideDisplay() {
     const cloned = srcCard.cloneNode(true);
     cloned.id = 'futPlayerCard_courtside';
     cloned.classList.add('courtside-active-card');
+    cloned.removeAttribute('onclick');
+    cloned.style.cursor = 'default';
     mount.appendChild(cloned);
   }
 
