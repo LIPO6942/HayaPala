@@ -30,6 +30,7 @@ import {
   orderBy,
   serverTimestamp,
   Timestamp,
+  arrayUnion,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 import { firebaseConfig } from './firebase-config.js';
@@ -103,15 +104,11 @@ async function fbSavePlayer(player) {
 async function fbDeletePlayer(playerId) {
   try {
     const ref = doc(db, COL.players, playerId);
-    await deleteDoc(ref);
-    // Enregistrer également dans le document tombstones pour propager la suppression sur tous les appareils
     const tombRef = doc(db, COL.config, 'tombstones');
-    const snap = await getDoc(tombRef);
-    const existing = snap.exists() ? (snap.data().deletedPlayerIds || []) : [];
-    if (!existing.includes(playerId)) {
-      existing.push(playerId);
-      await setDoc(tombRef, { deletedPlayerIds: existing, updatedAt: serverTimestamp() }, { merge: true });
-    }
+    await Promise.all([
+      deleteDoc(ref),
+      setDoc(tombRef, { deletedPlayerIds: arrayUnion(playerId), updatedAt: serverTimestamp() }, { merge: true })
+    ]);
   } catch (e) {
     console.warn('fbDeletePlayer error:', e);
   }
@@ -152,6 +149,14 @@ async function fbUpdatePlayerLevel(playerId, { level, coachComment, coachId }) {
 function fbListenPlayers(callback) {
   return onSnapshot(collection(db, COL.players), snap => {
     callback(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+  });
+}
+
+function fbListenTombstones(callback) {
+  return onSnapshot(doc(db, COL.config, 'tombstones'), snap => {
+    if (snap.exists()) {
+      callback(snap.data().deletedPlayerIds || []);
+    }
   });
 }
 
@@ -333,7 +338,7 @@ export {
   // Auth
   fbSignIn, fbSignOut, fbCreateUser, fbOnAuthChange, fbUpdateUserProfile,
   // Players
-  fbGetPlayers, fbGetPlayer, fbSavePlayer, fbDeletePlayer, fbUpdatePlayerLevel, fbListenPlayers, fbGetTombstones,
+  fbGetPlayers, fbGetPlayer, fbSavePlayer, fbDeletePlayer, fbUpdatePlayerLevel, fbListenPlayers, fbGetTombstones, fbListenTombstones,
   // Courts
   fbGetCourts, fbSaveCourt,
   // Bookings

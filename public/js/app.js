@@ -7,7 +7,7 @@
 // ── Firebase imports (CDN ESM) ─────────────────────────────────────────────
 import {
   fbSignIn, fbSignOut, fbOnAuthChange, fbCreateUser, fbUpdateUserProfile,
-  fbGetPlayers, fbGetPlayer, fbSavePlayer, fbDeletePlayer, fbUpdatePlayerLevel, fbListenPlayers, fbGetTombstones,
+  fbGetPlayers, fbGetPlayer, fbSavePlayer, fbDeletePlayer, fbUpdatePlayerLevel, fbListenPlayers, fbGetTombstones, fbListenTombstones,
   fbGetCourts, fbSaveCourt,
   fbGetBookings, fbAddBooking, fbUpdateBooking, fbCancelBooking, fbListenBookings,
   fbGetOpenMatches, fbJoinMatch, fbCreateOpenMatch, fbListenOpenMatches,
@@ -125,23 +125,20 @@ function mergePlayersLists(currentList, incomingList) {
   const deletedSet = new Set(DB.deletedPlayerIds || []);
   const map = new Map();
 
-  // 1. La liste distante (Firestore / backend) est la source de vérité
+  // 1. La liste distante (Firestore / backend) est la source de vérité absolue
   (incomingList || []).forEach(p => {
     if (p && p.id && !deletedSet.has(p.id)) {
       map.set(p.id, p);
     }
   });
 
-  // 2. Ne conserver de la liste locale que les joueurs créés récemment (< 5 min) non encore synchronisés
-  const now = Date.now();
-  (currentList || []).forEach(p => {
-    if (p && p.id && !deletedSet.has(p.id) && !map.has(p.id)) {
-      const createdTime = p.createdAt ? new Date(p.createdAt).getTime() : 0;
-      if (now - createdTime < 300000) { // 5 minutes de tolérance pour créations locales hors-ligne
-        map.set(p.id, p);
-      }
+  // 2. Ne conserver en local que l'utilisateur courant de CET appareil s'il vient de s'inscrire (< 15s)
+  if (DB.currentUser && DB.currentUser.id && !deletedSet.has(DB.currentUser.id) && !map.has(DB.currentUser.id)) {
+    const createdTime = DB.currentUser.createdAt ? new Date(DB.currentUser.createdAt).getTime() : 0;
+    if (Date.now() - createdTime < 15000) {
+      map.set(DB.currentUser.id, DB.currentUser);
     }
-  });
+  }
 
   return Array.from(map.values());
 }
@@ -431,20 +428,50 @@ async function syncFromFirestore() {
 
 /** Active les listeners Firestore temps-réel */
 function startRealtimeListeners() {
+  // 1. Écouteur en direct des suppressions (tombstones) — zéro actualisation
+  fbListenTombstones(deletedIds => {
+    try {
+      if (Array.isArray(deletedIds) && deletedIds.length) {
+        if (!Array.isArray(DB.deletedPlayerIds)) DB.deletedPlayerIds = [];
+        let changed = false;
+        deletedIds.forEach(id => {
+          if (!DB.deletedPlayerIds.includes(id)) {
+            DB.deletedPlayerIds.push(id);
+            changed = true;
+          }
+        });
+        const prevCount = (DB.players || []).length;
+        DB.players = (DB.players || []).filter(p => !DB.deletedPlayerIds.includes(p.id));
+        if (changed || DB.players.length !== prevCount) {
+          saveDB(DB, false);
+          renderAdminPlayers();
+          renderAdminKPIs();
+          renderAdminAlerts();
+          if (typeof renderCoachPendingPlayers === 'function') renderCoachPendingPlayers();
+        }
+      }
+    } catch (e) {
+      console.warn('Realtime tombstones error:', e);
+    }
+  });
+
+  // 2. Écouteur en direct des joueurs (ajouts, modifications, suppressions) — zéro actualisation
   fbListenPlayers(players => {
     try {
-      if (players && players.length) {
+      if (Array.isArray(players)) {
         DB.players = mergePlayersLists(DB.players, players);
         saveDB(DB, false);
         renderAdminPlayers();
         renderAdminKPIs();
         renderAdminAlerts();
+        if (typeof renderCoachPendingPlayers === 'function') renderCoachPendingPlayers();
       }
     } catch (e) {
       console.warn('Realtime players error:', e);
     }
   });
 
+  // 3. Écouteur en direct des créneaux & réservations du jour
   fbListenBookings(getTodayStr(), bookings => {
     try {
       DB.bookings = mergeBookingsLists(DB.bookings, bookings);
@@ -458,11 +485,12 @@ function startRealtimeListeners() {
     }
   });
 
+  // 4. Écouteur en direct des matchs ouverts
   fbListenOpenMatches(matches => {
     try {
       const other = DB.bookings.filter(b => b.type !== 'open' || b.date !== getTodayStr());
       DB.bookings = [...other, ...matches];
-      saveDB(DB);
+      saveDB(DB, false);
       renderMatchesList();
       renderHomeOpenMatches(DB.currentUser);
     } catch (e) {
@@ -3389,6 +3417,7 @@ function submitAddPlayerToBooking(bookingId) {
     };
     DB.players = DB.players || [];
     DB.players.push(existingPlayer);
+    fbSavePlayer(existingPlayer).catch(() => {});
 
     // Notification au coach
     DB.notifications = DB.notifications || [];
@@ -4435,6 +4464,7 @@ function submitEditPlayer(e) {
   DB.lastAction = 'PLAYER_UPDATED';
   saveDB(DB, true, true);
   setTimeout(() => { delete DB.lastAction; }, 500);
+  fbSavePlayer(p).catch(() => {});
   closeAllModals();
   renderAdminPlayers();
   renderAdminKPIs();
@@ -4767,6 +4797,7 @@ function registerPlayer(e) {
   DB.lastAction = 'PLAYER_CREATED';
   saveDB(DB, true, true);
   setTimeout(() => { delete DB.lastAction; }, 500);
+  fbSavePlayer(newPlayer).catch(() => {});
 
   showToast(`✓ ${firstName} ${lastName} inscrit(e) et synchronisé(e) partout ✓`, 'success');
   closeAllModals();
@@ -5769,9 +5800,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // Connexion SSE temps-réel instantanée (multi-admin collaboratif avec auto-reconnect)
+    // Connexion SSE temps-réel instantanée (multi-admin local)
     let sse = null;
     function initSSE() {
+      if (window.location.protocol === 'https:') return; // Sur HTTPS Vercel, Firestore onSnapshot assure déjà le direct
       try {
         if (sse) sse.close();
         sse = new EventSource(getApiBaseUrl() + '/api/circlepadel/events');
@@ -5785,15 +5817,22 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         sse.onerror = () => {
           if (sse) sse.close();
-          setTimeout(initSSE, 1500);
+          setTimeout(initSSE, 2000);
         };
       } catch (sseErr) {
-        setTimeout(initSSE, 2000);
+        setTimeout(initSSE, 3000);
       }
     }
     initSSE();
 
-    // Synchronisation Firestore en tâche de fond si en ligne
+    // Démarrage immédiat des listeners Firestore temps-réel (0ms, cross-device instantané)
+    try {
+      startRealtimeListeners();
+    } catch (e) {
+      console.warn('⚠️ Listeners temps-réel ignorés :', e.message);
+    }
+
+    // Synchronisation Firestore & seed éventuel en tâche de fond
     try {
       await initFirestoreIfEmpty();
     } catch (e) {
@@ -5805,11 +5844,6 @@ document.addEventListener('DOMContentLoaded', () => {
       updateAuthUI();
     } catch (e) {
       console.warn('⚠️ Sync Firestore ignorée :', e.message);
-    }
-    try {
-      startRealtimeListeners();
-    } catch (e) {
-      console.warn('⚠️ Listeners temps-réel ignorés :', e.message);
     }
   })();
 

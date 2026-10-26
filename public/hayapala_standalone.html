@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <!-- CirclePadel v1.1 · Firebase Firestore + Auth · circlepadel -->
 <html lang="fr">
 <head>
@@ -78,9 +78,6 @@
               <span class="home-club-pro-badge" onclick="switchViewMode('backoffice-dashboard')" style="display:none">
                 ⚡ Espace Gérant
               </span>
-              <button onclick="openModal('modal-sync-mobile')" style="background:rgba(200,169,110,0.15); border:1px solid rgba(200,169,110,0.4); color:var(--gold); font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; cursor:pointer" title="Lien de synchronisation multi-appareils">
-                📱 Synchroniser PC
-              </button>
             </div>
             <button class="notif-bell-btn" id="navBtnNotifs" onclick="navigateToScreen('screen-notifications')">
               🔔
@@ -770,14 +767,9 @@
             <div class="hayapala-brand-text">CirclePadel <span style="font-size:13px; color:var(--gold); font-weight:700">Club Pro</span></div>
           </div>
           <div class="admin-live-badge">🟢 EN LIGNE</div>
-          <select class="admin-club-select-dropdown" id="adminClubSelect">
-            <option value="hp">CirclePadel · Votre Club de Padel</option>
-          </select>
         </div>
 
-        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
-          <button class="btn-table-action" onclick="openModal('modal-sync-mobile')" style="background:rgba(200,169,110,0.18); border:1px solid var(--gold); color:var(--gold); font-weight:700; padding:6px 12px">📱 Connecter Mobile</button>
-          <button class="btn-table-action" onclick="forceSyncAndClearCache()" style="padding:6px 12px" title="Forcer le rafraîchissement complet et vider le cache">🔄 Vider cache &amp; Sync</button>
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap">
           <span style="font-size:13px; color:var(--text-secondary)">Gérant : <strong style="color:var(--text-white)" id="adminManagerName">Admin</strong></span>
           <button class="btn-admin-switch-player" onclick="switchViewMode('player-app')">🎾 App Joueur</button>
           <button class="btn-reset-demo" onclick="switchViewMode('backoffice-login')">Déconnexion</button>
