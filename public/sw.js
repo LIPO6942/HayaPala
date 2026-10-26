@@ -1,10 +1,7 @@
-const CACHE_NAME = 'hayapala-pwa-v6';
+const CACHE_NAME = 'circlepadel-cache-v12';
 const ASSETS = [
   '/',
   '/index.html',
-  '/css/app.css',
-  '/js/app.js',
-  '/images/tennis-ball.svg',
   '/manifest.json'
 ];
 

@@ -14,7 +14,7 @@
   <link rel="manifest" href="./manifest.json" />
   <link rel="icon" type="image/jpeg" href="./images/pwa-icon.jpg" />
   <link rel="apple-touch-icon" href="./images/pwa-icon.jpg" />
-  <link rel="stylesheet" href="./css/app.css?v=2.5.0" />
+  <link rel="stylesheet" href="./css/app.css?v=2.7.0" />
 </head>
 <body>
 
@@ -301,7 +301,7 @@
           <div class="fut-card-container">
             <div class="fut-card green-edition" id="futPlayerCard" onclick="openCourtsideDisplay()" style="cursor:pointer" title="Cliquer pour agrandir la carte en plein écran">
               <!-- Image de fond IA haute définition : Homme ou Femme selon le profil du joueur -->
-              <img id="futCardBaseImg" src="./images/circlepadel_green_card.jpg" alt="CirclePadel FUT Card" class="fut-card-base-img" />
+              <img id="futCardBaseImg" src="./images/circlepadel_green_card.jpg?v=2.7.0" alt="CirclePadel FUT Card" class="fut-card-base-img" />
 
               <!-- Overlay dynamique interactif avec les données réelles du joueur -->
               <div class="fut-card-overlay-content">
@@ -2327,13 +2327,21 @@
           </div>
         </div>
 
-        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px">
+        <!-- Dates : Du ... Au ... (Calendrier) -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
           <div class="modal-field-group">
-            <label class="modal-label">Date</label>
-            <input type="date" class="login-field" id="eventDateInput" required />
+            <label class="modal-label">📅 Date de début (Du)</label>
+            <input type="date" class="login-field" id="eventStartDateInput" required onchange="handleEventStartDateChange()" />
           </div>
           <div class="modal-field-group">
-            <label class="modal-label">Heure Début</label>
+            <label class="modal-label">📅 Date de fin (Au)</label>
+            <input type="date" class="login-field" id="eventEndDateInput" required />
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+          <div class="modal-field-group">
+            <label class="modal-label">⏰ Heure de début (Chaque jour)</label>
             <select class="login-field" id="eventStartTimeSelect">
               <option value="08:00">08:00</option>
               <option value="09:30">09:30</option>
@@ -2347,7 +2355,7 @@
             </select>
           </div>
           <div class="modal-field-group">
-            <label class="modal-label">Heure Fin</label>
+            <label class="modal-label">⏰ Heure de fin</label>
             <select class="login-field" id="eventEndTimeSelect">
               <option value="11:00">11:00</option>
               <option value="12:30">12:30</option>
@@ -2363,27 +2371,27 @@
         </div>
 
         <div class="modal-field-group">
-          <label class="modal-label">Terrains à réserver et bloquer sur le Tableau 1 (Planning ordinaire)</label>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; background:var(--bg-card-2); border:1px solid var(--border-subtle); border-radius:10px; padding:10px 14px">
-            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer">
-              <input type="checkbox" name="eventCourts" value="court-1" checked />
-              <span>Court 1 · Central Philippe-Chatrier</span>
+          <label class="modal-label">Terrains à bloquer sur le Tableau 1 (Planning ordinaire)</label>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; background:var(--bg-card-2); border:1px solid var(--border-subtle); border-radius:10px; padding:12px 14px">
+            <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700; color:var(--text-white); cursor:pointer">
+              <input type="checkbox" name="eventCourts" value="court_1" checked />
+              <span>Terrain 1</span>
             </label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer">
-              <input type="checkbox" name="eventCourts" value="court-2" checked />
-              <span>Court 2 · Panoramique 360°</span>
+            <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700; color:var(--text-white); cursor:pointer">
+              <input type="checkbox" name="eventCourts" value="court_2" checked />
+              <span>Terrain 2</span>
             </label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer">
-              <input type="checkbox" name="eventCourts" value="court-3" />
-              <span>Court 3 · Sunset Outdoor</span>
+            <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700; color:var(--text-white); cursor:pointer">
+              <input type="checkbox" name="eventCourts" value="court_3" />
+              <span>Terrain 3</span>
             </label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer">
-              <input type="checkbox" name="eventCourts" value="court-4" />
-              <span>Court 4 · Indoor Masters</span>
+            <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700; color:var(--text-white); cursor:pointer">
+              <input type="checkbox" name="eventCourts" value="court_4" />
+              <span>Terrain 4</span>
             </label>
           </div>
           <div style="font-size:11px; color:var(--gold); margin-top:5px">
-            ⚡ Ces terrains seront automatiquement verrouillés et masqués pour les réservations ordinaires pendant cette plage.
+            🔒 Les terrains cochés seront totalement verrouillés sur le planning ordinaire pour bloquer les réservations des autres joueurs pendant toute la durée de l'événement.
           </div>
         </div>
 
@@ -2518,6 +2526,6 @@
   <!-- ── Toast notifications container ── -->
   <div class="toast-container" id="toastContainer" role="alert" aria-live="polite"></div>
 
-  <script type="module" src="./js/app.js?v=2.5.0"></script>
+  <script type="module" src="./js/app.js?v=2.7.0"></script>
 </body>
 </html>

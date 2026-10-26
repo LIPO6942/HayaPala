@@ -1252,7 +1252,7 @@ function renderProfileScreen() {
   const isFemale = isPlayerFemale(user);
   const futCardBaseImg = document.getElementById('futCardBaseImg');
   if (futCardBaseImg) {
-    futCardBaseImg.src = isFemale ? './images/circlepadel_green_card_woman.jpg' : './images/circlepadel_green_card.jpg';
+    futCardBaseImg.src = isFemale ? './images/circlepadel_green_card_woman.jpg?v=2.7.0' : './images/circlepadel_green_card.jpg?v=2.7.0';
   }
 
   // Niveau précis à 2 décimales (Format Rating Engine)
@@ -6411,6 +6411,25 @@ let adminEventsFilter = 'all';
 let selectedAdminEventId = null;
 let activeWorkbenchView = 'bracket'; // 'bracket' ou 'teams'
 
+function getDatesInRange(startStr, endStr) {
+  if (!startStr) return [getTodayStr()];
+  const dates = [];
+  const start = new Date(startStr);
+  const end = new Date(endStr || startStr);
+  let curr = new Date(start);
+  while (curr <= end) {
+    dates.push(curr.toISOString().split('T')[0]);
+    curr.setDate(curr.getDate() + 1);
+  }
+  return dates.length > 0 ? dates : [startStr];
+}
+window.getDatesInRange = getDatesInRange;
+
+function saveLocalDB() {
+  saveDB(DB);
+}
+window.saveLocalDB = saveLocalDB;
+
 function syncEventsWithTimetable() {
   if (!Array.isArray(DB.clubEvents)) return;
   const events = DB.clubEvents.filter(e => e && e.status !== 'archived');
@@ -6425,27 +6444,30 @@ function syncEventsWithTimetable() {
     if (startIdx === -1) return;
 
     const slotsToBlock = SLOT_TIMES.slice(startIdx, endIdx);
+    const eventDates = getDatesInRange(evt.startDate || evt.date, evt.endDate || evt.startDate || evt.date);
 
-    (evt.courtIds || []).forEach(courtId => {
-      slotsToBlock.forEach(time => {
-        const existing = DB.bookings.find(b => b.courtId === courtId && b.date === evt.date && b.startTime === time && b.status === 'confirmed');
-        if (!existing) {
-          DB.bookings.push({
-            id: `evt-block-${evt.id}-${courtId}-${time.replace(':', '')}`,
-            courtId: courtId,
-            date: evt.date,
-            startTime: time,
-            type: 'event',
-            status: 'confirmed',
-            eventId: evt.id,
-            eventTheme: evt.theme,
-            isEventAutoBlock: true,
-            notes: `${evt.title}`,
-            players: [
-              { userId: 'admin', name: `🔒 ${evt.themeLabel}`, isOrganizer: true }
-            ]
-          });
-        }
+    eventDates.forEach(dateStr => {
+      (evt.courtIds || []).forEach(courtId => {
+        slotsToBlock.forEach(time => {
+          const existing = DB.bookings.find(b => b.courtId === courtId && b.date === dateStr && b.startTime === time && b.status === 'confirmed');
+          if (!existing) {
+            DB.bookings.push({
+              id: `evt-block-${evt.id}-${courtId}-${dateStr}-${time.replace(':', '')}`,
+              courtId: courtId,
+              date: dateStr,
+              startTime: time,
+              type: 'event',
+              status: 'confirmed',
+              eventId: evt.id,
+              eventTheme: evt.theme,
+              isEventAutoBlock: true,
+              notes: `${evt.title}`,
+              players: [
+                { userId: 'admin', name: `🔒 ${evt.themeLabel}`, isOrganizer: true }
+              ]
+            });
+          }
+        });
       });
     });
   });
@@ -6634,7 +6656,7 @@ function renderAdminEvents() {
 
           <div class="event-meta-info">
             <div class="event-meta-item">
-              <span>📅</span> <strong>${evt.date}</strong> · ${evt.startTime} — ${evt.endTime}
+              <span>📅</span> <strong>${(evt.startDate && evt.endDate && evt.startDate !== evt.endDate) ? `Du ${evt.startDate} au ${evt.endDate}` : (evt.startDate || evt.date)}</strong> · ${evt.startTime} — ${evt.endTime}
             </div>
             <div class="event-meta-item">
               <span>🏟️</span> <span>Terrains bloqués : <strong style="color:var(--gold)">${courtNames}</strong></span>
@@ -6997,7 +7019,7 @@ function advanceBracketWinner(eventId, roundIdx, matchIdx, winnerSlot, scoreStr)
     showToast(`🏆 CHAMPION DU TOURNOI : ${winnerTeam.name} ! Félicitations !`, 'success');
   }
 
-  saveLocalDB();
+  saveDB(DB);
   renderAdminEvents();
 }
 window.advanceBracketWinner = advanceBracketWinner;
@@ -7008,15 +7030,19 @@ function resetTournamentBracket(eventId) {
   if (!confirm('Voulez-vous réinitialiser l\'arbre du tournoi et relancer le tirage ?')) return;
 
   evt.bracket = buildTournamentBracket(evt.tournamentSize || '1/16', evt.teams || []);
-  saveLocalDB();
+  saveDB(DB);
   showToast('Arbre du tournoi réinitialisé avec succès.', 'info');
   renderAdminEvents();
 }
 window.resetTournamentBracket = resetTournamentBracket;
 
 function openCreateClubEventModal() {
-  const dateInput = document.getElementById('eventDateInput');
-  if (dateInput) dateInput.value = adminCurrentDate || getTodayStr();
+  const today = adminCurrentDate || getTodayStr();
+  const startInput = document.getElementById('eventStartDateInput');
+  if (startInput) startInput.value = today;
+  const endInput = document.getElementById('eventEndDateInput');
+  if (endInput) endInput.value = today;
+
   const titleInput = document.getElementById('eventTitleInput');
   if (titleInput) titleInput.value = 'Tournoi Spécial Père / Fils — Family Padel Cup';
   const themeSelect = document.getElementById('eventThemeSelect');
@@ -7040,6 +7066,17 @@ function openCreateClubEventModal() {
   openModal('modal-create-club-event');
 }
 window.openCreateClubEventModal = openCreateClubEventModal;
+
+function handleEventStartDateChange() {
+  const startInput = document.getElementById('eventStartDateInput');
+  const endInput = document.getElementById('eventEndDateInput');
+  if (startInput && endInput) {
+    if (!endInput.value || endInput.value < startInput.value) {
+      endInput.value = startInput.value;
+    }
+  }
+}
+window.handleEventStartDateChange = handleEventStartDateChange;
 
 function handleEventThemeChange() {
   const theme = document.getElementById('eventThemeSelect')?.value;
@@ -7082,16 +7119,17 @@ function handleEventThemeChange() {
 window.handleEventThemeChange = handleEventThemeChange;
 
 function handleCreateClubEvent(e) {
-  e.preventDefault();
+  if (e && e.preventDefault) e.preventDefault();
   const title = document.getElementById('eventTitleInput')?.value?.trim();
   const theme = document.getElementById('eventThemeSelect')?.value;
   const isRanked = document.getElementById('eventRankedSelect')?.value === 'true';
-  const date = document.getElementById('eventDateInput')?.value;
-  const startTime = document.getElementById('eventStartTimeSelect')?.value;
-  const endTime = document.getElementById('eventEndTimeSelect')?.value;
-  const packType = document.getElementById('eventPackInput')?.value?.trim();
+  const startDate = document.getElementById('eventStartDateInput')?.value || document.getElementById('eventDateInput')?.value || getTodayStr();
+  const endDate = document.getElementById('eventEndDateInput')?.value || startDate;
+  const startTime = document.getElementById('eventStartTimeSelect')?.value || '14:00';
+  const endTime = document.getElementById('eventEndTimeSelect')?.value || '18:00';
+  const packType = document.getElementById('eventPackInput')?.value?.trim() || '';
   const pricePerTeam = parseFloat(document.getElementById('eventPriceInput')?.value) || 0;
-  const description = document.getElementById('eventDescInput')?.value?.trim();
+  const description = document.getElementById('eventDescInput')?.value?.trim() || '';
   const tournamentSize = document.getElementById('eventTournamentSizeSelect')?.value || '1/16';
 
   const selectedCourts = Array.from(document.querySelectorAll('input[name="eventCourts"]:checked')).map(cb => cb.value);
@@ -7102,7 +7140,7 @@ function handleCreateClubEvent(e) {
   }
 
   if (selectedCourts.length === 0) {
-    showToast('Sélectionnez au moins un terrain à réserver pour cet événement.', 'error');
+    showToast('Sélectionnez au moins un terrain (Terrain 1, 2, 3 ou 4) à bloquer pour cet événement.', 'error');
     return;
   }
 
@@ -7114,7 +7152,9 @@ function handleCreateClubEvent(e) {
     title,
     theme,
     themeLabel: EVENT_THEME_LABELS[theme] || 'Événement',
-    date,
+    startDate,
+    endDate,
+    date: startDate,
     startTime,
     endTime,
     courtIds: selectedCourts,
@@ -7134,11 +7174,12 @@ function handleCreateClubEvent(e) {
   DB.clubEvents.unshift(newEvent);
 
   syncEventsWithTimetable();
-  saveLocalDB();
+  saveDB(DB);
   closeModal('modal-create-club-event');
 
   const courtNames = selectedCourts.map(cid => (DB.courts || []).find(c => c.id === cid)?.name || cid).join(', ');
-  showToast(`🔒 Événement créé ! Terrains verrouillés : ${courtNames}`, 'success');
+  const dateLabel = (startDate === endDate) ? `le ${startDate}` : `du ${startDate} au ${endDate}`;
+  showToast(`🔒 Événement créé (${dateLabel}) ! Terrains verrouillés : ${courtNames}`, 'success');
   selectedAdminEventId = newEvent.id;
   activeWorkbenchView = isTournament ? 'bracket' : 'teams';
   renderAdminEvents();
@@ -7152,7 +7193,7 @@ function deleteClubEvent(eventId) {
   }
   DB.clubEvents = (DB.clubEvents || []).filter(e => e.id !== eventId);
   syncEventsWithTimetable();
-  saveLocalDB();
+  saveDB(DB);
   showToast('Événement supprimé et terrains libérés sur le planning ordinaire.', 'info');
   renderAdminEvents();
   renderAdminTimetable();
@@ -7217,7 +7258,7 @@ function handleRegisterEventTeam(e) {
     }
   }
 
-  saveLocalDB();
+  saveDB(DB);
   closeModal('modal-event-register-team');
   showToast(`✓ Équipe « ${player1Name} & ${player2Name} » inscrite au club house !`, 'success');
   renderAdminEvents();
@@ -7228,7 +7269,7 @@ function deleteEventTeam(eventId, teamId) {
   const evt = (DB.clubEvents || []).find(e => e.id === eventId);
   if (!evt || !Array.isArray(evt.teams)) return;
   evt.teams = evt.teams.filter(t => t.id !== teamId);
-  saveLocalDB();
+  saveDB(DB);
   showToast('Équipe retirée de l\'événement.', 'info');
   renderAdminEvents();
 }
@@ -7282,7 +7323,7 @@ function handleSaveEventMatchScore(e) {
   match.winnerName = (winnerTeamId === match.team1Id) ? match.team1Name : match.team2Name;
   match.status = 'completed';
 
-  saveLocalDB();
+  saveDB(DB);
   closeModal('modal-event-match-score');
   showToast(`✓ Score enregistré ! ${evt.isRanked ? 'Classement officiel mis à jour.' : '🛡️ Match festif (aucun impact Elo).'}`);
   renderAdminEvents();
@@ -7300,7 +7341,7 @@ function promptCreateEventMatch(eventId) {
   const t1 = evt.teams[0];
   const t2 = evt.teams[1];
   const matchTime = evt.startTime || '14:00';
-  const courtId = evt.courtIds?.[0] || 'court-1';
+  const courtId = evt.courtIds?.[0] || 'court_1';
 
   const newMatch = {
     id: `m-${Date.now().toString(36)}`,
@@ -7319,7 +7360,7 @@ function promptCreateEventMatch(eventId) {
 
   evt.matches = evt.matches || [];
   evt.matches.push(newMatch);
-  saveLocalDB();
+  saveDB(DB);
   showToast('Nouveau match d\'événement programmé !', 'success');
   renderAdminEvents();
 }
