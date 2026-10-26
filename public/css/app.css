@@ -4242,62 +4242,63 @@ button:active:not(:disabled),
 /* Plaque officielle du Joueur : Calée exactement à l'intérieur du ruban bleu 3D de la carte FUT */
 .fut-card.green-edition .fut-name-zone {
   position: absolute;
-  top: 62.2%;
+  top: 61.2%;
   left: 50%;
   transform: translateX(-50%);
-  width: 64%;
-  background: linear-gradient(180deg, rgba(14, 41, 66, 0.95) 0%, rgba(7, 23, 38, 0.98) 100%);
-  border: 1px solid rgba(212, 175, 55, 0.5);
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.9);
-  padding: 3px 8px 2px;
+  width: 72%;
+  background: linear-gradient(180deg, #0e2942 0%, #071726 100%);
+  border: 1px solid rgba(212, 175, 55, 0.65);
+  border-radius: 5px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.95), inset 0 1px 2px rgba(255, 215, 0, 0.35);
+  padding: 4px 8px 3px;
   text-align: center;
   pointer-events: auto;
-  z-index: 4;
+  z-index: 6;
   box-sizing: border-box;
 }
 
 .fut-card.green-edition .fut-name-zone .fut-name {
   font-family: 'Outfit', sans-serif;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 900;
-  letter-spacing: 2px;
+  letter-spacing: 1.8px;
   color: #FFFFFF;
   text-transform: uppercase;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.95), 0 0 14px rgba(255, 215, 0, 0.65);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: 1.15;
-  margin: 0;
+  line-height: 1.1;
+  margin: 0 0 2px 0;
 }
 
 .fut-card.green-edition .fut-name-zone .fut-style-pill {
-  display: inline-block;
+  display: block;
   font-family: 'Outfit', sans-serif;
-  font-size: 7.5px;
+  font-size: 8px;
   font-weight: 800;
   color: #FFD700;
-  letter-spacing: 1.1px;
+  letter-spacing: 0.9px;
   text-transform: uppercase;
-  margin-top: 1px;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
+  line-height: 1;
+  margin: 0 auto;
 }
 
-/* Panneau de statistiques officiel Padel CirclePadel — Épouse parfaitement le cadre vert émeraude intérieur sans jamais couper ni masquer les bordures vertes ni le joyau inférieur */
+/* Panneau de statistiques officiel Padel CirclePadel — 100% opaque pour masquer intégralement les textes du fond sans aucun débordement */
 .fut-stats-plate {
   position: absolute;
-  top: 69.6%;
-  bottom: 7.2%;
-  left: 14.5%;
-  right: 14.5%;
-  background: linear-gradient(180deg, rgba(8, 42, 23, 0.97) 0%, rgba(5, 28, 15, 0.98) 55%, rgba(2, 14, 7, 0.99) 100%) !important;
-  /* Découpe précise en pointe de blason qui épouse exactement la courbe intérieure du cadre vert émeraude */
-  clip-path: polygon(0% 0%, 100% 0%, 100% 64%, 88% 84%, 50% 100%, 12% 84%, 0% 64%) !important;
+  top: 70.0%;
+  bottom: 6.8%;
+  left: 10.8%;
+  right: 10.8%;
+  background: linear-gradient(180deg, #072e18 0%, #041f10 50%, #021109 100%) !important;
+  /* Découpe précise en pointe de blason qui épouse parfaitement la courbe intérieure du cadre vert émeraude */
+  clip-path: polygon(0% 0%, 100% 0%, 100% 70%, 88% 87%, 50% 100%, 12% 87%, 0% 70%) !important;
   border: none !important;
   border-radius: 0 !important;
   box-shadow: none !important;
-  padding: 4px 6px 14px;
+  padding: 5px 6px 14px;
   box-sizing: border-box;
   pointer-events: auto;
   z-index: 4;
@@ -4401,24 +4402,34 @@ button:active:not(:disabled),
 }
 
 .courtside-stage .fut-card.green-edition .fut-name-zone {
-  top: 62.2% !important;
-  width: 64% !important;
-  padding: 4px 10px 3px !important;
+  top: 61.2% !important;
+  width: 72% !important;
+  padding: 5px 10px 4px !important;
+  z-index: 6 !important;
+}
+
+.courtside-stage .fut-card.green-edition .fut-name-zone .fut-name {
+  font-size: 19px !important;
+}
+
+.courtside-stage .fut-card.green-edition .fut-name-zone .fut-style-pill {
+  font-size: 9px !important;
 }
 
 .courtside-stage .fut-card.green-edition .fut-stats-plate {
-  top: 69.6% !important;
-  bottom: 7.2% !important;
-  left: 14.5% !important;
-  right: 14.5% !important;
+  top: 70.0% !important;
+  bottom: 6.8% !important;
+  left: 10.8% !important;
+  right: 10.8% !important;
   width: auto !important;
   transform: none !important;
-  background: linear-gradient(180deg, rgba(8, 42, 23, 0.97) 0%, rgba(5, 28, 15, 0.98) 55%, rgba(2, 14, 7, 0.99) 100%) !important;
-  clip-path: polygon(0% 0%, 100% 0%, 100% 64%, 88% 84%, 50% 100%, 12% 84%, 0% 64%) !important;
+  background: linear-gradient(180deg, #072e18 0%, #041f10 50%, #021109 100%) !important;
+  clip-path: polygon(0% 0%, 100% 0%, 100% 70%, 88% 87%, 50% 100%, 12% 87%, 0% 70%) !important;
   border: none !important;
   border-radius: 0 !important;
   box-shadow: none !important;
   padding: 6px 10px 18px !important;
+  z-index: 4 !important;
 }
 
 .courtside-stage .fut-card.green-edition .fut-chip-val {
