@@ -4301,21 +4301,20 @@ button:active:not(:disabled),
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
 }
 
-/* Panneau de statistiques officiel Padel CirclePadel — Format Authentique EA Sports FC */
+/* Panneau de statistiques officiel Padel CirclePadel — Épouse parfaitement le cadre vert de la carte FUT */
 .fut-stats-plate {
   position: absolute;
-  top: 70.8%;
+  top: 67.4%;
   bottom: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 93%;
-  background: #04160d !important;
-  /* 100% OPAQUE pour masquer intégralement les textes anglais factices du fond (PWR, AGL, TEC, DEF, STA) */
-  border: 1.5px solid rgba(212, 175, 55, 0.85);
-  border-radius: 10px;
-  padding: 5px 8px 4px;
+  left: 17px;
+  right: 17px;
+  background: linear-gradient(180deg, rgba(5, 27, 16, 0.98) 0%, rgba(2, 13, 7, 0.99) 100%) !important;
+  /* Masque 100% le texte pré-imprimé du fond tout en épousant exactement le cadre vert émeraude */
+  border: none !important;
+  border-radius: 0 0 16px 16px;
+  padding: 6px 8px 4px;
   box-sizing: border-box;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.98), inset 0 1px 2px rgba(255, 215, 0, 0.35);
+  box-shadow: inset 0 0 18px rgba(46, 204, 113, 0.15) !important;
   pointer-events: auto;
   z-index: 4;
   display: flex;
@@ -4418,9 +4417,16 @@ button:active:not(:disabled),
 }
 
 .courtside-stage .fut-card.green-edition .fut-stats-plate {
-  bottom: 14px;
-  width: 93%;
-  padding: 7px 10px 5px;
+  top: 67.4% !important;
+  bottom: 16px !important;
+  left: 20px !important;
+  right: 20px !important;
+  width: auto !important;
+  transform: none !important;
+  border: none !important;
+  border-radius: 0 0 20px 20px !important;
+  box-shadow: inset 0 0 24px rgba(46, 204, 113, 0.2) !important;
+  padding: 8px 12px 6px !important;
 }
 
 .courtside-stage .fut-card.green-edition .fut-chip-val {
@@ -5700,6 +5706,281 @@ body.light-mode .loyalty-clock-ticks line {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+}
+
+/* ── Event Photo Banner with CirclePadel Watermark & Green Turf Aesthetics ── */
+.event-card-banner {
+  position: relative;
+  width: calc(100% + 32px);
+  height: 140px;
+  margin: -16px -16px 14px -16px;
+  border-radius: 14px 14px 0 0;
+  overflow: hidden;
+  background: #04140c;
+}
+
+.event-card-banner-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.event-card:hover .event-card-banner-img {
+  transform: scale(1.05);
+}
+
+.event-banner-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(2, 12, 7, 0.15) 0%, rgba(2, 12, 7, 0.88) 100%);
+}
+
+.event-banner-watermark {
+  position: absolute;
+  bottom: 8px;
+  left: 10px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  color: #FFFFFF;
+  background: rgba(4, 20, 13, 0.85);
+  backdrop-filter: blur(6px);
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(46, 204, 113, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+  z-index: 2;
+}
+
+.event-banner-top-badges {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 2;
+}
+
+.workbench-hero-banner {
+  position: relative;
+  width: 100%;
+  height: 180px;
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  border: 1.5px solid rgba(212, 175, 55, 0.35);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+}
+
+.workbench-hero-banner-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.workbench-hero-content {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(3, 16, 10, 0.95) 0%, rgba(3, 16, 10, 0.7) 50%, rgba(3, 16, 10, 0.3) 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 20px 24px;
+}
+
+/* ==========================================================================
+   ARBRE DU TOURNOI OFFICIEL & BRACKET ÉLIMINATION DIRECTE (1/32, 1/16, 1/8, 1/4)
+   Comme les tournois de foot / padel officiels
+   ========================================================================== */
+.tournament-bracket-wrapper {
+  overflow-x: auto;
+  padding: 20px 14px;
+  background: rgba(4, 15, 10, 0.8);
+  border: 1.5px solid rgba(46, 204, 113, 0.25);
+  border-radius: 16px;
+  margin-top: 14px;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.8);
+}
+
+.tournament-bracket-tree {
+  display: flex;
+  gap: 32px;
+  min-width: max-content;
+  align-items: stretch;
+  padding: 10px 4px;
+}
+
+.bracket-round {
+  display: flex;
+  flex-direction: column;
+  min-width: 220px;
+  width: 220px;
+}
+
+.bracket-round-title {
+  text-align: center;
+  font-family: 'Outfit', sans-serif;
+  font-size: 12.5px;
+  font-weight: 900;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  border-radius: 8px;
+  padding: 7px 10px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+.bracket-matches-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  flex: 1;
+  gap: 16px;
+}
+
+.bracket-match-node {
+  position: relative;
+  background: #071911;
+  border: 1.5px solid rgba(212, 175, 55, 0.3);
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.8);
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.bracket-match-node:hover {
+  border-color: var(--gold);
+  box-shadow: 0 8px 24px rgba(212, 175, 55, 0.25);
+}
+
+.bracket-match-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 9.5px;
+  color: var(--text-muted);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.bracket-team-slot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  transition: background 0.15s ease;
+}
+
+.bracket-team-slot:last-child {
+  border-bottom: none;
+}
+
+.bracket-team-slot.winner {
+  background: rgba(46, 204, 113, 0.16);
+  color: #2ecc71;
+  font-weight: 900;
+}
+
+.bracket-team-slot.loser {
+  opacity: 0.45;
+}
+
+.bracket-team-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 145px;
+}
+
+.bracket-team-score {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 900;
+  font-size: 11px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 4px;
+  padding: 2px 6px;
+  color: var(--gold);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.bracket-match-footer {
+  padding: 5px 8px;
+  background: rgba(0, 0, 0, 0.35);
+  text-align: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.btn-bracket-score {
+  width: 100%;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(46, 204, 113, 0.15));
+  border: 1px solid rgba(212, 175, 55, 0.5);
+  color: var(--gold);
+  font-size: 10px;
+  font-weight: 800;
+  padding: 5px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-bracket-score:hover {
+  background: var(--gold);
+  color: #000;
+  font-weight: 900;
+}
+
+.tournament-champion-banner {
+  background: linear-gradient(135deg, #0e301e 0%, #061f13 50%, #16361a 100%);
+  border: 2px solid var(--gold);
+  border-radius: 14px;
+  padding: 16px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 30px rgba(212, 175, 55, 0.35);
+}
+
+.champion-trophy-icon {
+  font-size: 42px;
+  filter: drop-shadow(0 0 14px rgba(255, 215, 0, 0.7));
+}
+
+.champion-info {
+  flex: 1;
+}
+
+.champion-sub-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.champion-team-name {
+  font-family: 'Outfit', sans-serif;
+  font-size: 22px;
+  font-weight: 900;
+  color: #FFFFFF;
+  margin-top: 3px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
 }
 </style>
 </head>
@@ -7999,6 +8280,21 @@ body.light-mode .loyalty-clock-ticks line {
           </div>
         </div>
 
+        <div class="modal-field-group" id="eventTournamentSizeGroup" style="display:none; background:rgba(212,175,55,0.06); border:1.5px solid rgba(212,175,55,0.4); border-radius:12px; padding:12px 14px; margin-bottom:12px">
+          <label class="modal-label" style="color:var(--gold); font-size:12px; font-weight:800">
+            🌳 Format de l'Arbre du Tournoi (Bracket élimination directe)
+          </label>
+          <select class="login-field" id="eventTournamentSizeSelect" style="font-weight:700">
+            <option value="1/16" selected>🏆 1/16 de Finale (32 paires · 16es, 8es, Quarts, Demies, Finale)</option>
+            <option value="1/32">🏆 1/32 de Finale (64 paires · 32es, 16es, 8es, Quarts, Demies, Finale)</option>
+            <option value="1/8">🏆 1/8 de Finale (16 paires · 8es, Quarts, Demies, Finale)</option>
+            <option value="1/4">🏆 1/4 de Finale (8 paires · Quarts, Demies, Finale)</option>
+          </select>
+          <div style="font-size:11px; color:var(--text-secondary); margin-top:5px; line-height:1.4">
+            ⚽ Comme pour les tournois de football &amp; grands tournois de padel : l'arbre est dessiné automatiquement et affiche le vainqueur de chaque tour qui monte au tour suivant jusqu'au trophée !
+          </div>
+        </div>
+
         <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px">
           <div class="modal-field-group">
             <label class="modal-label">Date</label>
@@ -8190,7 +8486,7 @@ body.light-mode .loyalty-clock-ticks line {
   <!-- ── Toast notifications container ── -->
   <div class="toast-container" id="toastContainer" role="alert" aria-live="polite"></div>
 
-  <script type="module" src="./js/app.js?v=2.4.0"></script>
+  <script type="module" src="./js/app.js?v=2.5.0"></script>
 </body>
 </html>
 

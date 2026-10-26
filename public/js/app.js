@@ -93,131 +93,8 @@ try {
  * Assure l'intégrité de la structure DB pour immuniser l'interface contre tout bug d'incohérence
  */
 function getClubEventsSeed() {
-  const today = new Date().toISOString().split('T')[0];
-  return [
-    {
-      id: 'event-father-son',
-      title: 'Tournoi Fête des Pères — Family Padel Cup',
-      theme: 'father_son',
-      themeLabel: '👨‍👦 Père / Fils (Family Padel)',
-      date: today,
-      startTime: '14:00',
-      endTime: '18:00',
-      courtIds: ['court-1', 'court-2'],
-      isRanked: false,
-      status: 'active',
-      packType: 'Pack Famille (Matchs + Goûter + Casquettes)',
-      pricePerTeam: 60,
-      description: 'Tournoi double amical ouvert aux duos parent/enfant (< 16 ans). Ambiance festive, goûter au club house et médailles pour tous.',
-      teams: [
-        {
-          id: 'team-fs-1',
-          player1Name: 'Karim Trabelsi',
-          player2Name: 'Yassine Trabelsi (11 ans)',
-          category: 'Junior 10-13 ans',
-          phone: '+216 98 123 456',
-          pack: 'Pack Famille Premium',
-          paid: true,
-          registeredAt: '2026-10-26T10:00:00'
-        },
-        {
-          id: 'team-fs-2',
-          player1Name: 'Mehdi Ben Salem',
-          player2Name: 'Sami Ben Salem (13 ans)',
-          category: 'Junior 10-13 ans',
-          phone: '+216 22 456 789',
-          pack: 'Pack Famille Premium',
-          paid: true,
-          registeredAt: '2026-10-26T10:30:00'
-        },
-        {
-          id: 'team-fs-3',
-          player1Name: 'Tarek Ben Amor',
-          player2Name: 'Rayen Ben Amor (14 ans)',
-          category: 'Junior 14-16 ans',
-          phone: '+216 55 789 012',
-          pack: 'Pack Famille',
-          paid: false,
-          registeredAt: '2026-10-26T11:00:00'
-        }
-      ],
-      matches: [
-        {
-          id: 'm-fs-1',
-          courtId: 'court-1',
-          time: '14:00',
-          team1Id: 'team-fs-1',
-          team1Name: 'Karim & Yassine',
-          team2Id: 'team-fs-2',
-          team2Name: 'Mehdi & Sami',
-          score: '6-4, 6-3',
-          winnerTeamId: 'team-fs-1',
-          winnerName: 'Karim & Yassine',
-          status: 'completed',
-          isRanked: false
-        },
-        {
-          id: 'm-fs-2',
-          courtId: 'court-2',
-          time: '15:30',
-          team1Id: 'team-fs-2',
-          team1Name: 'Mehdi & Sami',
-          team2Id: 'team-fs-3',
-          team2Name: 'Tarek & Rayen',
-          score: '',
-          winnerTeamId: '',
-          winnerName: '',
-          status: 'pending',
-          isRanked: false
-        }
-      ]
-    },
-    {
-      id: 'event-valentines',
-      title: 'Soirée Saint-Valentin — Matchs en Couples & Doubles Mixtes',
-      theme: 'valentines',
-      themeLabel: '❤️ Saint-Valentin (Couples)',
-      date: today,
-      startTime: '18:30',
-      endTime: '21:30',
-      courtIds: ['court-3'],
-      isRanked: false,
-      status: 'planned',
-      packType: 'Pack Duo Love (Matchs + Cocktail Club House)',
-      pricePerTeam: 80,
-      description: 'Tournoi festif en double mixte pour couples. Ambiance musicale et cocktail dînatoire au club house après les matchs.',
-      teams: [
-        {
-          id: 'team-val-1',
-          player1Name: 'Sofiene Gharbi',
-          player2Name: 'Sarra Gharbi',
-          category: 'Duo Mixte',
-          phone: '+216 99 333 444',
-          pack: 'Pack Duo Love',
-          paid: true,
-          registeredAt: '2026-10-26T09:00:00'
-        }
-      ],
-      matches: []
-    },
-    {
-      id: 'event-handicap',
-      title: 'Journée Padel Inclusif & Handisport',
-      theme: 'handicap',
-      themeLabel: '♿ Handisport / Padel Inclusif',
-      date: today,
-      startTime: '09:30',
-      endTime: '12:30',
-      courtIds: ['court-4'],
-      isRanked: false,
-      status: 'planned',
-      packType: 'Session Gratuite / Initiation Club',
-      pricePerTeam: 0,
-      description: 'Matinée de sensibilisation et de découverte du padel fauteuil et adapté. Coaching dédié et matchs d\'exhibition partagés.',
-      teams: [],
-      matches: []
-    }
-  ];
+  // Aucun mock ni donnée superflue : le gérant crée ses propres événements et tournois au club
+  return [];
 }
 
 function sanitizeDB(db) {
@@ -226,7 +103,12 @@ function sanitizeDB(db) {
   if (!Array.isArray(db.deletedPlayerIds)) db.deletedPlayerIds = [];
   if (!Array.isArray(db.courts) || db.courts.length === 0) db.courts = [...COURTS_SEED];
   if (!Array.isArray(db.bookings)) db.bookings = [];
-  if (!Array.isArray(db.clubEvents) || db.clubEvents.length === 0) db.clubEvents = getClubEventsSeed();
+  if (!Array.isArray(db.clubEvents)) db.clubEvents = [];
+
+  // Épuration stricte : retirer tout mock résiduel (ex: anciens mock events ou blocages associés)
+  db.clubEvents = db.clubEvents.filter(e => e && e.id && !e.id.startsWith('event-father-son') && !e.id.startsWith('event-valentines') && !e.id.startsWith('event-handicap'));
+  db.bookings = db.bookings.filter(b => !(b.isEventAutoBlock && (b.eventId === 'event-father-son' || b.eventId === 'event-valentines' || b.eventId === 'event-handicap')));
+
   if (!Array.isArray(db.notifications)) db.notifications = [];
   if (!Array.isArray(db.matchReviews)) db.matchReviews = [];
   if (!Array.isArray(db.transactions)) db.transactions = [];
@@ -2466,8 +2348,8 @@ function renderProfileHistory(user) {
 function canUserRecordMatchScore(booking = null, targetUser = null) {
   const user = targetUser || (DB.players || []).find(p => p.id === DB.currentUser?.id) || DB.currentUser;
 
-  // 1. Le gérant a toujours le plein pouvoir d'homologation et de correction
-  if (currentMode === 'backoffice-dashboard' || user?.role === 'admin') {
+  // 1. Le gérant en mode backoffice a le pouvoir d'homologation et de correction
+  if (currentMode === 'backoffice-dashboard') {
     return { allowed: true, reason: 'admin' };
   }
 
@@ -4231,11 +4113,15 @@ function checkFinishedMatchesScorePrompt() {
   const now = new Date();
   const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-  // Chercher un match confirmé, auquel ce joueur a participé avec un compte officiel, dont l'horaire de fin est dépassé, et sans score saisi
+  // Chercher un match réel confirmé (non un événement club), auquel ce joueur a personnellement participé, dont l'horaire de fin est dépassé, et sans score saisi
   const pendingMatch = (DB.bookings || []).find(b => {
-    if (!b || b.status !== 'confirmed' || b.scoreRecorded === true) return false;
+    if (!b || b.type === 'event' || b.isEventAutoBlock === true || b.status !== 'confirmed' || b.scoreRecorded === true) return false;
 
-    // Doit être un participant du match ayant un compte CirclePadel officiel (ou le créateur)
+    // L'utilisateur DOIT avoir participé à ce match comme joueur officiel
+    const hasParticipated = (b.players || []).some(p => p && p.userId === user.id && !p.isGuest);
+    if (!hasParticipated) return false;
+
+    // Droit d'enregistrement
     const auth = canUserRecordMatchScore(b, user);
     if (!auth.allowed) return false;
 
@@ -4254,11 +4140,14 @@ function checkFinishedMatchesScorePrompt() {
 
   const detailsEl = document.getElementById('scorePromptMatchDetails');
   if (detailsEl) {
+    const court = (DB.courts || []).find(c => c.id === pendingMatch.courtId);
+    const courtName = pendingMatch.courtName || court?.name || 'Terrain CirclePadel';
+    const endTime = pendingMatch.endTime || addMinutes(pendingMatch.startTime || '10:00', 90);
     const coPlayers = (pendingMatch.players || []).filter(p => p.userId !== user.id).map(p => p.name).filter(Boolean);
     const coText = coPlayers.length > 0 ? `<br><span style="color:var(--text-white); font-weight:600">Joueurs : ${coPlayers.join(', ')}</span>` : '';
     detailsEl.innerHTML = `
       <div style="font-weight:700; color:var(--gold); font-size:14px; margin-bottom:4px">
-        🎾 ${pendingMatch.courtName} · ${pendingMatch.startTime} – ${pendingMatch.endTime}
+        🎾 ${courtName} · ${pendingMatch.startTime} – ${endTime}
       </div>
       <div>Date : <strong>${pendingMatch.date === todayStr ? "Aujourd'hui" : formatDate(pendingMatch.date)}</strong>${coText}</div>
     `;
@@ -6504,13 +6393,23 @@ const EVENT_THEME_LABELS = {
   father_son: '👨‍👦 Père / Fils (Family Padel)',
   valentines: '❤️ Saint-Valentin (Couples)',
   handicap: '♿ Padel Inclusif / Handisport',
-  environmental: '🌱 Green Padel',
-  tournament: '🏆 Tournoi Officiel',
-  pack: '📦 Pack Spécial'
+  environmental: '🌱 Green Padel Day',
+  tournament: '🏆 Tournoi Officiel Homologué',
+  pack: '📦 Pack Animation & Découverte'
+};
+
+const EVENT_THEME_IMAGES = {
+  father_son: './images/events/father_son.jpg',
+  valentines: './images/events/valentines.jpg',
+  handicap: './images/events/handicap.jpg',
+  environmental: './images/events/green_padel.jpg',
+  tournament: './images/events/tournament.jpg',
+  pack: './images/events/green_padel.jpg'
 };
 
 let adminEventsFilter = 'all';
 let selectedAdminEventId = null;
+let activeWorkbenchView = 'bracket'; // 'bracket' ou 'teams'
 
 function syncEventsWithTimetable() {
   if (!Array.isArray(DB.clubEvents)) return;
@@ -6585,6 +6484,88 @@ function selectAdminEvent(eventId) {
 }
 window.selectAdminEvent = selectAdminEvent;
 
+function switchWorkbenchView(view) {
+  activeWorkbenchView = view;
+  if (selectedAdminEventId) {
+    renderAdminEventWorkbench(selectedAdminEventId);
+  }
+}
+window.switchWorkbenchView = switchWorkbenchView;
+
+/**
+ * Moteur de génération de l'Arbre du Tournoi officiel (1/32, 1/16, 1/8, 1/4)
+ */
+function buildTournamentBracket(size = '1/16', teams = []) {
+  const roundDefs = {
+    '1/32': [
+      { name: '1/32 de Finale', matchCount: 32 },
+      { name: '1/16 de Finale', matchCount: 16 },
+      { name: '1/8 de Finale', matchCount: 8 },
+      { name: 'Quarts de Finale', matchCount: 4 },
+      { name: 'Demi-Finales', matchCount: 2 },
+      { name: '🏆 Grande Finale', matchCount: 1 }
+    ],
+    '1/16': [
+      { name: '1/16 de Finale', matchCount: 16 },
+      { name: '1/8 de Finale', matchCount: 8 },
+      { name: 'Quarts de Finale', matchCount: 4 },
+      { name: 'Demi-Finales', matchCount: 2 },
+      { name: '🏆 Grande Finale', matchCount: 1 }
+    ],
+    '1/8': [
+      { name: '1/8 de Finale', matchCount: 8 },
+      { name: 'Quarts de Finale', matchCount: 4 },
+      { name: 'Demi-Finales', matchCount: 2 },
+      { name: '🏆 Grande Finale', matchCount: 1 }
+    ],
+    '1/4': [
+      { name: 'Quarts de Finale', matchCount: 4 },
+      { name: 'Demi-Finales', matchCount: 2 },
+      { name: '🏆 Grande Finale', matchCount: 1 }
+    ]
+  };
+
+  const roundsConfig = roundDefs[size] || roundDefs['1/16'];
+  const rounds = roundsConfig.map((cfg, rIdx) => {
+    const matches = [];
+    for (let mIdx = 0; mIdx < cfg.matchCount; mIdx++) {
+      let team1Name = '';
+      let team2Name = '';
+      if (rIdx === 0) {
+        const t1 = teams[mIdx * 2];
+        const t2 = teams[mIdx * 2 + 1];
+        team1Name = t1 ? `${t1.player1Name.split(' ')[0]} & ${t1.player2Name.split(' ')[0]}` : `Paire #${mIdx * 2 + 1}`;
+        team2Name = t2 ? `${t2.player1Name.split(' ')[0]} & ${t2.player2Name.split(' ')[0]}` : `Paire #${mIdx * 2 + 2}`;
+      } else {
+        team1Name = `Vainqueur M${mIdx * 2 + 1}`;
+        team2Name = `Vainqueur M${mIdx * 2 + 2}`;
+      }
+
+      matches.push({
+        id: `bm-${rIdx}-${mIdx}`,
+        matchNumber: mIdx + 1,
+        team1: { name: team1Name, score: '', won: false },
+        team2: { name: team2Name, score: '', won: false },
+        winnerName: '',
+        status: 'pending'
+      });
+    }
+    return {
+      roundIndex: rIdx,
+      title: cfg.name,
+      matchCount: cfg.matchCount,
+      matches
+    };
+  });
+
+  return {
+    size,
+    rounds,
+    champion: null
+  };
+}
+window.buildTournamentBracket = buildTournamentBracket;
+
 function renderAdminEvents() {
   const container = document.getElementById('adminEventsCardsList');
   if (!container) return;
@@ -6596,10 +6577,12 @@ function renderAdminEvents() {
 
   if (events.length === 0) {
     container.innerHTML = `
-      <div style="grid-column: 1 / -1; text-align:center; padding:36px; background:var(--bg-card-2); border:1px dashed var(--border-card); border-radius:14px">
-        <div style="font-size:36px; margin-bottom:10px">🏆</div>
-        <div style="font-size:15px; font-weight:800; color:var(--text-white)">Aucun événement dans cette catégorie</div>
-        <div style="font-size:12px; color:var(--text-secondary); margin-top:4px">Utilisez le bouton ci-dessus pour créer un match à thème ou tournoi.</div>
+      <div style="grid-column: 1 / -1; text-align:center; padding:44px 20px; background:var(--bg-card-2); border:1px dashed rgba(212,175,55,0.3); border-radius:16px">
+        <div style="font-size:42px; margin-bottom:12px">🏆</div>
+        <div style="font-size:16px; font-weight:800; color:var(--text-white)">Aucun événement ou tournoi programmé</div>
+        <div style="font-size:12.5px; color:var(--text-secondary); margin-top:6px; max-width:480px; margin-left:auto; margin-right:auto">
+          Utilisez le bouton ci-dessus pour créer un match festif amical (Père/Fils, Saint-Valentin), un tournoi avec arbre d'élimination (1/32 ou 1/16) ou une formule pack.
+        </div>
       </div>
     `;
     renderAdminEventWorkbench(null);
@@ -6616,17 +6599,18 @@ function renderAdminEvents() {
       const c = (DB.courts || []).find(court => court.id === cid);
       return c ? c.name : cid;
     }).join(', ') || 'Aucun terrain';
-    
+
     const teamCount = (evt.teams || []).length;
     const isRanked = evt.isRanked === true;
-    const rankedBadge = isRanked
-      ? `<span class="event-ranked-tag competitive">🏅 Tournoi Officiel (Avec Elo)</span>`
-      : `<span class="event-ranked-tag festive">🛡️ Match Festif (Hors-classement Elo)</span>`;
+    const photoUrl = evt.photoUrl || EVENT_THEME_IMAGES[evt.theme] || './images/events/tournament.jpg';
 
     return `
       <div class="event-card ${isSelected ? 'active-selected' : ''}" id="eventCard_${evt.id}">
-        <div>
-          <div class="event-card-header">
+        <!-- Photo thématique distinctive du terrain vert avec sigle CirclePadel -->
+        <div class="event-card-banner">
+          <img src="${photoUrl}" alt="${evt.title}" class="event-card-banner-img" />
+          <div class="event-banner-overlay"></div>
+          <div class="event-banner-top-badges">
             <span class="event-theme-badge ${evt.theme}">
               ${EVENT_THEME_LABELS[evt.theme] || '🏆 Événement'}
             </span>
@@ -6634,9 +6618,19 @@ function renderAdminEvents() {
               ${evt.status === 'active' ? 'EN COURS' : 'PROGRAMMÉ'}
             </span>
           </div>
+          <div class="event-banner-watermark">
+            <span>🎾</span> <span>CirclePadel · Tapis Vert</span>
+          </div>
+        </div>
 
-          <div class="event-title">${evt.title}</div>
-          <div style="margin-bottom:10px">${rankedBadge}</div>
+        <div>
+          <div class="event-title" style="margin-top:2px">${evt.title}</div>
+          <div style="margin-bottom:10px">
+            ${isRanked 
+              ? `<span class="event-ranked-tag competitive">🏅 Tournoi Officiel (Avec Elo)</span>` 
+              : `<span class="event-ranked-tag festive">🛡️ Match Festif (Hors-classement Elo)</span>`}
+            ${evt.tournamentSize ? `<span class="event-ranked-tag" style="background:rgba(212,175,55,0.15); color:var(--gold); border-color:var(--gold); margin-left:4px">Format : ${evt.tournamentSize}</span>` : ''}
+          </div>
 
           <div class="event-meta-info">
             <div class="event-meta-item">
@@ -6646,11 +6640,11 @@ function renderAdminEvents() {
               <span>🏟️</span> <span>Terrains bloqués : <strong style="color:var(--gold)">${courtNames}</strong></span>
             </div>
             <div class="event-meta-item">
-              <span>👥</span> <span>Inscriptions : <strong>${teamCount} paire(s) au guichet</strong></span>
+              <span>👥</span> <span>Inscriptions guichet : <strong>${teamCount} paire(s)</strong></span>
             </div>
-            ${evt.packType ? `
-            <div class="event-meta-item">
-              <span>📦</span> <span>Formule : <strong>${evt.packType}</strong> (${evt.pricePerTeam || 0} DT)</span>
+            ${evt.bracket?.champion ? `
+            <div class="event-meta-item" style="color:var(--gold)">
+              <span>🏆</span> <span>Champion : <strong>${evt.bracket.champion}</strong></span>
             </div>` : ''}
           </div>
         </div>
@@ -6691,132 +6685,334 @@ function renderAdminEventWorkbench(eventId) {
     return c ? c.name : cid;
   }).join(', ');
 
-  const teamsHtml = (evt.teams && evt.teams.length > 0) ? `
-    <table class="workbench-teams-table">
-      <thead>
-        <tr>
-          <th>Paire #</th>
-          <th>Joueur 1 (Capitaine)</th>
-          <th>Joueur 2 (Partenaire / Enfant / Conjoint)</th>
-          <th>Catégorie</th>
-          <th>Téléphone</th>
-          <th>Formule Pack</th>
-          <th>Paiement Club House</th>
-          <th style="text-align:right">Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${evt.teams.map((t, idx) => `
-          <tr>
-            <td><strong style="color:var(--gold)">Duo ${idx + 1}</strong></td>
-            <td><strong>${t.player1Name}</strong></td>
-            <td><strong>${t.player2Name}</strong></td>
-            <td><span style="font-size:11px; color:var(--text-secondary)">${t.category || 'Standard'}</span></td>
-            <td>${t.phone || '—'}</td>
-            <td><span style="color:#ffd700">${t.pack || evt.packType || 'Standard'}</span></td>
-            <td>
-              <span class="${t.paid ? 'badge-paid' : 'badge-unpaid'}">
-                ${t.paid ? '✓ Payé au guichet' : '⏳ En attente'}
-              </span>
-            </td>
-            <td style="text-align:right">
-              <button class="btn-table-action danger" onclick="deleteEventTeam('${evt.id}', '${t.id}')" title="Retirer cette équipe">Retirer</button>
-            </td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>
-  ` : `
-    <div style="text-align:center; padding:24px; background:rgba(255,255,255,0.02); border-radius:10px; color:var(--text-muted); font-size:12px">
-      Aucune paire inscrite pour l'instant. Utilisez le bouton ci-dessus pour enregistrer manuellement des joueurs au club house.
-    </div>
-  `;
+  const photoUrl = evt.photoUrl || EVENT_THEME_IMAGES[evt.theme] || './images/events/tournament.jpg';
+  const isTournament = (evt.theme === 'tournament') || !!evt.bracket;
 
-  const matchesHtml = (evt.matches && evt.matches.length > 0) ? `
-    <div class="event-matches-grid">
-      ${evt.matches.map(m => {
-        const isCompleted = m.status === 'completed' && m.score;
-        return `
-          <div class="event-match-card">
-            <div>
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
-                <span style="font-size:11px; color:var(--text-muted)">🏟️ ${(DB.courts || []).find(c => c.id === m.courtId)?.name || m.courtId} · ⏰ ${m.time}</span>
-                <span class="info-badge ${isCompleted ? 'green' : 'amber'}" style="font-size:9px">
-                  ${isCompleted ? 'TERMINÉ' : 'EN ATTENTE'}
-                </span>
-              </div>
-              <div style="font-size:13px; font-weight:800; color:var(--text-white); margin-bottom:4px">
-                ${m.team1Name} <span style="color:var(--gold)">VS</span> ${m.team2Name}
-              </div>
-              <div style="font-size:12px; margin-top:6px">
-                Score : <strong style="color:${isCompleted ? '#2ecc71' : 'var(--text-muted)'}; font-size:14px">${m.score || 'Non joué'}</strong>
-              </div>
-              ${m.winnerName ? `<div style="font-size:11px; color:var(--gold); margin-top:2px">🏆 Vainqueur : <strong>${m.winnerName}</strong></div>` : ''}
-            </div>
-            <div style="margin-top:10px; border-top:1px solid rgba(255,255,255,0.06); padding-top:8px">
-              <button class="btn-primary-action" onclick="openEventMatchScoreModal('${evt.id}', '${m.id}')" style="width:100%; padding:6px; font-size:11px">
-                ✏️ ${isCompleted ? 'Modifier le Score' : 'Saisir le Score (Club House)'}
-              </button>
-            </div>
-          </div>
-        `;
-      }).join('')}
-    </div>
-  ` : `
-    <div style="text-align:center; padding:20px; background:rgba(255,255,255,0.02); border-radius:10px; color:var(--text-muted); font-size:12px">
-      Aucun match planifié pour le moment. Cliquez sur « + Programmer un Match » pour créer une rencontre.
-    </div>
-  `;
-
-  workbench.innerHTML = `
-    <div class="workbench-header">
-      <div>
-        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+  // Header Banner Hero
+  const heroHtml = `
+    <div class="workbench-hero-banner">
+      <img src="${photoUrl}" alt="${evt.title}" class="workbench-hero-banner-img" />
+      <div class="workbench-hero-content">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap">
           <span class="event-theme-badge ${evt.theme}">${EVENT_THEME_LABELS[evt.theme] || 'Événement'}</span>
-          <h3 style="font-family:'Outfit',sans-serif; font-size:18px; font-weight:900; color:var(--text-white); margin:0">${evt.title}</h3>
+          <span style="font-size:11px; color:#2ecc71; background:rgba(0,0,0,0.65); padding:3px 10px; border-radius:6px; border:1px solid #2ecc71">
+            ${evt.isRanked ? '🏅 Tournoi Officiel Compétitif (Avec Elo)' : '🛡️ Match Festif (Hors-classement Elo)'}
+          </span>
+          ${evt.tournamentSize ? `<span style="font-size:11px; color:var(--gold); background:rgba(0,0,0,0.65); padding:3px 10px; border-radius:6px; border:1px solid var(--gold)">Arbre à élimination directe : ${evt.tournamentSize}</span>` : ''}
+          <span style="font-size:11px; color:rgba(255,255,255,0.7); background:rgba(0,0,0,0.65); padding:3px 8px; border-radius:6px; margin-left:auto">
+            🎾 CirclePadel Prestige
+          </span>
         </div>
-        <div style="font-size:12px; color:var(--text-secondary); margin-top:5px">
-          📅 ${evt.date} (${evt.startTime} - ${evt.endTime}) · 🔒 Terrains verrouillés sur le Tableau 1 : <strong style="color:var(--gold)">${courtNames}</strong>
+        <h2 style="font-family:'Outfit',sans-serif; font-size:22px; font-weight:900; color:#FFFFFF; margin:0; text-shadow:0 2px 10px rgba(0,0,0,0.9)">
+          ${evt.title}
+        </h2>
+        <div style="font-size:12px; color:rgba(255,255,255,0.9); margin-top:5px">
+          📅 <strong>${evt.date}</strong> (${evt.startTime} — ${evt.endTime}) · 🔒 Terrains verrouillés sur le Tableau 1 : <strong style="color:var(--gold)">${courtNames}</strong>
         </div>
       </div>
-      <div style="display:flex; gap:10px; flex-wrap:wrap">
-        <button class="btn-primary-action" onclick="openRegisterEventTeamModal('${evt.id}')" style="font-size:12px; padding:8px 16px">
-          + Inscrire une Équipe au Club House
+    </div>
+  `;
+
+  // Action Bar
+  const actionBarHtml = `
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px">
+      <div style="display:flex; gap:8px; flex-wrap:wrap">
+        ${isTournament ? `
+        <button class="filter-chip ${activeWorkbenchView === 'bracket' ? 'active' : ''}" onclick="switchWorkbenchView('bracket')">
+          🌳 Arbre du Tournoi (${evt.tournamentSize || '1/16'})
+        </button>` : ''}
+        <button class="filter-chip ${activeWorkbenchView === 'teams' || !isTournament ? 'active' : ''}" onclick="switchWorkbenchView('teams')">
+          👥 Paires Inscrites au Club House (${(evt.teams || []).length})
         </button>
-        <button class="btn-secondary-action" onclick="promptCreateEventMatch('${evt.id}')" style="font-size:12px; padding:8px 16px">
+      </div>
+
+      <div style="display:flex; gap:8px; flex-wrap:wrap">
+        <button class="btn-primary-action" onclick="openRegisterEventTeamModal('${evt.id}')" style="font-size:12px; padding:8px 14px">
+          + Inscrire une Équipe au Guichet
+        </button>
+        ${isTournament ? `
+        <button class="btn-secondary-action" onclick="resetTournamentBracket('${evt.id}')" style="font-size:12px; padding:8px 14px">
+          ↺ Re-générer l'Arbre
+        </button>` : `
+        <button class="btn-secondary-action" onclick="promptCreateEventMatch('${evt.id}')" style="font-size:12px; padding:8px 14px">
           + Programmer un Match
-        </button>
+        </button>`}
       </div>
     </div>
+  `;
 
-    <!-- Section 1 : Paires / Équipes inscrites -->
-    <div style="margin-bottom:24px">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
-        <h4 style="font-family:'Outfit',sans-serif; font-size:14px; font-weight:800; color:var(--gold); margin:0">
-          👥 Paires &amp; Équipes Inscrites au Guichet (${(evt.teams || []).length})
-        </h4>
-        <span style="font-size:11px; color:var(--text-muted)">Inscriptions manuelles au club house</span>
+  // Section 1 : Arbre du Tournoi
+  let contentHtml = '';
+  if (isTournament && activeWorkbenchView === 'bracket') {
+    contentHtml = renderTournamentBracketHTML(evt);
+  } else {
+    // Section Paires & Équipes inscrites
+    const teamsHtml = (evt.teams && evt.teams.length > 0) ? `
+      <table class="workbench-teams-table">
+        <thead>
+          <tr>
+            <th>Paire #</th>
+            <th>Joueur 1 (Capitaine)</th>
+            <th>Joueur 2 (Partenaire)</th>
+            <th>Catégorie</th>
+            <th>Téléphone</th>
+            <th>Formule</th>
+            <th>Paiement Guichet</th>
+            <th style="text-align:right">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${evt.teams.map((t, idx) => `
+            <tr>
+              <td><strong style="color:var(--gold)">Duo ${idx + 1}</strong></td>
+              <td><strong>${t.player1Name}</strong></td>
+              <td><strong>${t.player2Name}</strong></td>
+              <td><span style="font-size:11px; color:var(--text-secondary)">${t.category || 'Standard'}</span></td>
+              <td>${t.phone || '—'}</td>
+              <td><span style="color:#ffd700">${t.pack || evt.packType || 'Standard'}</span></td>
+              <td>
+                <span class="${t.paid ? 'badge-paid' : 'badge-unpaid'}">
+                  ${t.paid ? '✓ Payé au guichet' : '⏳ En attente'}
+                </span>
+              </td>
+              <td style="text-align:right">
+                <button class="btn-table-action danger" onclick="deleteEventTeam('${evt.id}', '${t.id}')">Retirer</button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    ` : `
+      <div style="text-align:center; padding:32px; background:rgba(255,255,255,0.02); border-radius:12px; color:var(--text-muted); font-size:13px">
+        Aucune paire enregistrée pour le moment. Cliquez sur « + Inscrire une Équipe au Guichet » pour inscrire manuellement les joueurs au Club House.
       </div>
-      <div class="admin-table-responsive-wrap">
-        ${teamsHtml}
-      </div>
-    </div>
+    `;
 
-    <!-- Section 2 : Matchs & Saisie des Scores -->
-    <div>
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
-        <h4 style="font-family:'Outfit',sans-serif; font-size:14px; font-weight:800; color:var(--gold); margin:0">
-          🎾 Matchs &amp; Feuilles de Score (${(evt.matches || []).length})
+    // Matchs libres (si pas en arbre)
+    const matchesHtml = (!isTournament && evt.matches && evt.matches.length > 0) ? `
+      <div class="event-matches-grid" style="margin-top:16px">
+        ${evt.matches.map(m => {
+          const isCompleted = m.status === 'completed' && m.score;
+          return `
+            <div class="event-match-card">
+              <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+                  <span style="font-size:11px; color:var(--text-muted)">🏟️ ${(DB.courts || []).find(c => c.id === m.courtId)?.name || m.courtId} · ⏰ ${m.time}</span>
+                  <span class="info-badge ${isCompleted ? 'green' : 'amber'}" style="font-size:9px">
+                    ${isCompleted ? 'TERMINÉ' : 'EN ATTENTE'}
+                  </span>
+                </div>
+                <div style="font-size:13px; font-weight:800; color:var(--text-white); margin-bottom:4px">
+                  ${m.team1Name} <span style="color:var(--gold)">VS</span> ${m.team2Name}
+                </div>
+                <div style="font-size:12px; margin-top:6px">
+                  Score : <strong style="color:${isCompleted ? '#2ecc71' : 'var(--text-muted)'}; font-size:14px">${m.score || 'Non joué'}</strong>
+                </div>
+                ${m.winnerName ? `<div style="font-size:11px; color:var(--gold); margin-top:2px">🏆 Vainqueur : <strong>${m.winnerName}</strong></div>` : ''}
+              </div>
+              <div style="margin-top:10px; border-top:1px solid rgba(255,255,255,0.06); padding-top:8px">
+                <button class="btn-primary-action" onclick="openEventMatchScoreModal('${evt.id}', '${m.id}')" style="width:100%; padding:6px; font-size:11px">
+                  ✏️ ${isCompleted ? 'Modifier le Score' : 'Saisir le Score (Club House)'}
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    ` : '';
+
+    contentHtml = `
+      <div style="margin-bottom:24px">
+        <h4 style="font-family:'Outfit',sans-serif; font-size:14px; font-weight:800; color:var(--gold); margin-bottom:12px">
+          👥 Paires Inscrites au Guichet du Club House (${(evt.teams || []).length})
         </h4>
-        <span style="font-size:11px; color:${evt.isRanked ? 'var(--gold)' : '#2ecc71'}">
-          ${evt.isRanked ? '🏅 Match officiel avec Elo' : '🛡️ Match festif (Hors-classement Elo)'}
-        </span>
+        <div class="admin-table-responsive-wrap">
+          ${teamsHtml}
+        </div>
       </div>
       ${matchesHtml}
+    `;
+  }
+
+  workbench.innerHTML = heroHtml + actionBarHtml + contentHtml;
+}
+window.renderAdminEventWorkbench = renderAdminEventWorkbench;
+
+/**
+ * Dessine l'arbre du tournoi (Bracket football / padel) avec vainqueurs qui avancent
+ */
+function renderTournamentBracketHTML(evt) {
+  if (!evt.bracket || !Array.isArray(evt.bracket.rounds) || evt.bracket.rounds.length === 0) {
+    evt.bracket = buildTournamentBracket(evt.tournamentSize || '1/16', evt.teams || []);
+  }
+
+  const championBanner = evt.bracket.champion ? `
+    <div class="tournament-champion-banner">
+      <div class="champion-trophy-icon">🏆</div>
+      <div class="champion-info">
+        <div class="champion-sub-title">Vainqueur Officiel du Tournoi CirclePadel</div>
+        <div class="champion-team-name">${evt.bracket.champion}</div>
+        <div style="font-size:12px; color:rgba(255,255,255,0.7); margin-top:2px">Félicitations aux champions du tableau ! Trophée décerné au club house.</div>
+      </div>
+    </div>
+  ` : '';
+
+  const roundsHtml = evt.bracket.rounds.map((rnd, rIdx) => {
+    const isFinalRound = (rIdx === evt.bracket.rounds.length - 1);
+    const matchesHtml = rnd.matches.map((m, mIdx) => {
+      const isCompleted = m.status === 'completed';
+      return `
+        <div class="bracket-match-node" id="bracketMatch_${rIdx}_${mIdx}">
+          <div class="bracket-match-header">
+            <span>Match ${m.matchNumber}</span>
+            <span>${isCompleted ? '✓ Terminé' : 'En attente'}</span>
+          </div>
+
+          <!-- Équipe 1 -->
+          <div class="bracket-team-slot ${m.team1.won ? 'winner' : (m.team2.won ? 'loser' : '')}" onclick="quickPickBracketWinner('${evt.id}', ${rIdx}, ${mIdx}, 'team1')">
+            <span class="bracket-team-name" title="${m.team1.name}">
+              ${m.team1.won ? '🏆 ' : ''}${m.team1.name}
+            </span>
+            <span class="bracket-team-score">${m.team1.score || (m.team1.won ? 'V' : '—')}</span>
+          </div>
+
+          <!-- Équipe 2 -->
+          <div class="bracket-team-slot ${m.team2.won ? 'winner' : (m.team1.won ? 'loser' : '')}" onclick="quickPickBracketWinner('${evt.id}', ${rIdx}, ${mIdx}, 'team2')">
+            <span class="bracket-team-name" title="${m.team2.name}">
+              ${m.team2.won ? '🏆 ' : ''}${m.team2.name}
+            </span>
+            <span class="bracket-team-score">${m.team2.score || (m.team2.won ? 'V' : '—')}</span>
+          </div>
+
+          <div class="bracket-match-footer">
+            <button type="button" class="btn-bracket-score" onclick="openBracketScorePrompt('${evt.id}', ${rIdx}, ${mIdx})">
+              ⚡ Saisir Score & Vainqueur
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="bracket-round">
+        <div class="bracket-round-title">${rnd.title}</div>
+        <div class="bracket-matches-col">
+          ${matchesHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    ${championBanner}
+    <div class="tournament-bracket-wrapper">
+      <div style="font-size:12px; color:var(--text-muted); margin-bottom:12px; display:flex; justify-content:space-between; align-items:center">
+        <span>💡 Cliquez sur une équipe ou sur le bouton de score pour faire avancer le vainqueur vers le tour suivant.</span>
+        <span style="color:var(--gold); font-weight:700">Arbre officiel élimination directe</span>
+      </div>
+      <div class="tournament-bracket-tree">
+        ${roundsHtml}
+      </div>
     </div>
   `;
 }
-window.renderAdminEventWorkbench = renderAdminEventWorkbench;
+
+function quickPickBracketWinner(eventId, rIdx, mIdx, slot) {
+  const evt = (DB.clubEvents || []).find(e => e.id === eventId);
+  if (!evt || !evt.bracket || !evt.bracket.rounds) return;
+  const match = evt.bracket.rounds[rIdx]?.matches[mIdx];
+  if (!match) return;
+
+  const teamName = slot === 'team1' ? match.team1.name : match.team2.name;
+  if (!teamName || teamName.startsWith('Vainqueur M')) {
+    showToast('Les équipes de ce match ne sont pas encore définies.', 'info');
+    return;
+  }
+
+  const score = prompt(`Déclarer « ${teamName} » vainqueur du Match ${match.matchNumber} ?\nEntrez le score des sets (ou laissez vide pour validation directe) :`, '6-4, 6-3');
+  if (score === null) return;
+
+  advanceBracketWinner(eventId, rIdx, mIdx, slot, score.trim() || 'V');
+}
+window.quickPickBracketWinner = quickPickBracketWinner;
+
+function openBracketScorePrompt(eventId, rIdx, mIdx) {
+  const evt = (DB.clubEvents || []).find(e => e.id === eventId);
+  if (!evt || !evt.bracket || !evt.bracket.rounds) return;
+  const match = evt.bracket.rounds[rIdx]?.matches[mIdx];
+  if (!match) return;
+
+  const t1 = match.team1.name;
+  const t2 = match.team2.name;
+  const score = prompt(`Match ${match.matchNumber} : ${t1} VS ${t2}\n\nEntrez le score final (ex: 6-3, 6-4) :`, '6-4, 6-3');
+  if (score === null) return;
+
+  const winner = confirm(`Cliquez sur [OK] si le vainqueur est :\n👉 ${t1}\n\nCliquez sur [Annuler] si le vainqueur est :\n👉 ${t2}`);
+  advanceBracketWinner(eventId, rIdx, mIdx, winner ? 'team1' : 'team2', score.trim());
+}
+window.openBracketScorePrompt = openBracketScorePrompt;
+
+function advanceBracketWinner(eventId, roundIdx, matchIdx, winnerSlot, scoreStr) {
+  const evt = (DB.clubEvents || []).find(e => e.id === eventId);
+  if (!evt || !evt.bracket || !evt.bracket.rounds) return;
+
+  const currentRound = evt.bracket.rounds[roundIdx];
+  if (!currentRound) return;
+  const match = currentRound.matches[matchIdx];
+  if (!match) return;
+
+  const winnerTeam = winnerSlot === 'team1' ? match.team1 : match.team2;
+  const loserTeam = winnerSlot === 'team1' ? match.team2 : match.team1;
+
+  match.team1.won = (winnerSlot === 'team1');
+  match.team2.won = (winnerSlot === 'team2');
+
+  if (winnerSlot === 'team1') {
+    match.team1.score = scoreStr || 'V';
+    match.team2.score = '—';
+  } else {
+    match.team2.score = scoreStr || 'V';
+    match.team1.score = '—';
+  }
+
+  match.winnerName = winnerTeam.name;
+  match.status = 'completed';
+
+  // Faire avancer le vainqueur au tour suivant !
+  const nextRound = evt.bracket.rounds[roundIdx + 1];
+  if (nextRound) {
+    const nextMatchIdx = Math.floor(matchIdx / 2);
+    const nextMatch = nextRound.matches[nextMatchIdx];
+    if (nextMatch) {
+      if (matchIdx % 2 === 0) {
+        nextMatch.team1.name = winnerTeam.name;
+      } else {
+        nextMatch.team2.name = winnerTeam.name;
+      }
+    }
+    showToast(`✓ « ${winnerTeam.name} » avance au tour suivant (${nextRound.title}) !`, 'success');
+  } else {
+    // Dernier tour = Finale ! Proclamer le Champion !
+    evt.bracket.champion = winnerTeam.name;
+    showToast(`🏆 CHAMPION DU TOURNOI : ${winnerTeam.name} ! Félicitations !`, 'success');
+  }
+
+  saveLocalDB();
+  renderAdminEvents();
+}
+window.advanceBracketWinner = advanceBracketWinner;
+
+function resetTournamentBracket(eventId) {
+  const evt = (DB.clubEvents || []).find(e => e.id === eventId);
+  if (!evt) return;
+  if (!confirm('Voulez-vous réinitialiser l\'arbre du tournoi et relancer le tirage ?')) return;
+
+  evt.bracket = buildTournamentBracket(evt.tournamentSize || '1/16', evt.teams || []);
+  saveLocalDB();
+  showToast('Arbre du tournoi réinitialisé avec succès.', 'info');
+  renderAdminEvents();
+}
+window.resetTournamentBracket = resetTournamentBracket;
 
 function openCreateClubEventModal() {
   const dateInput = document.getElementById('eventDateInput');
@@ -6837,6 +7033,10 @@ function openCreateClubEventModal() {
   if (priceInput) priceInput.value = '60';
   const descInput = document.getElementById('eventDescInput');
   if (descInput) descInput.value = 'Tournoi convivial réservé aux paires parent/enfant.';
+
+  const sizeGroup = document.getElementById('eventTournamentSizeGroup');
+  if (sizeGroup) sizeGroup.style.display = 'none';
+
   openModal('modal-create-club-event');
 }
 window.openCreateClubEventModal = openCreateClubEventModal;
@@ -6846,8 +7046,13 @@ function handleEventThemeChange() {
   const titleEl = document.getElementById('eventTitleInput');
   const packEl = document.getElementById('eventPackInput');
   const rankedEl = document.getElementById('eventRankedSelect');
+  const sizeGroup = document.getElementById('eventTournamentSizeGroup');
   if (!theme || !titleEl || !packEl || !rankedEl) return;
-  
+
+  if (sizeGroup) {
+    sizeGroup.style.display = (theme === 'tournament') ? 'block' : 'none';
+  }
+
   if (theme === 'father_son') {
     titleEl.value = 'Tournoi Spécial Père / Fils — Family Padel Cup';
     packEl.value = 'Pack Famille (Matchs + Goûter Junior + T-shirt)';
@@ -6887,6 +7092,7 @@ function handleCreateClubEvent(e) {
   const packType = document.getElementById('eventPackInput')?.value?.trim();
   const pricePerTeam = parseFloat(document.getElementById('eventPriceInput')?.value) || 0;
   const description = document.getElementById('eventDescInput')?.value?.trim();
+  const tournamentSize = document.getElementById('eventTournamentSizeSelect')?.value || '1/16';
 
   const selectedCourts = Array.from(document.querySelectorAll('input[name="eventCourts"]:checked')).map(cb => cb.value);
 
@@ -6899,6 +7105,9 @@ function handleCreateClubEvent(e) {
     showToast('Sélectionnez au moins un terrain à réserver pour cet événement.', 'error');
     return;
   }
+
+  const isTournament = (theme === 'tournament');
+  const bracket = isTournament ? buildTournamentBracket(tournamentSize, []) : null;
 
   const newEvent = {
     id: `evt-${Date.now().toString(36)}`,
@@ -6914,6 +7123,9 @@ function handleCreateClubEvent(e) {
     packType,
     pricePerTeam,
     description,
+    photoUrl: EVENT_THEME_IMAGES[theme] || './images/events/tournament.jpg',
+    tournamentSize: isTournament ? tournamentSize : null,
+    bracket,
     teams: [],
     matches: []
   };
@@ -6928,6 +7140,7 @@ function handleCreateClubEvent(e) {
   const courtNames = selectedCourts.map(cid => (DB.courts || []).find(c => c.id === cid)?.name || cid).join(', ');
   showToast(`🔒 Événement créé ! Terrains verrouillés : ${courtNames}`, 'success');
   selectedAdminEventId = newEvent.id;
+  activeWorkbenchView = isTournament ? 'bracket' : 'teams';
   renderAdminEvents();
   renderAdminTimetable();
 }
@@ -6992,6 +7205,17 @@ function handleRegisterEventTeam(e) {
 
   evt.teams = evt.teams || [];
   evt.teams.push(newTeam);
+
+  // Si c'est un tournoi avec un bracket, actualiser le premier tour du bracket avec cette nouvelle paire
+  if (evt.bracket && evt.bracket.rounds && evt.bracket.rounds[0]) {
+    const r0 = evt.bracket.rounds[0];
+    const teamIdx = evt.teams.length - 1;
+    const matchIdx = Math.floor(teamIdx / 2);
+    if (r0.matches[matchIdx]) {
+      const slot = (teamIdx % 2 === 0) ? 'team1' : 'team2';
+      r0.matches[matchIdx][slot].name = `${player1Name.split(' ')[0]} & ${player2Name.split(' ')[0]}`;
+    }
+  }
 
   saveLocalDB();
   closeModal('modal-event-register-team');
