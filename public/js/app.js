@@ -6303,14 +6303,15 @@ document.addEventListener('keydown', async (e) => {
 // TOGGLE THÈME CLAIR / SOMBRE
 // ============================================================================
 
-const THEME_KEY = 'circlepadel_theme';
+const THEME_KEY = 'circlepadel_theme_v2';
 
 function applyTheme(theme) {
-  const isDark = theme === 'dark';
+  const isDark = theme !== 'light';
   document.body.classList.toggle('light-mode', !isDark);
+  document.documentElement.classList.toggle('light-mode', !isDark);
   const btn = document.getElementById('btnToggleTheme');
   if (btn) btn.textContent = isDark ? '🌙' : '☀️';
-  localStorage.setItem(THEME_KEY, theme);
+  localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
 
   // Mettre à jour immédiatement le radar de compétences pour adapter les petits traits
   try {

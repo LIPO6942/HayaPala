@@ -6050,3 +6050,218 @@ body.light-mode .loyalty-clock-ticks line {
   font-weight: 700 !important;
   letter-spacing: -0.01em !important;
 }
+
+
+/* ==========================================================================
+   FORMULAIRE ÉVÉNEMENTS & MATCHS À THÈME (THE CIRCLE NATURE LUXURY)
+   ========================================================================== */
+.event-modal-sheet {
+  max-width: 540px !important;
+  background: var(--bg-card) !important;
+  border: 1.5px solid var(--border-card) !important;
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.65), 0 0 40px rgba(197, 230, 65, 0.12) !important;
+  border-radius: var(--radius-xl) !important;
+  padding: 24px 22px 30px !important;
+}
+
+@media (max-width: 540px) {
+  .event-modal-sheet {
+    padding: 20px 16px 26px !important;
+    border-radius: 20px 20px 0 0 !important;
+    max-height: 92vh !important;
+  }
+}
+
+.event-modal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 520px) {
+  .event-modal-grid.stack-sm {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+}
+
+/* Custom Select Dropdowns with The Circle Lime Arrow */
+select.login-field {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  background-color: var(--bg-input) !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23C5E641' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 14px center !important;
+  background-size: 15px !important;
+  padding-right: 42px !important;
+  cursor: pointer;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  transition: all var(--ease-fast);
+}
+
+select.login-field:focus {
+  border-color: var(--gold) !important;
+  box-shadow: 0 0 0 3px rgba(197, 230, 65, 0.22) !important;
+}
+
+select.login-field option {
+  background-color: #061E14 !important;
+  color: #F3F8F3 !important;
+  padding: 12px 14px !important;
+  font-size: 14px !important;
+}
+
+select.login-field option:checked {
+  background-color: #0D3724 !important;
+  color: #C5E641 !important;
+  font-weight: 700 !important;
+}
+
+/* Custom Date Pickers */
+input[type="date"].login-field {
+  color-scheme: dark;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+input[type="date"].login-field::-webkit-calendar-picker-indicator {
+  filter: invert(85%) sepia(50%) saturate(600%) hue-rotate(35deg) brightness(100%);
+  cursor: pointer;
+  padding: 4px;
+}
+
+/* Bracket Tournament Box */
+#eventTournamentSizeGroup {
+  background: rgba(197, 230, 65, 0.08) !important;
+  border: 1.5px solid rgba(197, 230, 65, 0.35) !important;
+  border-radius: var(--radius-md) !important;
+  padding: 14px 16px !important;
+  margin-bottom: 14px !important;
+}
+
+/* Court Selectable Cards */
+.court-checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 6px;
+}
+
+@media (max-width: 520px) {
+  .court-checkbox-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+}
+
+.court-select-card {
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  display: block;
+}
+
+.court-select-card input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.court-card-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1.5px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  transition: all var(--ease-smooth);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.court-select-card:hover .court-card-inner {
+  border-color: rgba(197, 230, 65, 0.4);
+  color: var(--text-primary);
+}
+
+.court-select-card input:checked + .court-card-inner {
+  background: rgba(197, 230, 65, 0.16) !important;
+  border-color: var(--gold) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 16px rgba(197, 230, 65, 0.22);
+}
+
+.court-badge-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: transparent;
+  font-size: 11px;
+  font-weight: 900;
+  transition: all var(--ease-fast);
+}
+
+.court-select-card input:checked + .court-card-inner .court-badge-check {
+  background: var(--gold) !important;
+  color: #08331E !important;
+}
+
+.court-lock-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--gold);
+  margin-top: 8px;
+  line-height: 1.45;
+  background: rgba(197, 230, 65, 0.07);
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(197, 230, 65, 0.2);
+}
+
+/* Event Submit Button */
+.btn-create-event-submit {
+  margin-top: 14px;
+  padding: 14px 24px;
+  background: var(--gradient-btn) !important;
+  color: #08331E !important;
+  font-size: 14.5px;
+  font-weight: 800;
+  border-radius: var(--radius-full) !important;
+  box-shadow: 0 6px 24px rgba(197, 230, 65, 0.35) !important;
+  border: none !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  cursor: pointer;
+  transition: all var(--ease-smooth);
+}
+
+.btn-create-event-submit:hover {
+  background: var(--gradient-btn-hover) !important;
+  box-shadow: 0 8px 32px rgba(197, 230, 65, 0.45) !important;
+  transform: translateY(-2px);
+  color: #052414 !important;
+}
+
+.btn-create-event-submit:active {
+  transform: translateY(0);
+}

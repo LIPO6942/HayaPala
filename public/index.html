@@ -17,7 +17,20 @@
   <link rel="manifest" href="./manifest.json" />
   <link rel="icon" type="image/jpeg" href="./images/pwa-icon.jpg" />
   <link rel="apple-touch-icon" href="./images/pwa-icon.jpg" />
-  <link rel="stylesheet" href="./css/app.css?v=2.8.0" />
+  <link rel="stylesheet" href="./css/app.css?v=2.8.1" />
+  <script>
+    // Forcer le thème sombre The Circle par défaut immédiat (sans flash blanc)
+    (function () {
+      try {
+        var t = localStorage.getItem('circlepadel_theme_v2');
+        if (t === 'light') {
+          document.documentElement.classList.add('light-mode');
+        } else {
+          document.documentElement.classList.remove('light-mode');
+        }
+      } catch (e) {}
+    })();
+  </script>
 </head>
 
 <body>
@@ -963,8 +976,7 @@
                 Les événements réservent et bloquent automatiquement les terrains sur le Tableau 1 (Planning ordinaire).
               </p>
             </div>
-            <button class="btn-new-admin-booking" onclick="openCreateClubEventModal()"
-              style="background:linear-gradient(135deg, #9b59b6, #8e44ad); border-color:#d4af37">
+            <button class="btn-new-admin-booking" onclick="openCreateClubEventModal()">
               <span>+</span> Créer un Événement / Match à Thème
             </button>
           </div>
