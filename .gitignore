@@ -6,3 +6,4 @@ node_portable/
 data/hayapala.json
 data/*.json
 .firebase/
+scratch/
