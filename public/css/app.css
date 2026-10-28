@@ -4,40 +4,42 @@
    Inspiré de Padel Society (clubpadelsociety.com)
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Outfit:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;1,600;1,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 /* ==========================================================================
    DESIGN TOKENS — PALETTE OR & MARINE
    ========================================================================== */
 :root {
-  /* ── Couleurs principales ── */
-  --gold: #C8A96E;
-  --gold-bright: #E2C27D;
-  --gold-muted: #9A7B4F;
-  --gold-glow: rgba(200, 169, 110, 0.28);
-  --gold-glow-sm: rgba(200, 169, 110, 0.15);
+  /* ── Couleurs signature The Circle Padel Club ── */
+  --gold: #C5E641;                     /* Vert Lime électrique signature */
+  --gold-bright: #D8FA55;              /* Lime lumineux */
+  --gold-muted: #8FA828;               /* Olive lime atténué */
+  --gold-glow: rgba(197, 230, 65, 0.35);
+  --gold-glow-sm: rgba(197, 230, 65, 0.18);
 
-  /* ── Fonds / Surfaces ── */
-  --bg-canvas: #080B10;
-  --bg-frame: #0C1018;
-  --bg-card: #111620;
-  --bg-card-2: #161D2A;
-  --bg-card-hover: #1C2436;
-  --bg-input: #0E1420;
-  --bg-overlay: rgba(8, 11, 16, 0.92);
+  /* ── Fonds / Surfaces (Vert forêt profond) ── */
+  --bg-canvas: #092B1D;                /* Vert forêt impérial profond */
+  --bg-frame: #061E14;                 /* Vert très sombre pour barres de navigation */
+  --bg-card: #0D3724;                  /* Surfaces des cartes et conteneurs */
+  --bg-card-2: #12432C;                /* Cartes secondaires / surélevées */
+  --bg-card-hover: #174E34;            /* Cartes au survol */
+  --bg-input: #072619;                 /* Champs de saisie */
+  --bg-overlay: rgba(6, 30, 20, 0.94); /* Modales, tiroirs & backdrops */
+  --bg-cream: #F6F0E2;                 /* Section crème / écru doux */
 
   /* ── Borders ── */
-  --border-subtle: rgba(255, 255, 255, 0.07);
-  --border-card: rgba(255, 255, 255, 0.10);
-  --border-gold: rgba(200, 169, 110, 0.35);
-  --border-gold-sm: rgba(200, 169, 110, 0.18);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-card: rgba(197, 230, 65, 0.14);
+  --border-gold: rgba(197, 230, 65, 0.45);
+  --border-gold-sm: rgba(197, 230, 65, 0.22);
 
   /* ── Textes ── */
   --text-white: #FFFFFF;
-  --text-primary: #EEF0F4;
-  --text-secondary: #8A95A8;
-  --text-muted: #535E6E;
-  --text-dark: #080B10;
+  --text-primary: #F3F8F3;
+  --text-secondary: #9EB7A7;           /* Vert sauge doux */
+  --text-muted: #658171;
+  --text-dark: #08331E;                /* Vert forêt très foncé pour texte sur boutons Lime */
+  --text-serif: 'Playfair Display', Georgia, serif;
 
   /* ── Statuts ── */
   --green: #2ECC71;
@@ -49,19 +51,19 @@
   --blue: #3498DB;
   --blue-bg: rgba(52, 152, 219, 0.13);
 
-  /* ── Gradients signature ── */
-  --gradient-gold: linear-gradient(135deg, #C8A96E 0%, #E8D5A3 50%, #C8A96E 100%);
-  --gradient-card: linear-gradient(160deg, rgba(25, 32, 48, 0.85) 0%, rgba(12, 16, 24, 0.95) 100%);
-  --gradient-hero: linear-gradient(180deg, rgba(8, 11, 16, 0) 0%, rgba(8, 11, 16, 0.97) 100%);
-  --gradient-btn: linear-gradient(135deg, #C8A96E 0%, #A8873E 100%);
-  --gradient-btn-hover: linear-gradient(135deg, #E2C27D 0%, #C8A96E 100%);
+  /* ── Gradients signature The Circle ── */
+  --gradient-gold: linear-gradient(135deg, #C5E641 0%, #DCFF66 50%, #B0D72E 100%);
+  --gradient-card: linear-gradient(160deg, rgba(13, 55, 36, 0.94) 0%, rgba(9, 43, 29, 0.98) 100%);
+  --gradient-hero: linear-gradient(180deg, rgba(9, 43, 29, 0) 0%, rgba(9, 43, 29, 0.98) 100%);
+  --gradient-btn: linear-gradient(135deg, #C5E641 0%, #B2D82D 100%);
+  --gradient-btn-hover: linear-gradient(135deg, #D5F858 0%, #C5E641 100%);
 
   /* ── Ombres ── */
-  --shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 8px 28px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.65);
-  --shadow-gold: 0 4px 24px rgba(200, 169, 110, 0.25);
-  --shadow-gold-lg: 0 8px 40px rgba(200, 169, 110, 0.3);
+  --shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 8px 28px rgba(0, 0, 0, 0.50);
+  --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.70);
+  --shadow-gold: 0 4px 20px rgba(197, 230, 65, 0.30);
+  --shadow-gold-lg: 0 8px 36px rgba(197, 230, 65, 0.45);
 
   /* ── Transitions ── */
   --ease-fast: 0.15s ease;
@@ -80,37 +82,39 @@
    MODE CLAIR — surcharge des variables (body.light-mode)
    ========================================================================== */
 body.light-mode {
-  --bg-canvas: #EEF2F6;
-  --bg-frame: #F8FAFC;
+  --bg-canvas: #F6F0E2;                /* Crème / Écru The Circle */
+  --bg-frame: #ECE4D3;
   --bg-card: #FFFFFF;
-  --bg-card-2: #F1F5F9;
-  --bg-card-hover: #E2E8F0;
-  --bg-input: #F1F5F9;
-  --bg-overlay: rgba(15, 23, 42, 0.45);
+  --bg-card-2: #FBF8F2;
+  --bg-card-hover: #EFE8DA;
+  --bg-input: #F0E8D9;
+  --bg-overlay: rgba(9, 43, 29, 0.45);
 
-  --border-subtle: rgba(15, 23, 42, 0.08);
-  --border-card: rgba(15, 23, 42, 0.10);
-  --border-gold: rgba(180, 140, 60, 0.45);
-  --border-gold-sm: rgba(180, 140, 60, 0.25);
+  --border-subtle: rgba(9, 43, 29, 0.08);
+  --border-card: rgba(9, 43, 29, 0.10);
+  --border-gold: rgba(140, 175, 30, 0.45);
+  --border-gold-sm: rgba(140, 175, 30, 0.25);
 
-  --text-white: #0F172A;
-  --text-primary: #1E293B;
-  --text-secondary: #475569;
-  --text-muted: #64748B;
-  --text-dark: #F8FAFC;
+  --text-white: #092B1D;
+  --text-primary: #0C3423;
+  --text-secondary: #4A6354;
+  --text-muted: #6C8275;
+  --text-dark: #FFFFFF;
 
   --green-bg: rgba(46, 204, 113, 0.12);
   --red-bg: rgba(231, 76, 60, 0.10);
   --amber-bg: rgba(243, 156, 18, 0.12);
   --blue-bg: rgba(52, 152, 219, 0.10);
 
-  --gradient-card: linear-gradient(160deg, #FFFFFF 0%, #F1F5F9 100%);
-  --gradient-hero: linear-gradient(180deg, rgba(238, 242, 246, 0) 0%, rgba(238, 242, 246, 0.98) 100%);
+  --gradient-card: linear-gradient(160deg, #FFFFFF 0%, #F8F4EB 100%);
+  --gradient-hero: linear-gradient(180deg, rgba(246, 240, 226, 0) 0%, rgba(246, 240, 226, 0.98) 100%);
+  --gradient-btn: linear-gradient(135deg, #0D3E27 0%, #072517 100%);
+  --gradient-btn-hover: linear-gradient(135deg, #155234 0%, #0D3E27 100%);
 
-  --shadow-sm: 0 2px 10px rgba(15, 23, 42, 0.04);
-  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
-  --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.12);
-  --shadow-gold: 0 4px 20px rgba(212, 175, 55, 0.20);
+  --shadow-sm: 0 2px 10px rgba(9, 43, 29, 0.04);
+  --shadow-md: 0 8px 24px rgba(9, 43, 29, 0.08);
+  --shadow-lg: 0 16px 40px rgba(9, 43, 29, 0.12);
+  --shadow-gold: 0 4px 20px rgba(140, 175, 30, 0.20);
 }
 
 /* ── MODE CLAIR : EN-TÊTE SWITCHER (PLATFORM CONTROL BAR) ── */
@@ -399,12 +403,17 @@ img {
 }
 
 .pala-icon-symbol {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
   overflow: hidden;
-  border: 1px solid var(--border-gold-sm);
+  border: 1.5px solid rgba(197, 230, 65, 0.40);
+  background: #0B3D24;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 
 .pala-head-img {
@@ -924,16 +933,18 @@ img {
 
 .btn-join-match {
   width: 100%;
-  padding: 10px;
-  border-radius: var(--radius-md);
+  padding: 11px 18px;
+  border-radius: var(--radius-full);
   border: none;
   background: var(--gradient-btn);
-  color: #000;
-  font-size: 12px;
-  font-weight: 800;
+  color: #08331E;
+  font-family: 'Outfit', sans-serif;
+  font-size: 12.5px;
+  font-weight: 700;
   transition: all var(--ease-smooth);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  cursor: pointer;
 }
 
 .btn-join-match:hover {
@@ -1318,22 +1329,24 @@ img {
   transform: translateX(50%);
   max-width: 390px;
   width: calc(100% - 40px);
-  padding: 14px 20px;
-  border-radius: var(--radius-xl);
+  padding: 14px 24px;
+  border-radius: var(--radius-full);
   border: none;
   background: var(--gradient-btn);
-  color: #000;
-  font-size: 14px;
-  font-weight: 800;
+  color: #08331E;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14.5px;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  box-shadow: var(--shadow-gold-lg);
+  box-shadow: 0 8px 32px rgba(197, 230, 65, 0.38);
   transition: all var(--ease-smooth);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  text-transform: none;
+  letter-spacing: 0.02em;
   z-index: 200;
+  cursor: pointer;
 }
 
 .btn-launch-match-cta:hover {
@@ -2333,17 +2346,23 @@ img {
    ========================================================================== */
 .btn-primary-action {
   width: 100%;
-  padding: 14px 20px;
-  border-radius: var(--radius-md);
+  padding: 14px 24px;
+  border-radius: var(--radius-full);
   border: none;
   background: var(--gradient-btn);
-  color: #000;
-  font-size: 14px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  color: #08331E;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14.5px;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0.01em;
   transition: all var(--ease-smooth);
-  box-shadow: var(--shadow-gold);
+  box-shadow: 0 4px 18px rgba(197, 230, 65, 0.30);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .btn-primary-action:hover {
@@ -2358,14 +2377,22 @@ img {
 
 .btn-secondary-action {
   width: 100%;
-  padding: 13px 20px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-gold-sm);
+  padding: 13px 24px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--gold);
   background: transparent;
-  color: var(--gold);
+  color: #FFFFFF;
+  font-family: 'Outfit', sans-serif;
   font-size: 14px;
   font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0.01em;
   transition: all var(--ease-smooth);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .btn-secondary-action:hover {
@@ -2375,17 +2402,19 @@ img {
 
 .btn-primary-login {
   width: 100%;
-  padding: 14px 20px;
-  border-radius: var(--radius-md);
+  padding: 14px 24px;
+  border-radius: var(--radius-full);
   border: none;
   background: var(--gradient-btn);
-  color: #000;
-  font-size: 14px;
-  font-weight: 800;
+  color: #08331E;
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
   transition: all var(--ease-smooth);
   margin-top: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  cursor: pointer;
 }
 
 .btn-primary-login:hover {
@@ -2697,16 +2726,16 @@ img {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 9px 18px;
-  border-radius: var(--radius-md);
+  padding: 9px 20px;
+  border-radius: var(--radius-full);
   border: none;
   background: var(--gradient-btn);
-  color: #000;
+  color: #08331E;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
   white-space: nowrap;
   transition: all var(--ease-smooth);
-  box-shadow: var(--shadow-gold);
+  box-shadow: 0 4px 16px rgba(197, 230, 65, 0.28);
 }
 
 .btn-new-admin-booking:hover {
@@ -5984,4 +6013,40 @@ body.light-mode .loyalty-clock-ticks line {
   color: #FFFFFF;
   margin-top: 3px;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
-}
+}
+
+/* ─── THE CIRCLE BRAND TYPOGRAPHY & HEADER ─── */
+.the-circle-brand-wrap {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 1.05;
+}
+
+.the-circle-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 19px;
+  font-weight: 700;
+  color: #FFFFFF;
+  letter-spacing: -0.01em;
+}
+
+.the-circle-sub {
+  font-family: 'Outfit', sans-serif;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+/* Headings with Playfair Display Serif Elegance */
+.user-display-name,
+.screen-title,
+.login-brand-title,
+.celebration-title {
+  font-family: 'Playfair Display', Georgia, serif !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+}

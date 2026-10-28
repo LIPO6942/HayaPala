@@ -1,12 +1,12 @@
 {
-  "name": "CirclePadel - Padel Club App",
-  "short_name": "CirclePadel",
+  "name": "The Circle - Padel Club",
+  "short_name": "The Circle",
   "description": "L'expérience Padel nouvelle génération : Matchmaking, Réservation & Évaluation officielle",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#07090E",
-  "theme_color": "#07090E",
+  "background_color": "#092B1D",
+  "theme_color": "#092B1D",
   "icons": [
     {
       "src": "/images/pwa-icon.jpg",

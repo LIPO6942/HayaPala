@@ -1,4 +1,4 @@
-const CACHE_NAME = 'circlepadel-cache-v13';
+const CACHE_NAME = 'circlepadel-cache-v14';
 const ASSETS = [
   '/',
   '/index.html',
