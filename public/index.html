@@ -15,9 +15,9 @@
   <meta name="apple-mobile-web-app-title" content="CirclePadel" />
   <meta name="mobile-web-app-capable" content="yes" />
   <link rel="manifest" href="./manifest.json" />
-  <link rel="icon" type="image/jpeg" href="./images/pwa-icon.jpg" />
-  <link rel="apple-touch-icon" href="./images/pwa-icon.jpg" />
-  <link rel="stylesheet" href="./css/app.css?v=2.8.1" />
+  <link rel="icon" type="image/jpeg" href="./images/pwa-icon.jpg?v=2.8.2" />
+  <link rel="apple-touch-icon" href="./images/pwa-icon.jpg?v=2.8.2" />
+  <link rel="stylesheet" href="./css/app.css?v=2.8.2" />
   <script>
     // Forcer le thème sombre The Circle par défaut immédiat (sans flash blanc)
     (function () {
@@ -36,6 +36,55 @@
 <body>
 
   <!-- ======================================================================
+       SPLASH SCREEN (The Circle Padel Club - Where sport meets nature)
+       ====================================================================== -->
+  <div id="circle-splash-screen" class="circle-splash-screen" aria-hidden="false">
+    <div class="circle-splash-backdrop"></div>
+    <div class="circle-splash-content">
+      <div class="circle-splash-emblem-wrap">
+        <div class="circle-splash-glow"></div>
+        <img src="./images/the-circle-icon.png?v=2.8.2" alt="The Circle" class="circle-splash-icon-img" />
+      </div>
+      <div class="circle-splash-brand">
+        <h1 class="circle-splash-title">The Circle</h1>
+        <span class="circle-splash-sub">PADEL CLUB</span>
+      </div>
+      <p class="circle-splash-tagline">Where sport meets nature.</p>
+      <div class="circle-splash-loader">
+        <div class="circle-splash-loader-bar"></div>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      var splash = document.getElementById('circle-splash-screen');
+      if (!splash) return;
+      var dismissed = false;
+      function dismissSplash() {
+        if (dismissed) return;
+        dismissed = true;
+        splash.classList.add('splash-hidden');
+        setTimeout(function () {
+          splash.style.display = 'none';
+        }, 550);
+      }
+      var minTime = 1300;
+      var start = Date.now();
+      function scheduleDismiss() {
+        var elapsed = Date.now() - start;
+        var remaining = Math.max(0, minTime - elapsed);
+        setTimeout(dismissSplash, remaining);
+      }
+      if (document.readyState === 'complete') {
+        scheduleDismiss();
+      } else {
+        window.addEventListener('load', scheduleDismiss);
+        setTimeout(dismissSplash, 2600);
+      }
+    })();
+  </script>
+
+  <!-- ======================================================================
        TOP CONTROL BAR
        Switcher Joueur / Dashboard Gérant / Login
        ====================================================================== -->
@@ -43,7 +92,7 @@
     <div class="brand-section">
       <div class="hayapala-logo-badge" onclick="switchViewMode('player-app')" style="cursor:pointer">
         <div class="pala-icon-symbol">
-          <img src="./images/the-circle-icon.png" alt="The Circle" class="pala-head-img" />
+          <img src="./images/the-circle-icon.png?v=2.8.2" alt="The Circle" class="pala-head-img" />
         </div>
         <div class="the-circle-brand-wrap">
           <span class="the-circle-title">The Circle</span>
@@ -792,7 +841,7 @@
           title="Lancer un match">
           <div class="nav-center-glow"></div>
           <div class="nav-center-inner">
-            <img src="./images/pwa-icon.jpg" alt="CirclePadel" class="ball-fuzzy-img" />
+            <img src="./images/the-circle-icon.png?v=2.8.2" alt="The Circle" class="ball-fuzzy-img" />
           </div>
         </div>
 
@@ -822,7 +871,7 @@
         <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap">
           <div class="hayapala-logo-badge">
             <div class="pala-icon-symbol">
-              <img src="./images/the-circle-icon.png" alt="The Circle" class="pala-head-img" />
+              <img src="./images/the-circle-icon.png?v=2.8.2" alt="The Circle" class="pala-head-img" />
             </div>
             <div class="the-circle-brand-wrap">
               <span class="the-circle-title">The Circle <span
@@ -1349,7 +1398,7 @@
         <div class="login-logo-area">
           <div class="hayapala-logo-badge" style="justify-content:center">
             <div class="pala-icon-symbol" style="width:62px; height:62px; border-width:2px">
-              <img src="./images/the-circle-icon.png" alt="The Circle" class="pala-head-img" />
+              <img src="./images/the-circle-icon.png?v=2.8.2" alt="The Circle" class="pala-head-img" />
             </div>
           </div>
           <div class="the-circle-title" style="font-size:27px; text-align:center; margin-top:12px">The Circle</div>

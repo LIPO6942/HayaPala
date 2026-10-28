@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <!-- CirclePadel v1.1 · Firebase Firestore + Auth · circlepadel -->
 <html lang="fr">
 
@@ -15,8 +15,8 @@
   <meta name="apple-mobile-web-app-title" content="CirclePadel" />
   <meta name="mobile-web-app-capable" content="yes" />
   <link rel="manifest" href="./manifest.json" />
-  <link rel="icon" type="image/jpeg" href="./images/pwa-icon.jpg" />
-  <link rel="apple-touch-icon" href="./images/pwa-icon.jpg" />
+  <link rel="icon" type="image/jpeg" href="./images/pwa-icon.jpg?v=2.8.2" />
+  <link rel="apple-touch-icon" href="./images/pwa-icon.jpg?v=2.8.2" />
   <style>
 /* ==========================================================================
    HAYAPALA — DESIGN SYSTEM
@@ -6286,6 +6286,172 @@ input[type="date"].login-field::-webkit-calendar-picker-indicator {
   transform: translateY(0);
 }
 
+/* ─── SPLASH SCREEN THE CIRCLE PADEL CLUB ─── */
+.circle-splash-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-canvas, #092B1D);
+  color: var(--text-primary, #F3F8F3);
+  overflow: hidden;
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.5s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.circle-splash-screen.splash-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.circle-splash-backdrop {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 45%, #0F452C 0%, #092B1D 65%, #051A10 100%);
+  pointer-events: none;
+}
+
+.circle-splash-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px 24px;
+  max-width: 480px;
+  animation: splashContentIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.circle-splash-emblem-wrap {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+
+.circle-splash-glow {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(197, 230, 65, 0.28) 0%, rgba(197, 230, 65, 0) 70%);
+  filter: blur(14px);
+  pointer-events: none;
+  animation: splashPulse 2.4s ease-in-out infinite alternate;
+}
+
+.circle-splash-icon-img {
+  width: 86px;
+  height: 86px;
+  object-fit: contain;
+  position: relative;
+  z-index: 2;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.45));
+}
+
+.circle-splash-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+  margin-top: 4px;
+}
+
+.circle-splash-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 32px;
+  font-weight: 700;
+  color: #FFFFFF;
+  letter-spacing: -0.01em;
+  margin: 0;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.45);
+}
+
+.circle-splash-sub {
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.36em;
+  color: var(--gold, #C5E641);
+  text-transform: uppercase;
+  margin-top: 5px;
+}
+
+.circle-splash-tagline {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 20px;
+  font-style: italic;
+  font-weight: 500;
+  color: var(--bg-cream, #F6F0E2);
+  letter-spacing: 0.015em;
+  margin: 18px 0 0 0;
+  opacity: 0.96;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  animation: splashTaglineIn 1s cubic-bezier(0.16, 1, 0.3, 1) 0.2s backwards;
+}
+
+.circle-splash-loader {
+  width: 130px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.10);
+  border-radius: 9999px;
+  overflow: hidden;
+  margin-top: 28px;
+  position: relative;
+}
+
+.circle-splash-loader-bar {
+  height: 100%;
+  width: 45%;
+  background: var(--gradient-gold, linear-gradient(135deg, #C5E641 0%, #DCFF66 100%));
+  border-radius: 9999px;
+  box-shadow: 0 0 10px rgba(197, 230, 65, 0.55);
+  animation: splashLoaderSlide 1.3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes splashContentIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes splashTaglineIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 0.96;
+    transform: translateY(0);
+  }
+}
+
+@keyframes splashPulse {
+  0% { transform: scale(0.95); opacity: 0.6; }
+  100% { transform: scale(1.15); opacity: 1; }
+}
+
+@keyframes splashLoaderSlide {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(70%); }
+  100% { transform: translateX(250%); }
+}
+
+
 </style>
   <script>
     // Forcer le thème sombre The Circle par défaut immédiat (sans flash blanc)
@@ -6305,6 +6471,55 @@ input[type="date"].login-field::-webkit-calendar-picker-indicator {
 <body>
 
   <!-- ======================================================================
+       SPLASH SCREEN (The Circle Padel Club - Where sport meets nature)
+       ====================================================================== -->
+  <div id="circle-splash-screen" class="circle-splash-screen" aria-hidden="false">
+    <div class="circle-splash-backdrop"></div>
+    <div class="circle-splash-content">
+      <div class="circle-splash-emblem-wrap">
+        <div class="circle-splash-glow"></div>
+        <img src="./images/the-circle-icon.png?v=2.8.2" alt="The Circle" class="circle-splash-icon-img" />
+      </div>
+      <div class="circle-splash-brand">
+        <h1 class="circle-splash-title">The Circle</h1>
+        <span class="circle-splash-sub">PADEL CLUB</span>
+      </div>
+      <p class="circle-splash-tagline">Where sport meets nature.</p>
+      <div class="circle-splash-loader">
+        <div class="circle-splash-loader-bar"></div>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      var splash = document.getElementById('circle-splash-screen');
+      if (!splash) return;
+      var dismissed = false;
+      function dismissSplash() {
+        if (dismissed) return;
+        dismissed = true;
+        splash.classList.add('splash-hidden');
+        setTimeout(function () {
+          splash.style.display = 'none';
+        }, 550);
+      }
+      var minTime = 1300;
+      var start = Date.now();
+      function scheduleDismiss() {
+        var elapsed = Date.now() - start;
+        var remaining = Math.max(0, minTime - elapsed);
+        setTimeout(dismissSplash, remaining);
+      }
+      if (document.readyState === 'complete') {
+        scheduleDismiss();
+      } else {
+        window.addEventListener('load', scheduleDismiss);
+        setTimeout(dismissSplash, 2600);
+      }
+    })();
+  </script>
+
+  <!-- ======================================================================
        TOP CONTROL BAR
        Switcher Joueur / Dashboard Gérant / Login
        ====================================================================== -->
@@ -6312,7 +6527,7 @@ input[type="date"].login-field::-webkit-calendar-picker-indicator {
     <div class="brand-section">
       <div class="hayapala-logo-badge" onclick="switchViewMode('player-app')" style="cursor:pointer">
         <div class="pala-icon-symbol">
-          <img src="./images/the-circle-icon.png" alt="The Circle" class="pala-head-img" />
+          <img src="./images/the-circle-icon.png?v=2.8.2" alt="The Circle" class="pala-head-img" />
         </div>
         <div class="the-circle-brand-wrap">
           <span class="the-circle-title">The Circle</span>
@@ -7061,7 +7276,7 @@ input[type="date"].login-field::-webkit-calendar-picker-indicator {
           title="Lancer un match">
           <div class="nav-center-glow"></div>
           <div class="nav-center-inner">
-            <img src="./images/pwa-icon.jpg" alt="CirclePadel" class="ball-fuzzy-img" />
+            <img src="./images/the-circle-icon.png?v=2.8.2" alt="The Circle" class="ball-fuzzy-img" />
           </div>
         </div>
 
@@ -7091,7 +7306,7 @@ input[type="date"].login-field::-webkit-calendar-picker-indicator {
         <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap">
           <div class="hayapala-logo-badge">
             <div class="pala-icon-symbol">
-              <img src="./images/the-circle-icon.png" alt="The Circle" class="pala-head-img" />
+              <img src="./images/the-circle-icon.png?v=2.8.2" alt="The Circle" class="pala-head-img" />
             </div>
             <div class="the-circle-brand-wrap">
               <span class="the-circle-title">The Circle <span
@@ -7618,7 +7833,7 @@ input[type="date"].login-field::-webkit-calendar-picker-indicator {
         <div class="login-logo-area">
           <div class="hayapala-logo-badge" style="justify-content:center">
             <div class="pala-icon-symbol" style="width:62px; height:62px; border-width:2px">
-              <img src="./images/the-circle-icon.png" alt="The Circle" class="pala-head-img" />
+              <img src="./images/the-circle-icon.png?v=2.8.2" alt="The Circle" class="pala-head-img" />
             </div>
           </div>
           <div class="the-circle-title" style="font-size:27px; text-align:center; margin-top:12px">The Circle</div>
